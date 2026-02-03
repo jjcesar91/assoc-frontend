@@ -5,9 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // Needed for Docker
     proxy: {
       '/auth': {
-        target: 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:80',
         changeOrigin: true,
         secure: false,
       },
