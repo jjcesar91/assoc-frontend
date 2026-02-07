@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-function Login() {
+function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
-  const [user, setUser] = useState(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,9 +21,7 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        setUser(data.user);
-        localStorage.setItem('token', data.accessToken);
-        setMessage('Login successful!');
+        onLoginSuccess(data.accessToken);
       } else {
         setMessage(data.message || 'Login failed');
       }
@@ -33,31 +30,6 @@ function Login() {
       setMessage('Network error or server unreachable');
     }
   };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    setEmail('');
-    setPassword('');
-    setMessage('Logged out');
-  };
-
-  if (user) {
-    return (
-      <div className="login-container">
-        <div className="welcome-box">
-          <h2>Welcome, {user.username}!</h2>
-          <p>Email: {user.email}</p>
-          <p className="form-label" style={{textAlign: 'center', opacity: 0.7}}>
-            Your access token is stored in localStorage.
-          </p>
-          <button className="login-button logout-button" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="login-container">
