@@ -2,14 +2,65 @@ import React, { useState, useEffect } from 'react';
 import './Soci.css';
 import SocioModal from './SocioModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
-import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw } from 'lucide-react';
+import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
     const [soci, setSoci] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [selectedSocio, setSelectedSocio] = useState(null);
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+    const [filters, setFilters] = useState({
+        cognome: '',
+        nome: '',
+        iscritto: '',
+        certMedico: '',
+        pagamenti: '',
+        lista: ''
+    });
+
+    const handleFilterChange = (field, value) => {
+        setFilters(prev => ({ ...prev, [field]: value }));
+    };
+
+    const getCertStatus = (dateString) => {
+        if (!dateString) return 'MISSING';
+        const date = new Date(dateString);
+        const today = new Date();
+        const d = new Date(date); d.setHours(0,0,0,0);
+        const t = new Date(today); t.setHours(0,0,0,0);
+        
+        if (d < t) return '0'; // Scaduto
+        
+        const diffTime = d - t;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 30) return '1'; // In scadenza
+        return '2'; // Valido
+    };
+
+    const filteredSoci = soci.filter(socio => {
+        if (filters.cognome && (!socio.cognome || !socio.cognome.toLowerCase().includes(filters.cognome.toLowerCase()))) return false;
+        if (filters.nome && (!socio.nome || !socio.nome.toLowerCase().includes(filters.nome.toLowerCase()))) return false;
+        
+        if (filters.iscritto !== '') {
+            const isActive = socio.is_active ? '1' : '0';
+            if (isActive !== filters.iscritto) return false;
+        }
+
+        if (filters.certMedico !== '') {
+            const status = getCertStatus(socio.scadenza_certificato);
+            if (filters.certMedico === '0') {
+                 if (status !== '0' && status !== 'MISSING') return false;
+            } else {
+                 if (status !== filters.certMedico) return false;
+            }
+        }
+        
+        return true;
+    });
 
     useEffect(() => {
         fetchSoci();
@@ -29,17 +80,21 @@ const Soci = ({ onLogout }) => {
         }
     };
 
-    const handleCreateSocio = async (formData) => {
+    const handleSaveSocio = async (formData) => {
         try {
-            // Need to set a dummy user_id because the backend requires it.
+            const isUpdate = !!formData.id;
+            const url = isUpdate ? `/users/api/soci/${formData.id}` : '/users/api/soci';
+            const method = isUpdate ? 'PUT' : 'POST';
+
+            // Need to set a dummy user_id because the backend requires it for creation
             // In a real app we might create a user account first or handle it differently.
             const payload = {
                 ...formData,
-                user_id: 99999 + Math.floor(Math.random() * 100000) // Temporary Hack for DB constraint
+                user_id: !isUpdate ? 99999 + Math.floor(Math.random() * 100000) : (formData.user_id || 99999) 
             };
             
-            const response = await fetch('/users/api/soci', {
-                method: 'POST',
+            const response = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -49,11 +104,17 @@ const Soci = ({ onLogout }) => {
                 fetchSoci();
             } else {
                 const err = await response.json();
-                alert('Errore creazione: ' + (err.error || err.message));
+                alert('Errore salvataggio: ' + (err.error || err.message));
             }
         } catch (error) {
+            console.error(error);
             alert('Errore di rete');
         }
+    };
+
+    const handleEditSocio = (socio) => {
+        setSelectedSocio(socio);
+        setShowModal(true);
     };
 
     return (
@@ -79,19 +140,36 @@ const Soci = ({ onLogout }) => {
                         {/* Cognome */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Cognome</label>
-                            <input className="md-input" placeholder="Cognome" style={{width: '100%', padding: '6px 12px'}} />
+                            <input 
+                                className="md-input" 
+                                placeholder="Cognome" 
+                                style={{width: '100%', padding: '6px 12px'}} 
+                                value={filters.cognome}
+                                onChange={(e) => handleFilterChange('cognome', e.target.value)}
+                            />
                         </div>
                         
                         {/* Nome */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Nome</label>
-                            <input className="md-input" placeholder="Nome" style={{width: '100%', padding: '6px 12px'}} />
+                            <input 
+                                className="md-input" 
+                                placeholder="Nome" 
+                                style={{width: '100%', padding: '6px 12px'}} 
+                                value={filters.nome}
+                                onChange={(e) => handleFilterChange('nome', e.target.value)}
+                            />
                         </div>
 
                         {/* Iscritto */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '100px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Iscritto</label>
-                            <select className="md-select" style={{width: '100%', padding: '6px 12px'}}>
+                            <select 
+                                className="md-select" 
+                                style={{width: '100%', padding: '6px 12px'}}
+                                value={filters.iscritto}
+                                onChange={(e) => handleFilterChange('iscritto', e.target.value)}
+                            >
                                 <option value="">TUTTI</option>
                                 <option value="1">SI</option>
                                 <option value="0">NO</option>
@@ -101,7 +179,12 @@ const Soci = ({ onLogout }) => {
                         {/* Cert. medico */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Cert. medico</label>
-                            <select className="md-select" style={{width: '100%', padding: '6px 12px'}}>
+                            <select 
+                                className="md-select" 
+                                style={{width: '100%', padding: '6px 12px'}}
+                                value={filters.certMedico}
+                                onChange={(e) => handleFilterChange('certMedico', e.target.value)}
+                            >
                                 <option value="">TUTTI</option>
                                 <option value="2">VALIDO</option>
                                 <option value="1">IN SCADENZA</option>
@@ -112,7 +195,12 @@ const Soci = ({ onLogout }) => {
                         {/* Pagamenti */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Pagamenti</label>
-                            <select className="md-select" style={{width: '100%', padding: '6px 12px'}}>
+                            <select 
+                                className="md-select" 
+                                style={{width: '100%', padding: '6px 12px'}}
+                                value={filters.pagamenti}
+                                onChange={(e) => handleFilterChange('pagamenti', e.target.value)}
+                            >
                                 <option value="">TUTTI</option>
                                 <option value="0">REGOLARI</option>
                                 <option value="1">NON REGOLARI</option>
@@ -122,7 +210,12 @@ const Soci = ({ onLogout }) => {
                         {/* Liste */}
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Liste</label>
-                            <select className="md-select" style={{width: '100%', padding: '6px 12px'}}>
+                            <select 
+                                className="md-select" 
+                                style={{width: '100%', padding: '6px 12px'}}
+                                value={filters.lista}
+                                onChange={(e) => handleFilterChange('lista', e.target.value)}
+                            >
                                 <option value="">TUTTI</option>
                                 <option value="4614">Aerobica</option>
                                 <option value="4356">THAI BOXE</option>
@@ -194,7 +287,7 @@ const Soci = ({ onLogout }) => {
                         <button 
                             className="btn-contained" 
                             style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}} 
-                            onClick={() => setShowModal(true)}
+                            onClick={() => { setSelectedSocio(null); setShowModal(true); }}
                         >
                             <Plus size={14}/> Nuovo socio
                         </button>
@@ -218,7 +311,7 @@ const Soci = ({ onLogout }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {soci.map(socio => (
+                                {filteredSoci.map(socio => (
                                     <tr key={socio.id}>
                                         <td>
                                             <div style={{
@@ -252,13 +345,13 @@ const Soci = ({ onLogout }) => {
                                             <div style={{fontSize: '0.875rem'}}>{socio.telefono}</div>
                                         </td>
                                         <td style={{textAlign:'right'}}>
+                                            <button className="btn-icon-small" title="Modifica" onClick={() => handleEditSocio(socio)}><CreditCard size={18}/></button>
                                             <button className="btn-icon-small" title="Invia Email"><Mail size={18}/></button>
-                                            <button className="btn-icon-small" title="Pagamenti"><CreditCard size={18}/></button>
-                                            <button className="btn-icon-small"><MoreVertical size={18}/></button>
+                                            <button className="btn-icon-small"><Euro size={18}/></button>
                                         </td>
                                     </tr>
                                 ))}
-                                {soci.length === 0 && (
+                                {filteredSoci.length === 0 && (
                                     <tr>
                                         <td colSpan="7" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
                                             Nessun socio trovato
@@ -273,7 +366,7 @@ const Soci = ({ onLogout }) => {
 
 
 
-            {showModal && <SocioModal onClose={() => setShowModal(false)} onSave={handleCreateSocio} />}
+            {showModal && <SocioModal onClose={() => setShowModal(false)} onSave={handleSaveSocio} socioData={selectedSocio} />}
             
             <AdvancedSearchSidebar 
                 isOpen={showAdvancedSearch} 
