@@ -301,7 +301,7 @@ const Soci = ({ onLogout }) => {
                         <table className="md-table">
                             <thead>
                                 <tr>
-                                    <th style={{width: '60px'}}></th> {/* Avatar */}
+                                    <th style={{width: '60px'}}></th>
                                     <th>Nominativo</th>
                                     <th>Dati di nascita</th>
                                     <th>Stato Iscrizione</th>

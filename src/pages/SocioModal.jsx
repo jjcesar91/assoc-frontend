@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check } from 'lucide-react';
+import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle } from 'lucide-react';
+import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import './SocioModal.css';
 
@@ -55,6 +56,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const [formData, setFormData] = useState(initialState);
     const [activeTab, setActiveTab] = useState('Anagrafica');
+    const [warningMessage, setWarningMessage] = useState(null);
+    const [highlightCF, setHighlightCF] = useState(false);
+
+    // Effect to clear highlight
+    useEffect(() => {
+        if (highlightCF) {
+            const timer = setTimeout(() => setHighlightCF(false), 2000); // 2 seconds pulse
+            return () => clearTimeout(timer);
+        }
+    }, [highlightCF]);
 
     // Populate data when socioData prop changes
     useEffect(() => {
@@ -100,6 +111,256 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }));
     };
 
+    // Case 1: Compute Codice Fiscale from fields
+    useEffect(() => {
+        const { nome, cognome, sesso, data_nascita, luogo_nascita } = formData;
+        
+        // This effect should strictly run when these specific fields change
+        // We only auto-calculate if we have enough info to attempt a calculation
+        if (nome && cognome && sesso && data_nascita && luogo_nascita) {
+            try {
+                // Robust Date Parsing (avoid Timezone offsets from new Date(string))
+                // Expecting YYYY-MM-DD from input type="date"
+                let day, month, year;
+                if (typeof data_nascita === 'string' && data_nascita.includes('-')) {
+                    const parts = data_nascita.split('-');
+                    year = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10);
+                    day = parseInt(parts[2], 10);
+                } else {
+                    const dateVal = new Date(data_nascita);
+                    if (isNaN(dateVal.getTime())) return;
+                    day = dateVal.getDate();
+                    month = dateVal.getMonth() + 1;
+                    year = dateVal.getFullYear();
+                }
+
+                const cf = new CodiceFiscale({
+                    name: nome.trim(),
+                    surname: cognome.trim(),
+                    gender: sesso,
+                    day,
+                    month,
+                    year,
+                    birthplace: luogo_nascita.trim()
+                });
+                
+                // Update only if different to avoid infinite loops
+                if (cf.code && cf.code !== formData.codice_fiscale) {
+                    console.log("Auto-updating CF to:", cf.code);
+                    setFormData(prev => ({ ...prev, codice_fiscale: cf.code }));
+                    // Clear warning if we successfully auto-generated a valid one based on current data
+                    setWarningMessage(null); 
+                    setHighlightCF(true);
+                }
+            } catch (e) {
+                // Invalid data for calculation (e.g. City not found in library DB), ignore but log
+                console.warn("Skipping CF auto-calc:", e.message);
+            }
+        }
+    }, [formData.nome, formData.cognome, formData.sesso, formData.data_nascita, formData.luogo_nascita]);
+
+    // Case 2: Validate/Fill fields from Codice Fiscale
+    useEffect(() => {
+        const { codice_fiscale, nome, cognome, sesso, data_nascita, luogo_nascita } = formData;
+        
+        // Requirement: "Sono valorizzati ALMENO Nome e Cognome"
+        if (!nome || !cognome) return; 
+        
+        // Fix: If explicitly empty or too short, show error instead of returning silently.
+        // But we usually don't want to spam error if the user is just starting to type (e.g. length < 16 but > 0)
+        // However, the request asks for "Validazione" when modified.
+        // If I delete a char, length becomes 15. The previous code had "if (length !== 16) return;" so it skipped the try/catch logic completely.
+        
+        if (!codice_fiscale) {
+            setWarningMessage(null); // Just empty, no error yet
+            return;
+        }
+
+        try {
+            const cf = new CodiceFiscale(codice_fiscale);
+            
+            // Extract info from CF
+            // Library exposes 'birthday' (Date), 'birthplace' (Object with .nome) and 'gender'
+            const cfDate = cf.birthday || cf.birthDate;
+            const cfGender = cf.gender;
+            
+            // Determine Place Name safely
+            let cfPlaceName = null;
+            if (cf.birthplace) {
+                if (typeof cf.birthplace === 'object' && cf.birthplace.nome) cfPlaceName = cf.birthplace.nome;
+                else if (typeof cf.birthplace === 'string') cfPlaceName = cf.birthplace;
+            } else if (cf.birthPlace) { // Fallback for older versions/typos
+                if (typeof cf.birthPlace === 'object' && cf.birthPlace.name) cfPlaceName = cf.birthPlace.name;
+                else if (typeof cf.birthPlace === 'string') cfPlaceName = cf.birthPlace;
+            }
+
+            const updates = {};
+            const conflicts = [];
+
+            // 1. Check/Fill Gender
+            if (cfGender) {
+                if (!sesso) {
+                    updates.sesso = cfGender;
+                } else if (sesso !== cfGender) {
+                    conflicts.push(`Il campo Sesso (${sesso}) non corrisponde a quello nel CF (${cfGender})`);
+                }
+            }
+
+            // 2. Check/Fill Date
+            if (cfDate) {
+                const y = cfDate.getFullYear();
+                const m = String(cfDate.getMonth() + 1).padStart(2, '0');
+                const d = String(cfDate.getDate()).padStart(2, '0');
+                const cfDateStr = `${y}-${m}-${d}`;
+
+                if (!data_nascita) {
+                    updates.data_nascita = cfDateStr;
+                } else if (data_nascita !== cfDateStr) {
+                    conflicts.push(`La Data di Nascita (${data_nascita}) non corrisponde a quella nel CF (${cfDateStr})`);
+                }
+            }
+
+            // 3. Check/Fill Place
+            if (cfPlaceName) {
+                const currentPlace = (luogo_nascita || '').trim().toUpperCase();
+                const derivedPlace = cfPlaceName.toUpperCase();
+                
+                if (!luogo_nascita) {
+                    updates.luogo_nascita = cfPlaceName; 
+                } else if (currentPlace !== derivedPlace) {
+                    // Check if one contains the other (lenient match)
+                    if (!currentPlace.includes(derivedPlace) && !derivedPlace.includes(currentPlace)) {
+                        conflicts.push(`Il Luogo di Nascita (${luogo_nascita}) non corrisponde a quello nel CF (${cfPlaceName})`);
+                    }
+                }
+            }
+
+            // 4. Check Consistency of Name/Surname with CF Code
+            // We cannot strictly "deduce" name from CF, but we can verify if the CF code matches what we expect from Name/Surname + calculated demographics
+            // If we have all fields, Case 1 would overwrite this.
+            // But if we have partial fields (e.g. valid Sesso/Data/Luogo but wrong Name for that CF), we detect it here.
+            
+            // To do this properly without re-implementing logic, we can try to generate a CF with the current metadata + keys
+            // If the user provided CF doesn't match the one generated using the User's Name/Surname + Deduced Data, 
+            // it implies the Name/Surname are inconsistent with the CF (assuming Sesso/Data/Luogo match because we just checked/filled them).
+            
+            if (nome && cognome && (sesso || updates.sesso) && (data_nascita || updates.data_nascita) && (luogo_nascita || updates.luogo_nascita)) {
+                try {
+                     const checkDate = new Date(data_nascita || updates.data_nascita);
+                     const checkCF = new CodiceFiscale({
+                        name: nome,
+                        surname: cognome,
+                        gender: sesso || updates.sesso,
+                        day: checkDate.getDate(),
+                        month: checkDate.getMonth() + 1,
+                        year: checkDate.getFullYear(),
+                        birthplace: luogo_nascita || updates.luogo_nascita
+                     });
+                     
+                     // If the CF we calculate from the data (existing + derived) is different from the input CF
+                     if (checkCF.code !== codice_fiscale) {
+                         // The issue could be just Name or Surname, since we validated the others
+                         // Or it could be the Check character
+                         // We just issue a general inconsistency warning regarding identity
+                         conflicts.push(`Il CF inserito non è coerente con Nome e Cognome specificati`);
+                     }
+                } catch(e) {
+                    // ignore calculation errors
+                }
+            }
+
+            if (conflicts.length > 0) {
+                setWarningMessage(conflicts.join('; '));
+            } else {
+                setWarningMessage(null);
+                if (Object.keys(updates).length > 0) {
+                    setFormData(prev => ({ ...prev, ...updates }));
+                }
+            }
+
+        } catch (e) {
+            console.error("CF Validation Error:", e);
+            let msg = e.message || 'Errore generico';
+            
+            // Translate common library errors
+            if (msg.includes('check digit')) msg = 'Carattere di controllo errato';
+            else if (msg.includes('length')) msg = 'Lunghezza non valida (deve essere 16 caratteri)';
+            else if (msg.includes('Invalid characters')) msg = 'Caratteri non validi';
+            else if (msg.includes('Provided input is not a valid Codice Fiscale') || msg.includes('Formato non valido')) {
+                // Manual check for better error detail when library is generic
+                if (codice_fiscale.length !== 16) {
+                    msg = `Lunghezza errata (${codice_fiscale.length}/16)`;
+                } else if (!/^[A-Z0-9]+$/i.test(codice_fiscale)) {
+                    msg = 'Contiene caratteri non validi (ammessi solo lettere e numeri)';
+                } else {
+                     // Try to calculate expected CF to see if it's a mismatch
+                     if (nome && cognome && sesso && data_nascita && luogo_nascita) {
+                        try {
+                            // Extract date parts
+                            let d, m, y;
+                            if (typeof data_nascita === 'string' && data_nascita.includes('-')) {
+                                const parts = data_nascita.split('-');
+                                y = parseInt(parts[0], 10);
+                                m = parseInt(parts[1], 10);
+                                d = parseInt(parts[2], 10);
+                            } else {
+                                const dt = new Date(data_nascita);
+                                d = dt.getDate(); m = dt.getMonth() + 1; y = dt.getFullYear();
+                            }
+
+                            const expectedCF = new CodiceFiscale({
+                                name: nome.trim(),
+                                surname: cognome.trim(),
+                                gender: sesso,
+                                day: d, month: m, year: y,
+                                birthplace: luogo_nascita.trim()
+                            });
+
+                            if (expectedCF.code !== codice_fiscale) {
+                                // Analyze diff
+                                const inputCF = codice_fiscale.toUpperCase();
+                                const exp = expectedCF.code;
+                                
+                                // Check Surname (first 3)
+                                if (inputCF.substring(0,3) !== exp.substring(0,3)) msg = 'Il CF non corrisponde al Cognome';
+                                // Check Name (next 3)
+                                else if (inputCF.substring(3,6) !== exp.substring(3,6)) msg = 'Il CF non corrisponde al Nome';
+                                // Check Year/Month/Day/Gender (next 5)
+                                else if (inputCF.substring(6,11) !== exp.substring(6,11)) msg = 'Il CF non corrisponde ai dati di nascita/sesso';
+                                // Check Place (next 4)
+                                else if (inputCF.substring(11,15) !== exp.substring(11,15)) msg = 'Il CF non corrisponde al Luogo di nascita';
+                                // Check Checksum (last char)
+                                else if (inputCF.substring(15) !== exp.substring(15)) msg = 'Carattere di controllo errato';
+                                else msg = 'Formato e Consistenza non validi';
+                            }
+                        } catch (calcErr) {
+                           msg = 'Formato non valido (e dati anagrafici insufficienti per ricalcolo)';  
+                        }
+                     } else {
+                         msg = 'Formato struttura errato';
+                     }
+                }
+            }
+            else if (msg.includes('constructor')) msg = 'Errore interno (libreria non caricata)';
+            
+            setWarningMessage(`Codice Fiscale non valido: ${msg}`);
+        }
+
+    }, [formData.codice_fiscale, formData.nome, formData.cognome, formData.sesso, formData.data_nascita, formData.luogo_nascita]); 
+    // ^ Added dependencies so it re-runs validation if fields change but CF doesn't (to show conflict)
+    // However, if fields change, Case 1 runs and updates CF.
+    // If Case 1 runs, it sets CF to "Correct" one. Then Case 2 runs. "Correct" CF matches. No conflict. 
+    // Does this defeat the purpose of showing "Conflict"?
+    // "Se erano già valorizzati, mostra un messaggio di errore...".
+    // If I change Date => Case 1 updates CF => Case 2 sees match.
+    // Conflict only happens if Case 1 FAILS to run (missing fields) OR if the user manually overrides CF to be wrong.
+    
+    // Wait, the Requirement says: 
+    // "Sono valorizzati ALMENO Nome e Cognome e viene modificato il codice fiscale"
+    // So Case 2 is primarily when CF changes.
+    // The addition of other dependencies here allows "On Open" validation if CF is already there.
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
@@ -143,6 +404,24 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     <button className="modal-close-icon" onClick={onClose}><X size={24}/></button>
                 </div>
                 
+                {warningMessage && (
+                    <div style={{
+                        backgroundColor: '#fee2e2', 
+                        border: '1px solid #ef4444', 
+                        color: '#b91c1c', 
+                        padding: '12px', 
+                        margin: '16px 24px 0', 
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontSize: '14px'
+                    }}>
+                        <AlertTriangle size={20} />
+                        <span>{warningMessage}</span>
+                    </div>
+                )}
+
                 {/* Content Area */}
                 <div className="modal-content-area" style={{flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#fff'}}>
                     
@@ -152,12 +431,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 
                                 {/* Row 1 */}
                                 <div className="form-group grid-span-3">
-                                    <label className="field-label">Cognome *</label>
-                                    <input className="md-input" name="cognome" value={formData.cognome} onChange={handleChange} required />
-                                </div>
-                                <div className="form-group grid-span-3">
                                     <label className="field-label">Nome *</label>
                                     <input className="md-input" name="nome" value={formData.nome} onChange={handleChange} required />
+                                </div>
+                                <div className="form-group grid-span-3">
+                                    <label className="field-label">Cognome *</label>
+                                    <input className="md-input" name="cognome" value={formData.cognome} onChange={handleChange} required />
                                 </div>
                                 <div className="form-group grid-span-2">
                                     <label className="field-label">Sesso *</label>
@@ -185,7 +464,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 <div className="form-group grid-span-2">
                                     <label className="field-label">Codice Fiscale *</label>
-                                    <input className="md-input" name="codice_fiscale" value={formData.codice_fiscale} onChange={handleChange} required />
+                                    <input 
+                                        className="md-input" 
+                                        name="codice_fiscale" 
+                                        value={formData.codice_fiscale} 
+                                        onChange={handleChange} 
+                                        required 
+                                        style={{
+                                            transition: 'all 0.5s ease',
+                                            borderColor: highlightCF ? '#22c55e' : undefined,
+                                            backgroundColor: highlightCF ? '#dcfce7' : undefined,
+                                            boxShadow: highlightCF ? '0 0 0 2px rgba(34, 197, 94, 0.2)' : undefined
+                                        }}
+                                    />
                                 </div>
                                 <div className="form-group grid-span-3">
                                     <label className="field-label">Email *</label>
