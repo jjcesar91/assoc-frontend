@@ -52,11 +52,7 @@ const Soci = ({ onLogout }) => {
 
         if (filters.certMedico !== '') {
             const status = getCertStatus(socio.scadenza_certificato);
-            if (filters.certMedico === '0') {
-                 if (status !== '0' && status !== 'MISSING') return false;
-            } else {
-                 if (status !== filters.certMedico) return false;
-            }
+            if (status !== filters.certMedico) return false;
         }
         
         return true;
@@ -186,6 +182,7 @@ const Soci = ({ onLogout }) => {
                                 onChange={(e) => handleFilterChange('certMedico', e.target.value)}
                             >
                                 <option value="">TUTTI</option>
+                                <option value="MISSING">MANCANTE</option>
                                 <option value="2">VALIDO</option>
                                 <option value="1">IN SCADENZA</option>
                                 <option value="0">SCADUTO</option>
@@ -325,7 +322,7 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{fontWeight: 500}}>{socio.cognome} {socio.nome}</div>
                                             <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
-                                                Livello: {socio.livello}
+                                                Socio/Tesserato: {socio.livello}
                                             </div>
                                         </td>
                                         <td>
@@ -337,9 +334,26 @@ const Soci = ({ onLogout }) => {
                                             </span>
                                         </td>
                                         <td>
-                                            <span className={`chip ${!socio.scadenza_certificato ? 'warning' : 'info'}`}>
-                                                {socio.scadenza_certificato || 'MANCANTE'}
-                                            </span>
+                                            {(() => {
+                                                const status = getCertStatus(socio.scadenza_certificato);
+                                                let color = 'inherit';
+                                                let text = socio.scadenza_certificato;
+
+                                                if (status === 'MISSING') {
+                                                    color = 'var(--danger-color)';
+                                                    text = 'MANCANTE';
+                                                } else if (status === '0') {
+                                                    color = 'var(--danger-color)';
+                                                } else if (status === '1') {
+                                                    color = 'var(--warning-color)';
+                                                }
+                                                
+                                                return (
+                                                    <span style={{ color: color, fontWeight: status === '2' ? 'normal' : 'bold' }}>
+                                                        {text}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td>
                                             <div style={{fontSize: '0.875rem'}}>{socio.telefono}</div>

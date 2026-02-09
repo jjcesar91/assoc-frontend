@@ -58,6 +58,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [activeTab, setActiveTab] = useState('Anagrafica');
     const [warningMessage, setWarningMessage] = useState(null);
     const [highlightCF, setHighlightCF] = useState(false);
+    const [emailError, setEmailError] = useState(null);
+    const [haCertificato, setHaCertificato] = useState(false);
 
     // Effect to clear highlight
     useEffect(() => {
@@ -66,6 +68,22 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             return () => clearTimeout(timer);
         }
     }, [highlightCF]);
+
+    // Validate Email Live
+    useEffect(() => {
+        const email = formData.email;
+        if (!email) {
+            setEmailError(null);
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setEmailError('Formato email non valido');
+        } else {
+            setEmailError(null);
+        }
+    }, [formData.email]);
 
     // Populate data when socioData prop changes
     useEffect(() => {
@@ -100,11 +118,50 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 data_scadenza_tesseramento: socioData.data_scadenza_tesseramento || '',
                 id_badge: socioData.id_badge || ''
             }));
+            
+            // Set Checkbox state based on date existence
+            setHaCertificato(!!socioData.scadenza_certificato);
         }
     }, [socioData]);
 
+    // Calculate if socio is minor
+    const isMinorenne = React.useMemo(() => {
+        if (!formData.data_nascita) return false;
+        
+        let birthDate;
+        // Robust parsing to align with existing logic
+        if (typeof formData.data_nascita === 'string' && formData.data_nascita.includes('-')) {
+            const parts = formData.data_nascita.split('-');
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1; // Month is 0-indexed in Date
+            const d = parseInt(parts[2], 10);
+            birthDate = new Date(y, m, d);
+        } else {
+            birthDate = new Date(formData.data_nascita);
+        }
+
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age < 18;
+    }, [formData.data_nascita]);
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        
+        // Handle Certificate Flag
+        if (name === 'ha_certificato') {
+            setHaCertificato(checked);
+            if (!checked) {
+                // Clear date if unchecked
+                setFormData(prev => ({ ...prev, scadenza_certificato: '' }));
+            }
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
@@ -361,6 +418,30 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     // So Case 2 is primarily when CF changes.
     // The addition of other dependencies here allows "On Open" validation if CF is already there.
 
+    const handleEmailBlur = async () => {
+        if (!formData.email) return;
+
+        try {
+            const response = await fetch('/users/api/soci/check-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: formData.email,
+                    excludeId: formData.id || null
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.exists) {
+                    alert(`L'email ${formData.email} è già usata da ${result.nome} ${result.cognome}`);
+                }
+            }
+        } catch (e) {
+            console.error("Email check failed", e);
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
@@ -448,7 +529,15 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 <div className="form-group grid-span-4">
                                     <label className="field-label">Data nascita *</label>
-                                    <input className="md-input" type="date" name="data_nascita" value={formData.data_nascita} onChange={handleChange} required />
+                                    <input 
+                                        className="md-input" 
+                                        type="date" 
+                                        name="data_nascita" 
+                                        value={formData.data_nascita} 
+                                        onChange={handleChange} 
+                                        onClick={(e) => e.target.showPicker?.()}
+                                        required 
+                                    />
                                 </div>
 
                                 {/* Row 2 */}
@@ -480,7 +569,17 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 <div className="form-group grid-span-3">
                                     <label className="field-label">Email *</label>
-                                    <input className="md-input" type="email" name="email" value={formData.email} onChange={handleChange} required />
+                                    <input 
+                                        className="md-input" 
+                                        type="email" 
+                                        name="email" 
+                                        value={formData.email} 
+                                        onChange={handleChange} 
+                                        onBlur={handleEmailBlur} 
+                                        required 
+                                        style={emailError ? { borderColor: '#ef4444' } : {}}
+                                    />
+                                    {emailError && <span style={{color: '#ef4444', fontSize: '11px', marginTop: '2px'}}>{emailError}</span>}
                                 </div>
                                 <div className="form-group grid-span-5">
                                     <label className="field-label">Telefono *</label>
@@ -506,95 +605,71 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     <input className="md-input" name="cap" value={formData.cap} onChange={handleChange} />
                                 </div>
 
-                                {/* Row 4 - Parents */}
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Codice fiscale genitore</label>
-                                    <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Cognome genitore</label>
-                                    <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Nome genitore</label>
-                                    <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Recapito 2</label>
-                                    <input className="md-input" name="recapito_2" placeholder="Recapito 2" value={formData.recapito_2} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Recapito 3</label>
-                                    <input className="md-input" name="recapito_3" placeholder="Recapito 3" value={formData.recapito_3} onChange={handleChange} />
-                                </div>
+                                {/* Row 4 - Parents (Visible only if Minor) */}
+                                {isMinorenne && (
+                                    <>
+                                        <div className="grid-span-12" style={{ marginTop: '16px', marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px', color: '#4b5563', fontWeight: '500' }}>
+                                            Dati Tutore / Genitore
+                                        </div>
+                                        <div className="form-group grid-span-4">
+                                            <label className="field-label">Codice fiscale genitore</label>
+                                            <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={handleChange} />
+                                        </div>
+                                        <div className="form-group grid-span-4">
+                                            <label className="field-label">Nome genitore</label>
+                                            <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={handleChange} />
+                                        </div>
+                                        <div className="form-group grid-span-4">
+                                            <label className="field-label">Cognome genitore</label>
+                                            <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={handleChange} />
+                                        </div>
+                                        <div className="form-group grid-span-6">
+                                            <label className="field-label">Recapito 1 genitore</label>
+                                            <input className="md-input" name="recapito_2" placeholder="Recapito 1" value={formData.recapito_2} onChange={handleChange} />
+                                        </div>
+                                        <div className="form-group grid-span-6">
+                                            <label className="field-label">Recapito 2 genitore</label>
+                                            <input className="md-input" name="recapito_3" placeholder="Recapito 2" value={formData.recapito_3} onChange={handleChange} />
+                                        </div>
+                                    </>
+                                )}
 
                                 {/* Row 5 - Tessere */}
                                 <div className="form-group grid-span-2">
-                                    <label className="field-label">Scadenza certificato</label>
-                                    <input className="md-input" type="date" name="scadenza_certificato" value={formData.scadenza_certificato} onChange={handleChange} />
+                                    <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', minHeight: '20px'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            name="ha_certificato" 
+                                            checked={haCertificato} 
+                                            onChange={handleChange} 
+                                            style={{width: 'auto', margin: 0}}
+                                        />
+                                        Ha certificato
+                                    </label>
+                                    <input 
+                                        className="md-input" 
+                                        type="date" 
+                                        name="scadenza_certificato" 
+                                        value={formData.scadenza_certificato} 
+                                        onChange={handleChange} 
+                                        disabled={!haCertificato}
+                                        onClick={(e) => haCertificato && e.target.showPicker?.()}
+                                        style={!haCertificato ? { backgroundColor: '#f3f4f6', color: '#9ca3af' } : {}}
+                                    />
                                 </div>
                                 <div className="form-group grid-span-2">
-                                    <label className="field-label">Livello</label>
+                                    <label className="field-label" style={{marginBottom: '6px', minHeight: '20px', display: 'flex', alignItems: 'center'}}>Socio/Tesserato</label>
                                     <select className="md-select" name="livello" value={formData.livello} onChange={handleChange}>
                                         <option value="ND">ND</option>
                                         <option value="Socio">Socio</option>
+                                        <option value="Tesserato">Tesserato</option>
                                     </select>
                                 </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Valutazione</label>
-                                    <select className="md-select" name="valutazione" value={formData.valutazione} onChange={handleChange}>
-                                        <option value="N.D.">N.D.</option>
-                                        <option value="Ottimo">Ottimo</option>
-                                    </select>
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Tessera società</label>
-                                    <input className="md-input" name="tessera_societa" value={formData.tessera_societa} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Tessera federazione</label>
-                                    <input className="md-input" name="tessera_federazione" placeholder="Tessera federazione" value={formData.tessera_federazione} onChange={handleChange} />
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label">Tessera EPS</label>
-                                    <input className="md-input" name="tessera_eps" placeholder="Tessera eps" value={formData.tessera_eps} onChange={handleChange} />
-                                </div>
-
+                                
                                 {/* Row 6 - Note and Extra */}
-                                <div className="form-group grid-span-4" style={{gridRow: 'span 2'}}>
+                                <div className="form-group grid-span-12" style={{gridRow: 'span 2'}}>
                                     <label className="field-label" style={{color: 'var(--success-color)', fontWeight:'bold'}}>Note</label>
                                     <textarea className="md-input" name="note" placeholder="Note" style={{height:'120px', resize:'none'}} value={formData.note} onChange={handleChange}></textarea>
-                                </div>
-
-                                {/* Extra Fields block */}
-                                <div className="grid-span-8 extra-fields-grid">
-                                    
-                                    {/* Placeholders from image */}
-                                    <div className="form-group">
-                                        <label className="field-label uppercase">INDIRIZZO</label>
-                                        <input className="md-input" disabled value="11/04/2025" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="field-label uppercase">LUOGO DI NASCITA</label>
-                                        <input className="md-input" disabled value="LUOGO DI NASCITA" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="field-label uppercase">DATA DI NASCITA</label>
-                                        <input className="md-input" disabled value="DATA DI NASCITA" />
-                                    </div>
-
-                                    {/* Actual fields */}
-                                    <div className="form-group">
-                                        <label className="field-label" style={{color:'var(--success-color)', fontWeight:'bold'}}>Data scadenza tesseramento</label>
-                                        <input className="md-input" type="date" name="data_scadenza_tesseramento" value={formData.data_scadenza_tesseramento} onChange={handleChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="field-label" style={{color:'var(--success-color)', fontWeight:'bold'}}>ID Badge</label>
-                                        <input className="md-input" name="id_badge" placeholder="ID BADGE" value={formData.id_badge} onChange={handleChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        {/* Empty placeholder */}
-                                    </div>
                                 </div>
                             </div>
                         </form>

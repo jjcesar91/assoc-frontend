@@ -1,5 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// Module-level cache
+let cachedComuni = null;
+let fetchPromise = null;
+
+const fetchAllComuni = async () => {
+    if (cachedComuni) return cachedComuni;
+    if (fetchPromise) return fetchPromise;
+
+    fetchPromise = fetch('https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json')
+        .then(res => {
+            if (!res.ok) throw new Error("Network response was not ok");
+            return res.json();
+        })
+        .then(data => {
+            // Extract just the names from the objects
+            cachedComuni = data.map(c => c.nome);
+            fetchPromise = null;
+            return cachedComuni;
+        })
+        .catch(err => {
+            console.error("Failed to fetch comuni list:", err);
+            fetchPromise = null;
+            return [];
+        });
+        
+    return fetchPromise;
+};
+
 const CityAutocomplete = ({ label, value, onChange, name, required = false, disabled = false, style }) => {
     const [query, setQuery] = useState(value || '');
     const [suggestions, setSuggestions] = useState([]);
@@ -23,6 +51,11 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Prefetch data on mount
+    useEffect(() => {
+        fetchAllComuni(); 
+    }, []);
+
     const fetchComuni = async (searchText) => {
         if (!searchText || searchText.length < 2) {
             setSuggestions([]);
@@ -32,41 +65,24 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
         
         setLoading(true);
         try {
-            // In a real scenario, you would fetch from your backend or an external API
-            // Example:
-            // const res = await fetch(`https://axqvoqvbfq.cloudimg.io/v7/https://comuni-ita.js.org/data/json/gi_comuni_cap.json`);
-            // const data = await res.json();
+            const allComuni = await fetchAllComuni();
             
-            // For Demo purposes, we simulate a delay and use a static list
-            // You can replace this list with the full JSON of Italian municipalities
-            const demoComuni = [
-                "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna", 
-                "Firenze", "Bari", "Catania", "Venezia", "Verona", "Messina", "Padova", 
-                "Trieste", "Taranto", "Brescia", "Prato", "Parma", "Modena", "Reggio Calabria",
-                "Reggio Emilia", "Perugia", "Ravenna", "Livorno", "Cagliari", "Foggia", 
-                "Rimini", "Salerno", "Ferrara", "Sassari", "Latina", "Giugliano in Campania",
-                "Monza", "Siracusa", "Pescara", "Bergamo", "Forlì", "Trento", "Vicenza", 
-                "Terni", "Bolzano", "Novara", "Piacenza", "Ancona", "Andria", "Arezzo", 
-                "Udine", "Cesena", "Lecce", "Pesaro", "Barletta", "Alessandria", "La Spezia",
-                "Pisa", "Pistoia", "Lucca", "Guidonia Montecelio", "Catanzaro", "Treviso",
-                "Como", "Busto Arsizio", "Grosseto", "Sesto San Giovanni", "Pozzuoli", "Varese", 
-                "Fiumicino", "Caserta", "Asti", "Cinisello Balsamo", "Aprilia", "Carpi", 
-                "Cremona", "Pavia", "Imola", "L'Aquila", "Altamura", "Massa", "Trapani", 
-                "Viterbo", "Cosenza", "Potenza", "Castellammare di Stabia", "Crotone", 
-                "Afragola", "Vittoria", "Pomezia", "Vigevano", "Carrara", "Viareggio", 
-                "Caltanissetta", "Fano", "Savona", "Matera", "Legnano", "Marano di Napoli", 
-                "Benevento", "Agrigento", "Faenza", "Cerignola", "Moncalieri", "Foligno", 
-                "Manfredonia", "Tivoli", "Avellino", "Bagheria", "Olbia", "Cuneo", "Anzio", 
-                "Sanremo", "Teramo", "Modica", "Bisceglie", "Siena", "San Severo", "Ercolano", 
-                "Portici", "Trani", "Velletri", "Cava de' Tirreni", "Acireale", "Rovigo", 
-                "Civitavecchia", "Gallarate", "Pordenone", "Aversa", "Montesilvano", "Mazara del Vallo", 
-                "Ascoli Piceno", "Battipaglia", "Campobasso", "Casoria", "Scafati", "Rho", 
-                "Chioggia", "Scandicci", "Collegno"
-            ];
+            if (!allComuni || allComuni.length === 0) {
+                setSuggestions([]);
+                setIsOpen(false);
+                return;
+            }
 
-            const filtered = demoComuni.filter(c => 
-                c.toLowerCase().includes(searchText.toLowerCase())
-            );
+            const lowerSearch = searchText.toLowerCase();
+            const filtered = allComuni.filter(c => 
+                c.toLowerCase().includes(lowerSearch)
+            ).sort((a, b) => {
+                const aStarts = a.toLowerCase().startsWith(lowerSearch);
+                const bStarts = b.toLowerCase().startsWith(lowerSearch);
+                if (aStarts && !bStarts) return -1;
+                if (!aStarts && bStarts) return 1;
+                return a.localeCompare(b);
+            }).slice(0, 50);
             
             setSuggestions(filtered);
             setIsOpen(true);
