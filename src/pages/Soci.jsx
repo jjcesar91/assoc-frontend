@@ -1,18 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import './Soci.css';
 import SocioModal from './SocioModal';
+import EditProfileModal from './EditProfileModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
-import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro } from 'lucide-react';
+import { useSocieta } from '../data/SocietaContext';
+import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
+    const { selectedSocietaId } = useSocieta();
     const [soci, setSoci] = useState([]);
-    const [societaList, setSocietaList] = useState([]);
-    const [selectedSocietaId, setSelectedSocietaId] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showEditProfileModal, setShowEditProfileModal] = useState(false);
     const [selectedSocio, setSelectedSocio] = useState(null);
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+
+    useEffect(() => {
+        // Fetch current user info for the menu
+        const fetchMe = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const response = await fetch('/auth/api/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setCurrentUser(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch user", e);
+            }
+        };
+        fetchMe();
+    }, []);
 
     const [filters, setFilters] = useState({
         cognome: '',
@@ -61,29 +85,10 @@ const Soci = ({ onLogout }) => {
     });
 
     useEffect(() => {
-        fetchSocieta();
-    }, []);
-
-    useEffect(() => {
         if (selectedSocietaId) {
             fetchSoci();
         }
     }, [selectedSocietaId]);
-
-    const fetchSocieta = async () => {
-        try {
-            const response = await fetch('/users/api/societa');
-            const data = await response.json();
-            if (Array.isArray(data)) {
-                setSocietaList(data);
-                if (data.length > 0 && !selectedSocietaId) {
-                    setSelectedSocietaId(data[0].id);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching societa:', error);
-        }
-    };
 
     const fetchSoci = async () => {
         if (!selectedSocietaId) return;
@@ -140,31 +145,8 @@ const Soci = ({ onLogout }) => {
 
     return (
         <div className="soci-full-container">
-            {/* AppBar */}
-            <div className="app-bar">
-                <div style={{display:'flex', alignItems:'center', gap:'16px'}}>
-                    <button className="icon-btn"><Menu size={24}/></button>
-                    <h1>Gestione Soci</h1>
-                </div>
-                <div className="app-bar-actions">
-                    <div style={{ marginRight: '16px' }}>
-                        <select
-                            className="md-select"
-                            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                            value={selectedSocietaId}
-                            onChange={(e) => setSelectedSocietaId(e.target.value)}
-                        >
-                            {societaList.map(s => (
-                                <option key={s.id} value={s.id}>{s.denominazione}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button className="icon-btn"><Search size={24}/></button>
-                    <button className="icon-btn"><Bell size={24}/></button>
-                    <button className="icon-btn" onClick={onLogout}><Settings size={24}/></button>
-                </div>
-            </div>
-
+            {/* AppBar removed, using Layout */}
+            
             <div className="main-content">
                 {/* Filters Toolbar */}
                 <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch'}}>
@@ -422,6 +404,11 @@ const Soci = ({ onLogout }) => {
             <AdvancedSearchSidebar 
                 isOpen={showAdvancedSearch} 
                 onClose={() => setShowAdvancedSearch(false)} 
+            />
+            
+            <EditProfileModal 
+                isOpen={showEditProfileModal} 
+                onClose={() => setShowEditProfileModal(false)} 
             />
         </div>
     );

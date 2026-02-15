@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import './App.css'
 import Login from './Login'
 import Soci from './pages/Soci'
+import Layout from './components/Layout'
+import SocietaAnagrafica from './pages/SocietaAnagrafica'
+import { SocietaProvider } from './data/SocietaContext'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,13 +33,24 @@ function App() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={handleLogin} /> : <Navigate to="/soci" />} />
-        <Route path="/soci" element={isAuthenticated ? <Soci onLogout={handleLogout}/> : <Navigate to="/login" />} />
-        <Route path="/" element={<Navigate to="/soci" />} />
-      </Routes>
-    </Router>
+    <SocietaProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={handleLogin} /> : <Navigate to="/soci" />} />
+          <Route path="/soci" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Soci">
+              <Soci />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/societa/anagrafica" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Anagrafica Società">
+              <SocietaAnagrafica />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/" element={<Navigate to="/soci" />} />
+        </Routes>
+      </Router>
+    </SocietaProvider>
   )
 }
 

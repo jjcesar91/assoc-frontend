@@ -14,7 +14,7 @@
 .soci-full-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   width: 100%;
   background-color: var(--bg-color);
   color: var(--text-primary);
@@ -377,4 +377,32 @@
 .dropdown-item-custom:hover {
     background-color: var(--bg-color);
     color: var(--primary-color);
+}
+
+/* Modern Profile Button */
+.profile-btn {
+    border-radius: 8px !important;
+    background-color: rgba(255, 255, 255, 0.15);
+    border: none !important;
+    padding: 6px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background-color 0.2s, transform 0.1s !important;
+    backdrop-filter: blur(4px);
+    width: auto !important;
+    height: auto !important;
+}
+
+.profile-btn:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.profile-btn:active {
+    transform: scale(0.96);
+}
+
+.profile-btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }

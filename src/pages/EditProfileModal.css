@@ -1,0 +1,139 @@
+.profile-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 50px;
+    z-index: 1000;
+}
+
+.profile-modal-content {
+    background-color: #f4f6f8;
+    padding: 24px;
+    border-radius: 8px;
+    min-width: 800px;
+    max-width: 90vw;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.profile-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #666;
+}
+
+.profile-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 10px;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 20px;
+    border-left: 4px solid #1976d2; /* Default blue */
+}
+
+.profile-card:last-child {
+    border-left-color: #f44336; /* Red for password */
+}
+
+.card-header h3 {
+    margin: 0 0 20px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1976d2;
+    text-transform: uppercase;
+}
+
+.profile-card:last-child .card-header h3 {
+    color: #1976d2; /* Password title is also blue in some designs, or keep red? Image shows "PASSWORD" in blue/default text color but red bar */
+    color: #3f51b5; 
+}
+
+.form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.modal-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background-color: #fff;
+    color: #333; /* Explicitly set dark text color */
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #1976d2;
+}
+
+.modal-input.readonly {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.modal-submit-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #00c853; /* Green */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.modal-submit-btn:hover {
+    background-color: #00e676;
+}
+
+.profile-modal-alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.profile-modal-alert.error {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef5350;
+}
+
+.profile-modal-alert.success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #66bb6a;
+}

@@ -110,9 +110,13 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
     };
 
     return (
-        <div className="form-group" ref={wrapperRef} style={{...style, position: 'relative'}}>
+        <div 
+            className="city-autocomplete-wrapper" 
+            ref={wrapperRef} 
+            style={{...style, position: 'relative'}}
+        >
             <label style={{marginBottom:'5px', display:'block'}}>{label} {required && '*'}</label>
-            <div style={{position:'relative'}}>
+            <div style={{position:'relative', display: 'flex'}}>
                 <input 
                     className="md-input" 
                     name={name}
@@ -122,7 +126,7 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
                     disabled={disabled}
                     required={required}
                     autoComplete="off"
-                    style={{width: '100%'}}
+                    style={{width: '100%', padding: '8px 12px'}}
                 />
                 {loading && (
                     <div style={{position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', color:'#999'}}>

@@ -1,0 +1,52 @@
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { X, Home, Briefcase, Settings, ChevronDown, List, User } from 'lucide-react';
+import './Sidebar.css';
+
+const Sidebar = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [isSocietaOpen, setIsSocietaOpen] = React.useState(false);
+
+    const handleNavigation = (path) => {
+        navigate(path);
+        onClose(); // Close sidebar on mobile/small screens or arguably always
+    };
+
+    return (
+        <>
+            {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
+            <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+                <div className="sidebar-header">
+                    <h2>Menu</h2>
+                    <button className="icon-btn" onClick={onClose}><X size={24} /></button>
+                </div>
+                <div className="sidebar-content">
+                    <div className="sidebar-item" onClick={() => setIsSocietaOpen(!isSocietaOpen)}>
+                        <Briefcase size={20} />
+                        <span>Società</span>
+                        <ChevronDown size={16} style={{ marginLeft: 'auto', transform: isSocietaOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    </div>
+                    
+                    {isSocietaOpen && (
+                        <div className="sidebar-sub-menu">
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/societa/anagrafica' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/societa/anagrafica')}
+                            >
+                                <span>Anagrafica</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="sidebar-item" onClick={() => handleNavigation('/soci')}>
+                        <User size={20} />
+                        <span>Soci</span>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
+export default Sidebar;
