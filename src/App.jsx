@@ -5,6 +5,7 @@ import Login from './Login'
 import Soci from './pages/Soci'
 import Layout from './components/Layout'
 import SocietaAnagrafica from './pages/SocietaAnagrafica'
+import AnnoContabile from './pages/AnnoContabile'
 import { SocietaProvider } from './data/SocietaContext'
 
 function App() {
@@ -45,6 +46,11 @@ function App() {
           <Route path="/societa/anagrafica" element={isAuthenticated ? (
             <Layout onLogout={handleLogout} title="Anagrafica Società">
               <SocietaAnagrafica />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/societa/anno-contabile" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Anno Contabile">
+              <AnnoContabile />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to="/soci" />} />

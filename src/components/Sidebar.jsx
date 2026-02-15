@@ -36,6 +36,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                             >
                                 <span>Anagrafica</span>
                             </div>
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/societa/anno-contabile' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/societa/anno-contabile')}
+                            >
+                                <span>Anno contabile</span>
+                            </div>
                         </div>
                     )}
 
