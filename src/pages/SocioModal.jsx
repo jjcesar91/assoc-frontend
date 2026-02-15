@@ -529,15 +529,22 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 <div className="form-group grid-span-4">
                                     <label className="field-label">Data nascita *</label>
-                                    <input 
-                                        className="md-input" 
-                                        type="date" 
-                                        name="data_nascita" 
-                                        value={formData.data_nascita} 
-                                        onChange={handleChange} 
-                                        onClick={(e) => e.target.showPicker?.()}
-                                        required 
-                                    />
+                                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                        <input 
+                                            className="md-input" 
+                                            type="date" 
+                                            name="data_nascita" 
+                                            value={formData.data_nascita} 
+                                            onChange={handleChange} 
+                                            required 
+                                            style={{width: '100%', paddingRight: '35px'}}
+                                        />
+                                        <Calendar 
+                                            size={18} 
+                                            style={{position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5}} 
+                                            onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()} 
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Row 2 */}
@@ -646,16 +653,33 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         />
                                         Ha certificato
                                     </label>
-                                    <input 
-                                        className="md-input" 
-                                        type="date" 
-                                        name="scadenza_certificato" 
-                                        value={formData.scadenza_certificato} 
-                                        onChange={handleChange} 
-                                        disabled={!haCertificato}
-                                        onClick={(e) => haCertificato && e.target.showPicker?.()}
-                                        style={!haCertificato ? { backgroundColor: '#f3f4f6', color: '#9ca3af' } : {}}
-                                    />
+                                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                        <input 
+                                            className="md-input" 
+                                            type="date" 
+                                            name="scadenza_certificato" 
+                                            value={formData.scadenza_certificato} 
+                                            onChange={handleChange} 
+                                            disabled={!haCertificato}
+                                            style={{
+                                                width: '100%', 
+                                                paddingRight: '35px',
+                                                backgroundColor: !haCertificato ? '#f3f4f6' : undefined,
+                                                color: !haCertificato ? '#9ca3af' : undefined
+                                            }}
+                                        />
+                                        <Calendar 
+                                            size={18} 
+                                            style={{
+                                                position: 'absolute', 
+                                                right: '10px', 
+                                                color: haCertificato ? '#6b7280' : '#d1d5db',
+                                                cursor: haCertificato ? 'pointer' : 'default',
+                                                zIndex: 5
+                                            }}
+                                            onClick={(e) => haCertificato && e.currentTarget.previousElementSibling.showPicker?.()} 
+                                        />
+                                    </div>
                                 </div>
                                 <div className="form-group grid-span-2">
                                     <label className="field-label" style={{marginBottom: '6px', minHeight: '20px', display: 'flex', alignItems: 'center'}}>Socio/Tesserato</label>
