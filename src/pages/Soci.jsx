@@ -6,6 +6,8 @@ import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, Mor
 
 const Soci = ({ onLogout }) => {
     const [soci, setSoci] = useState([]);
+    const [societaList, setSocietaList] = useState([]);
+    const [selectedSocietaId, setSelectedSocietaId] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedSocio, setSelectedSocio] = useState(null);
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
@@ -59,12 +61,34 @@ const Soci = ({ onLogout }) => {
     });
 
     useEffect(() => {
-        fetchSoci();
+        fetchSocieta();
     }, []);
 
-    const fetchSoci = async () => {
+    useEffect(() => {
+        if (selectedSocietaId) {
+            fetchSoci();
+        }
+    }, [selectedSocietaId]);
+
+    const fetchSocieta = async () => {
         try {
-            const response = await fetch('/users/api/soci');
+            const response = await fetch('/users/api/societa');
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                setSocietaList(data);
+                if (data.length > 0 && !selectedSocietaId) {
+                    setSelectedSocietaId(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching societa:', error);
+        }
+    };
+
+    const fetchSoci = async () => {
+        if (!selectedSocietaId) return;
+        try {
+            const response = await fetch(`/users/api/soci?societa_id=${selectedSocietaId}`);
             const data = await response.json();
             if (Array.isArray(data)) {
                 setSoci(data);
@@ -86,7 +110,8 @@ const Soci = ({ onLogout }) => {
             // In a real app we might create a user account first or handle it differently.
             const payload = {
                 ...formData,
-                user_id: !isUpdate ? 99999 + Math.floor(Math.random() * 100000) : (formData.user_id || 99999) 
+                user_id: !isUpdate ? 99999 + Math.floor(Math.random() * 100000) : (formData.user_id || 99999),
+                societa_id: selectedSocietaId
             };
             
             const response = await fetch(url, {
@@ -122,6 +147,18 @@ const Soci = ({ onLogout }) => {
                     <h1>Gestione Soci</h1>
                 </div>
                 <div className="app-bar-actions">
+                    <div style={{ marginRight: '16px' }}>
+                        <select
+                            className="md-select"
+                            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                            value={selectedSocietaId}
+                            onChange={(e) => setSelectedSocietaId(e.target.value)}
+                        >
+                            {societaList.map(s => (
+                                <option key={s.id} value={s.id}>{s.denominazione}</option>
+                            ))}
+                        </select>
+                    </div>
                     <button className="icon-btn"><Search size={24}/></button>
                     <button className="icon-btn"><Bell size={24}/></button>
                     <button className="icon-btn" onClick={onLogout}><Settings size={24}/></button>
