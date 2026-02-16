@@ -449,13 +449,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
-        { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
+        // { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
         { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: 0 },
         { id: 'Scadenzari', icon: <Calendar size={18}/>, label: 'Scadenzari', count: 0 },
         { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: 0 },
-        { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
+        // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
-        { id: 'Crediti', icon: <Coins size={18}/>, label: 'Crediti' }
+        // { id: 'Crediti', icon: <Coins size={18}/>, label: 'Crediti' }
     ];
 
     return (
