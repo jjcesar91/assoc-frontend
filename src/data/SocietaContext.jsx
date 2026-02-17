@@ -6,8 +6,18 @@ export const useSocieta = () => useContext(SocietaContext);
 
 export const SocietaProvider = ({ children }) => {
     const [societaList, setSocietaList] = useState([]);
-    const [selectedSocietaId, setSelectedSocietaId] = useState('');
+    // Initialize from localStorage
+    const [selectedSocietaId, setSelectedSocietaId] = useState(() => {
+        return localStorage.getItem('selectedSocietaId') || '';
+    });
     const [loading, setLoading] = useState(true);
+
+    // Persist to localStorage whenever selectedSocietaId changes
+    useEffect(() => {
+        if (selectedSocietaId) {
+            localStorage.setItem('selectedSocietaId', selectedSocietaId);
+        }
+    }, [selectedSocietaId]);
 
     const fetchSocieta = async () => {
         try {
@@ -15,8 +25,12 @@ export const SocietaProvider = ({ children }) => {
             const data = await response.json();
             if (Array.isArray(data)) {
                 setSocietaList(data);
+                
+                // capture the initial value (from localStorage) or current closure value
+                const currentId = selectedSocietaId;
+
                 // If there's no selected ID, or the selected ID is not in the new list, select the first one
-                if (data.length > 0 && (!selectedSocietaId || !data.find(s => s.id === selectedSocietaId))) {
+                if (data.length > 0 && (!currentId || !data.find(s => s.id === currentId))) {
                     setSelectedSocietaId(data[0].id);
                 }
             }
@@ -29,6 +43,7 @@ export const SocietaProvider = ({ children }) => {
 
     useEffect(() => {
         fetchSocieta();
+         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

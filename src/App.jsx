@@ -7,6 +7,8 @@ import Layout from './components/Layout'
 import SocietaAnagrafica from './pages/SocietaAnagrafica'
 import AnnoContabile from './pages/AnnoContabile'
 import SocietaComunicazioni from './pages/SocietaComunicazioni'
+import Modulistica from './pages/Modulistica'
+import TemplateStampa from './pages/TemplateStampa'
 import { SocietaProvider } from './data/SocietaContext'
 
 function App() {
@@ -57,6 +59,16 @@ function App() {
           <Route path="/societa/comunicazioni" element={isAuthenticated ? (
             <Layout onLogout={handleLogout} title="Comunicazioni">
               <SocietaComunicazioni />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/modulistica" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Modulistica">
+              <Modulistica />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/modulistica/template" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Template di Stampa">
+              <TemplateStampa />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to="/soci" />} />

@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Home, Briefcase, Settings, ChevronDown, List, User } from 'lucide-react';
+import { X, Home, Briefcase, Settings, ChevronDown, List, User, FileText } from 'lucide-react';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSocietaOpen, setIsSocietaOpen] = React.useState(false);
+    const [isModulisticaOpen, setIsModulisticaOpen] = React.useState(false);
 
     const handleNavigation = (path) => {
         navigate(path);
@@ -55,6 +56,29 @@ const Sidebar = ({ isOpen, onClose }) => {
                         <User size={20} />
                         <span>Soci</span>
                     </div>
+
+                    <div className="sidebar-item" onClick={() => setIsModulisticaOpen(!isModulisticaOpen)}>
+                        <FileText size={20} />
+                        <span>Modulistica</span>
+                        <ChevronDown size={16} style={{ marginLeft: 'auto', transform: isModulisticaOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    </div>
+
+                    {isModulisticaOpen && (
+                        <div className="sidebar-sub-menu">
+                             <div 
+                                className={`sidebar-sub-item ${location.pathname === '/modulistica' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/modulistica')}
+                            >
+                                <span>Moduli</span>
+                            </div>
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/modulistica/template' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/modulistica/template')}
+                            >
+                                <span>Template di Stampa</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </>
