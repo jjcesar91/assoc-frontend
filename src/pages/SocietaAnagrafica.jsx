@@ -276,7 +276,7 @@ const SocietaAnagrafica = () => {
                             </select>
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px', color: '#555' }}>Nome</label>
+                            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px', color: '#555' }}>Affiliazione</label>
                             <select 
                                 className="md-input" 
                                 value={tempAffiliazione.nome} 
@@ -284,7 +284,7 @@ const SocietaAnagrafica = () => {
                                 style={{ width: '100%', padding: '6px 8px' }}
                                 disabled={!tempAffiliazione.tipo}
                             >
-                                <option value="">Seleziona Nome...</option>
+                                <option value="">Seleziona...</option>
                                 {tempAffiliazione.tipo && ASSOCIAZIONE_OPTIONS[tempAffiliazione.tipo]?.map(opt => (
                                     <option key={opt} value={opt}>{opt}</option>
                                 ))}

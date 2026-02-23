@@ -115,7 +115,7 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
             ref={wrapperRef} 
             style={{...style, position: 'relative'}}
         >
-            <label style={{marginBottom:'5px', display:'block'}}>{label} {required && '*'}</label>
+            {label && <label className="field-label" style={{marginBottom:'6px', display:'block'}}>{label} {required && '*'}</label>}
             <div style={{position:'relative', display: 'flex'}}>
                 <input 
                     className="md-input" 

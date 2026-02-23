@@ -549,8 +549,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                                 {/* Row 2 */}
                                 <div className="form-group grid-span-2">
+                                    <label className="field-label">Luogo di nascita *</label>
                                     <CityAutocomplete 
-                                        label="Luogo di nascita" 
                                         name="luogo_nascita" 
                                         value={formData.luogo_nascita} 
                                         onChange={handleChange} 
@@ -599,8 +599,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     <input className="md-input" name="indirizzo" placeholder="VIA..." value={formData.indirizzo} onChange={handleChange} />
                                 </div>
                                 <div className="form-group grid-span-3">
+                                    <label className="field-label">Comune</label>
                                     <CityAutocomplete 
-                                        label="Comune" 
                                         name="comune" 
                                         value={formData.comune} 
                                         onChange={handleChange} 
