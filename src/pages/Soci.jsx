@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Soci.css';
 import SocioModal from './SocioModal';
 import EditProfileModal from './EditProfileModal';
+import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
@@ -11,7 +12,9 @@ const Soci = ({ onLogout }) => {
     const [soci, setSoci] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+    const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [selectedSocio, setSelectedSocio] = useState(null);
+    const [comunicazioneSocioId, setComunicazioneSocioId] = useState(null);
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -141,6 +144,11 @@ const Soci = ({ onLogout }) => {
     const handleEditSocio = (socio) => {
         setSelectedSocio(socio);
         setShowModal(true);
+    };
+
+    const handleOpenComunicazione = (socioId) => {
+        setComunicazioneSocioId(socioId);
+        setShowComunicazioneModal(true);
     };
 
     return (
@@ -378,8 +386,14 @@ const Soci = ({ onLogout }) => {
                                             <div style={{fontSize: '0.875rem'}}>{socio.telefono}</div>
                                         </td>
                                         <td style={{textAlign:'right'}}>
-                                            <button className="btn-icon-small" title="Modifica" onClick={() => handleEditSocio(socio)}><CreditCard size={18}/></button>
-                                            <button className="btn-icon-small" title="Invia Email"><Mail size={18}/></button>
+                                            <button className="btn-icon-small" title="Modifica" onClick={() => handleEditSocio(socio)}><Edit size={18}/></button>
+                                            <button 
+                                                className="btn-icon-small" 
+                                                title="Invia Email"
+                                                onClick={() => handleOpenComunicazione(socio.id)}
+                                            >
+                                                <Mail size={18}/>
+                                            </button>
                                             <button className="btn-icon-small"><Euro size={18}/></button>
                                         </td>
                                     </tr>
@@ -401,6 +415,16 @@ const Soci = ({ onLogout }) => {
 
             {showModal && <SocioModal onClose={() => setShowModal(false)} onSave={handleSaveSocio} socioData={selectedSocio} />}
             
+            {showComunicazioneModal && (
+                <ComunicazioneModal
+                    socioId={comunicazioneSocioId}
+                    onClose={() => setShowComunicazioneModal(false)}
+                    onSave={() => {
+                        // Optionally refresh socio list or show success message
+                    }}
+                />
+            )}
+
             <AdvancedSearchSidebar 
                 isOpen={showAdvancedSearch} 
                 onClose={() => setShowAdvancedSearch(false)} 

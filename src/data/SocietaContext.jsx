@@ -30,7 +30,7 @@ export const SocietaProvider = ({ children }) => {
                 const currentId = selectedSocietaId;
 
                 // If there's no selected ID, or the selected ID is not in the new list, select the first one
-                if (data.length > 0 && (!currentId || !data.find(s => s.id === currentId))) {
+                if (data.length > 0 && (!currentId || !data.find(s => s.id == currentId))) {
                     setSelectedSocietaId(data[0].id);
                 }
             }

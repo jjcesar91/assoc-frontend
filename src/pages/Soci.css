@@ -84,17 +84,24 @@
 
 .md-input, .md-select {
   padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 1rem;
+  border: 1px solid transparent;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+  font-size: 0.95rem;
   outline: none;
-  transition: border-color 0.3s;
+  transition: all 0.2s ease;
+  box-shadow: none;
+}
+
+.md-input:hover, .md-select:hover {
+  background-color: #e4e6eb;
 }
 
 .md-input:focus, .md-select:focus {
-  border-color: var(--primary-color);
-  border-width: 2px;
-  padding: 9px 11px;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  border-color: transparent;
+  padding: 10px 12px; /* Keep padding consistent */
 }
 
 .search-field-wrapper {

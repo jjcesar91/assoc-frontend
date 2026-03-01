@@ -1,0 +1,151 @@
+.comunicazione-modal {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    width: 600px;
+    max-width: 95%;
+    display: flex;
+    flex-direction: column;
+}
+
+.comunicazione-header {
+    background-color: #10b981; /* Green */
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.comunicazione-close {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.comunicazione-body {
+    padding: 24px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.comunicazione-type-selector {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 10px;
+}
+
+.type-btn {
+    padding: 8px 24px;
+    border: 1px solid #d1d5db;
+    background: white;
+    cursor: pointer;
+    font-weight: 500;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.type-btn:first-child {
+    border-radius: 6px 0 0 6px;
+    border-right: none;
+}
+
+.type-btn:last-child {
+    border-radius: 0 6px 6px 0;
+    border-left: none;
+}
+
+.type-btn.active {
+    background-color: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.comunicazione-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.comunicazione-field label {
+    font-weight: 500;
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.comunicazione-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #374151;
+    background-color: white;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.comunicazione-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.comunicazione-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.comunicazione-footer {
+    padding: 16px 24px;
+    background-color: white; /* was #f3f4f6 */
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-annulla {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+
+.btn-invia {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px; /* was 6px */
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+
+.btn-annulla:hover { background-color: #dc2626; }
+.btn-invia:hover { background-color: #059669; }

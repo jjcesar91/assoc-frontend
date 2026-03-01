@@ -44,60 +44,68 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
             <div 
                 onClick={() => setIsOpen(!isOpen)}
                 style={{
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    minHeight: '38px',
-                    backgroundColor: 'white',
+                    border: '1px solid transparent',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    minHeight: '40px',
+                    backgroundColor: isOpen ? 'white' : '#f0f2f5',
                     cursor: 'pointer',
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '4px',
                     alignItems: 'center',
-                    position: 'relative'
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isOpen ? '0 0 0 2px rgba(25, 118, 210, 0.2)' : 'none'
                 }}
             >
-                {selectedOptions.length === 0 && <span style={{color: '#888'}}>Seleziona...</span>}
-                
-                {selectedOptions.map(option => (
-                    <span key={option.value} style={{
-                        backgroundColor: '#e0e7ff',
-                        color: '#3730a3',
-                        borderRadius: '4px',
-                        padding: '2px 6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.9rem'
-                    }}>
-                        {option.label}
-                        <X size={14} style={{cursor: 'pointer'}} onClick={(e) => handleRemove(e, option.value)} />
-                    </span>
-                ))}
-                
-                 <div style={{flex: 1}}></div>
+                <div style={{display:'flex', flexWrap:'wrap', gap:'6px', flex:1}}>
+                    {selectedOptions.length === 0 && <span style={{color: '#666', fontSize:'0.9rem'}}>Seleziona...</span>}
+                    
+                    {selectedOptions.map(option => (
+                        <span key={option.value} style={{
+                            backgroundColor: '#e3f2fd',
+                            color: '#1565c0',
+                            borderRadius: '16px',
+                            padding: '4px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: 500
+                        }}>
+                            {option.label}
+                            <X size={14} style={{cursor: 'pointer'}} onClick={(e) => handleRemove(e, option.value)} />
+                        </span>
+                    ))}
+                </div>
                  
-                 {value.length > 0 && (
-                    <div onClick={handleClear} style={{display:'flex', alignItems:'center', marginRight:'4px'}}>
-                         <X size={16} color="#666"/>
-                    </div>
-                 )}
+                 <div style={{display:'flex', alignItems:'center', marginLeft:'8px', color: '#757575'}}>
+                     {value.length > 0 ? (
+                        <div onClick={handleClear} style={{display:'flex', alignItems:'center', cursor:'pointer', padding:'4px', borderRadius:'50%'}}>
+                             <X size={16} />
+                        </div>
+                     ) : (
+                        <ChevronDown size={16} />
+                     )}
+                 </div>
             </div>
 
             {isOpen && (
                 <div style={{
                     position: 'absolute',
-                    top: '100%',
+                    top: 'calc(100% + 4px)',
                     left: 0,
                     right: 0,
                     backgroundColor: 'white',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    marginTop: '4px',
-                    maxHeight: '200px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    maxHeight: '220px',
                     overflowY: 'auto',
                     zIndex: 1000,
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    padding: '8px 0'
                 }}>
                     {options.map(option => {
                         const isSelected = value.includes(option.value);
@@ -106,20 +114,26 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                                 key={option.value}
                                 onClick={() => handleSelect(option.value)}
                                 style={{
-                                    padding: '8px 12px',
+                                    padding: '10px 16px',
                                     cursor: 'pointer',
-                                    backgroundColor: isSelected ? '#4f46e5' : 'transparent',
-                                    color: isSelected ? 'white' : 'inherit',
-                                    transition: 'background-color 0.2s'
+                                    backgroundColor: 'transparent',
+                                    color: isSelected ? '#1976d2' : '#333',
+                                    fontWeight: isSelected ? 500 : 400,
+                                    fontSize: '0.9rem',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'background-color 0.1s'
                                 }}
                                 onMouseEnter={(e) => {
-                                    if(!isSelected) e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                    e.currentTarget.style.backgroundColor = isSelected ? 'rgba(25, 118, 210, 0.08)' : '#f5f5f5';
                                 }}
                                 onMouseLeave={(e) => {
-                                    if(!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
                                 }}
                             >
                                 {option.label}
+                                {isSelected && <span style={{fontSize:'1.1rem'}}>✓</span>}
                             </div>
                         );
                     })}

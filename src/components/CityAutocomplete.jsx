@@ -126,7 +126,7 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
                     disabled={disabled}
                     required={required}
                     autoComplete="off"
-                    style={{width: '100%', padding: '8px 12px'}}
+                    style={{width: '100%'}}
                 />
                 {loading && (
                     <div style={{position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', color:'#999'}}>

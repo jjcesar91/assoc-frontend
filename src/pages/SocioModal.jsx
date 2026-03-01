@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle } from 'lucide-react';
+import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare } from 'lucide-react';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
+import ComunicazioneModal from '../components/ComunicazioneModal';
 import './SocioModal.css';
 
 const SocioModal = ({ onClose, onSave, socioData }) => {
@@ -60,6 +61,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [highlightCF, setHighlightCF] = useState(false);
     const [emailError, setEmailError] = useState(null);
     const [haCertificato, setHaCertificato] = useState(false);
+    const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
+    const [comunicazioni, setComunicazioni] = useState([]);
 
     // Effect to clear highlight
     useEffect(() => {
@@ -148,6 +151,25 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }
         return age < 18;
     }, [formData.data_nascita]);
+
+    const fetchComunicazioni = async () => {
+        if (!formData.id) return;
+        try {
+            const response = await fetch(`/users/api/soci/${formData.id}/comunicazioni`);
+            if (response.ok) {
+                const data = await response.json();
+                setComunicazioni(data);
+            }
+        } catch (error) {
+            console.error('Error fetching comunicazioni:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'Comunicazioni' && formData.id) {
+            fetchComunicazioni();
+        }
+    }, [activeTab, formData.id]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -451,7 +473,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
         // { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
         { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: 0 },
-        { id: 'Scadenzari', icon: <Calendar size={18}/>, label: 'Scadenzari', count: 0 },
         { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: 0 },
         // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
@@ -699,7 +720,143 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </form>
                     )}
                     
-                    {activeTab !== 'Anagrafica' && (
+                    {activeTab === 'Comunicazioni' && (
+                        isEditMode ? (
+                            <div style={{padding: '24px'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+                                    <h3 style={{margin: 0, fontSize: '1.2rem', fontWeight: 600, color: '#111827'}}>Comunicazioni</h3>
+                                    <button 
+                                        className="btn-save-full" 
+                                        style={{width: 'auto', padding: '8px 16px', backgroundColor: '#10b981'}}
+                                        onClick={() => setShowComunicazioneModal(true)}
+                                    >
+                                        <Mail size={18} style={{marginRight: '8px'}}/>
+                                        Nuova Comunicazione
+                                    </button>
+                                </div>
+                                
+                                <div style={{
+                                    backgroundColor: '#fff', 
+                                    border: '1px solid #e5e7eb', 
+                                    borderRadius: '8px', 
+                                    overflow: 'hidden'
+                                }}>
+                                    {comunicazioni.length > 0 ? (
+                                        <div style={{display: 'flex', flexDirection: 'column'}}>
+                                            <div style={{
+                                                display: 'grid', 
+                                                gridTemplateColumns: '150px 80px 80px 1fr 120px', 
+                                                padding: '12px 16px', 
+                                                background: '#f9fafb', 
+                                                borderBottom: '1px solid #e5e7eb', 
+                                                fontWeight: 600, 
+                                                fontSize: '0.85rem', 
+                                                color: '#6b7280',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.025em'
+                                            }}>
+                                                <div>Data</div>
+                                                <div>Tipo</div>
+                                                <div>Stato</div>
+                                                <div>Oggetto / Contenuto</div>
+                                                <div>Mittente</div>
+                                            </div>
+                                            <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+                                            {comunicazioni.map((com) => (
+                                                <div key={com.id} style={{
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: '150px 80px 80px 1fr 120px', 
+                                                    padding: '16px 16px', 
+                                                    borderBottom: '1px solid #f3f4f6', 
+                                                    fontSize: '0.9rem', 
+                                                    alignItems: 'center',
+                                                    backgroundColor: 'white'
+                                                }}>
+                                                    <div style={{
+                                                        color: '#111827', 
+                                                        fontSize: '0.85rem',
+                                                        display: 'flex',
+                                                        flexDirection: 'column'
+                                                    }}>
+                                                        <span>{new Date(com.data_invio || com.createdAt).toLocaleDateString()}</span>
+                                                        <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>{new Date(com.data_invio || com.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '9999px', 
+                                                            fontSize: '0.7rem', 
+                                                            fontWeight: 600,
+                                                            backgroundColor: com.tipo === 'EMAIL' ? '#eff6ff' : '#fdf2f8',
+                                                            color: com.tipo === 'EMAIL' ? '#2563eb' : '#db2777',
+                                                            display: 'inline-block',
+                                                            border: `1px solid ${com.tipo === 'EMAIL' ? '#dbeafe' : '#fce7f3'}`
+                                                        }}>
+                                                            {com.tipo}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            color: com.isInviato ? '#059669' : '#d97706',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 500
+                                                        }}>
+                                                            {com.isInviato ? <Check size={14} strokeWidth={2.5} /> : <Activity size={14} />} {com.isInviato ? 'Inviato' : 'In attesa'}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{
+                                                        whiteSpace: 'nowrap', 
+                                                        overflow: 'hidden', 
+                                                        textOverflow: 'ellipsis', 
+                                                        paddingRight: '16px',
+                                                        color: '#374151',
+                                                        display: 'flex',
+                                                        alignItems: 'center'
+                                                    }}>
+                                                        {com.tipo === 'EMAIL' && com.oggetto ? (
+                                                            <div style={{maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, color: '#111827', marginRight: '6px'}} title={com.oggetto}>{com.oggetto}</div>
+                                                        ) : null}
+                                                        <div style={{
+                                                            color: '#6b7280', 
+                                                            fontSize: '0.85rem',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            flex: 1
+                                                        }} title={com.testo ? com.testo.replace(/<[^>]+>/g, '') : ''}>
+                                                            {com.tipo === 'EMAIL' && com.oggetto ? '- ' : ''}
+                                                            {com.testo ? com.testo.replace(/<[^>]+>/g, '') : ''}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{fontSize: '0.85rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                                        {com.mittente_nome || 'Sistema'}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{padding: '60px 20px', textAlign: 'center', color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                                            <div style={{backgroundColor: '#f3f4f6', padding: '16px', borderRadius: '50%', marginBottom: '16px'}}>
+                                                <Mail size={32} />
+                                            </div>
+                                            <p style={{margin: 0, fontWeight: 500}}>Nessuna comunicazione inviata</p>
+                                            <p style={{margin: '8px 0 0 0', fontSize: '0.9rem', maxWidth: '300px'}}>Utilizza il pulsante "Nuova Comunicazione" per inviare email o SMS a questo socio.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{padding: '24px', textAlign: 'center', color: '#6b7280'}}>
+                                Devi prima salvare il socio per inviare comunicazioni.
+                            </div>
+                        )
+                    )}
+
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
@@ -715,6 +872,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     </button>
                 </div>
             </div>
+
+            {showComunicazioneModal && (
+                 <ComunicazioneModal 
+                    onClose={() => setShowComunicazioneModal(false)}
+                    socioId={formData.id}
+                    onSave={() => {
+                        fetchComunicazioni();
+                    }}
+                 />
+            )}
         </div>
     );
 };

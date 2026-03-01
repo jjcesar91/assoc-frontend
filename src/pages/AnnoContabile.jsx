@@ -174,7 +174,7 @@ const AnnoContabile = () => {
                             style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: 'white' }}
                         >
                             <option value="solare">Anno Solare (01/01 - 31/12)</option>
-                            <option value="associativo">Anno Associativo (01/09 - 31/08)</option>
+                            <option value="associativo">Anno Sportivo (01/09 - 31/08)</option>
                             <option value="personalizzato">Personalizzato</option>
                         </select>
                         <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>

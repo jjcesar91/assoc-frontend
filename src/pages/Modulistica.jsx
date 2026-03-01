@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, Calendar } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 
 const Modulistica = () => {
@@ -10,6 +10,11 @@ const Modulistica = () => {
     const [editingId, setEditingId] = useState(null);
     const [modalContent, setModalContent] = useState('');
     const contentRef = useRef(null);
+    
+    // Print Modal State
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [printDate, setPrintDate] = useState('');
+    const [moduloToPrint, setModuloToPrint] = useState(null);
 
     const [moduli, setModuli] = useState([]);
 
@@ -65,7 +70,20 @@ const Modulistica = () => {
         setIsModalOpen(true);
     };
 
-    const handlePrint = (modulo) => {
+    const handlePrintRequest = (modulo) => {
+        setModuloToPrint(modulo);
+        setPrintDate(new Date().toISOString().split('T')[0]);
+        setIsPrintModalOpen(true);
+    };
+
+    const handleConfirmPrint = () => {
+        if (moduloToPrint && printDate) {
+            executePrint(moduloToPrint, printDate);
+            setIsPrintModalOpen(false);
+        }
+    };
+
+    const executePrint = (modulo, dateToPrint) => {
         let societa = null;
         if (selectedSocietaId && societaList.length > 0) {
             societa = societaList.find(s => s.id == selectedSocietaId);
@@ -86,7 +104,7 @@ const Modulistica = () => {
         const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
         const cf = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
         const footerText = societa ? (societa.footer_text || '') : '';
-        const today = new Date().toLocaleDateString('it-IT');
+        const today = new Date(dateToPrint).toLocaleDateString('it-IT');
 
         // Helper to convert image to base64 to avoid CORS/Loading issues in PDF
         const getBase64Image = (url) => {
@@ -376,7 +394,7 @@ const Modulistica = () => {
                                             <button 
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#28a745' }} 
                                                 title="Stampa PDF"
-                                                onClick={() => handlePrint(modulo)}
+                                                onClick={() => handlePrintRequest(modulo)}
                                             >
                                                 <Printer size={18} />
                                             </button>
@@ -420,7 +438,7 @@ const Modulistica = () => {
                         maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#333' }}>Nuovo Modulo</h3>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#333' }}>{editingId ? 'Modifica Modulo' : 'Nuovo Modulo'}</h3>
                             <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                                 <X size={24} />
                             </button>
@@ -496,6 +514,67 @@ const Modulistica = () => {
                                 }}
                             >
                                 Salva
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Print Date Modal */}
+            {isPrintModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', borderRadius: '8px', padding: '24px', width: '90%', maxWidth: '400px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#333' }}>Stampa Modulo</h3>
+                            <button onClick={() => setIsPrintModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>Seleziona la data per il documento</label>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input 
+                                    type="date" 
+                                    className="md-input"
+                                    value={printDate} 
+                                    onChange={(e) => setPrintDate(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 35px 10px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333' }}
+                                />
+                                <Calendar 
+                                    size={18} 
+                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }} 
+                                    onClick={(e) => {
+                                        // Try to find the input sibling to show picker
+                                        const input = e.currentTarget.parentNode.querySelector('input[type="date"]');
+                                        if (input && input.showPicker) input.showPicker();
+                                    }} 
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                             <button
+                                onClick={() => setIsPrintModalOpen(false)}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer'
+                                }}
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={handleConfirmPrint}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer'
+                                }}
+                            >
+                                Conferma e Stampa
                             </button>
                         </div>
                     </div>
