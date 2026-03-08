@@ -3,9 +3,11 @@ import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Che
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
+import { useSocieta } from '../data/SocietaContext';
 import './SocioModal.css';
 
 const SocioModal = ({ onClose, onSave, socioData }) => {
+    const { societaList, selectedSocietaId } = useSocieta();
     // Determine if we are editing an existing scio or creating a new one
     const isEditMode = !!socioData;
     
@@ -38,6 +40,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
         // Dati Societari
         scadenza_certificato: '',
+        data_ammissione: '', // Nuovo campo data iscrizione socio
         livello: 'ND',
         valutazione: 'N.D.',
         tessera_societa: '',
@@ -63,6 +66,371 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [haCertificato, setHaCertificato] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [comunicazioni, setComunicazioni] = useState([]);
+    
+    // Iscrizione State
+    const [showIscrizioneModal, setShowIscrizioneModal] = useState(false);
+    const [iscrizioneDate, setIscrizioneDate] = useState(new Date().toISOString().split('T')[0]);
+    const [iscrizioneStatus, setIscrizioneStatus] = useState(null); // 'ISCRITTO' | 'NON ISCRITTO'
+    const [currentIscrizioneDate, setCurrentIscrizioneDate] = useState(''); // Date string for display
+    const [currentRefYear, setCurrentRefYear] = useState(null);
+
+    // Accetta come Socio State
+    const [showAccettaSocioModal, setShowAccettaSocioModal] = useState(false);
+    const [accettaSocioDate, setAccettaSocioDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Print State
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
+    const [targetModuleName, setTargetModuleName] = useState(null);
+    const [isCustomPrint, setIsCustomPrint] = useState(false);
+    const [availableModules, setAvailableModules] = useState([]);
+
+    // Load html2pdf
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+        script.async = true;
+        document.body.appendChild(script);
+        return () => {
+             if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        }
+    }, []);
+
+    const handlePrintRequest = async (moduleName) => {
+        setPrintDate(new Date().toISOString().split('T')[0]);
+        
+        if (moduleName === 'altri_moduli') {
+            setIsCustomPrint(true);
+            setTargetModuleName('');
+            try {
+                const response = await fetch('/documents/api/moduli');
+                if (response.ok) {
+                    const data = await response.json();
+                    setAvailableModules(data);
+                    if (data.length > 0) {
+                        setTargetModuleName(data[0].descrizione);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Errore nel caricamento dei moduli");
+                return;
+            }
+        } else {
+            setIsCustomPrint(false);
+            setTargetModuleName(moduleName);
+        }
+        setShowPrintModal(true);
+    };
+
+    const executePrint = async () => {
+        if (!targetModuleName) {
+            alert("Seleziona un modulo");
+            return;
+        }
+
+        try {
+            let modulo = null;
+
+            if (isCustomPrint && availableModules.length > 0) {
+                 modulo = availableModules.find(m => m.descrizione === targetModuleName);
+            }
+
+            if (!modulo) {
+                // Fetch all modules to find the right one (fallback for standard actions)
+                const response = await fetch('/documents/api/moduli');
+                if (!response.ok) throw new Error('Failed to fetch modules');
+                const moduli = await response.json();
+                
+                // Loose match by description (case insensitive)
+                modulo = moduli.find(m => m.descrizione.toLowerCase() === targetModuleName.toLowerCase().replace(/_/g, ' '));
+            }
+            
+            if (!modulo) {
+                alert(`Modulo "${targetModuleName.replace(/_/g, ' ')}" non trovato nella sezione Modulistica.`);
+                return;
+            }
+
+            // Prepare Data
+            let societa = null;
+            if (selectedSocietaId && societaList) {
+                societa = societaList.find(s => s.id == selectedSocietaId);
+            }
+            
+            let logoUrl = '';
+            if (societa && societa.logo_path) {
+                if (societa.logo_path.startsWith('http') || societa.logo_path.startsWith('blob:') || societa.logo_path.startsWith('data:')) {
+                    logoUrl = societa.logo_path;
+                } else {
+                    logoUrl = `/users/${societa.logo_path.startsWith('/') ? societa.logo_path.slice(1) : societa.logo_path}`;
+                }
+            }
+            
+            const denomination = societa ? societa.denominazione : 'Nome Società';
+            const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
+            const cfInfo = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
+            const today = new Date(printDate).toLocaleDateString('it-IT');
+
+            // Helper to convert image to base64
+            const getBase64Image = (url) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = url;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    };
+                    img.onerror = reject;
+                });
+            };
+
+            const generatePDF = (logoBase64 = null) => {
+                const element = document.createElement('div');
+                element.style.width = '100%'; 
+                element.style.maxWidth = '800px';
+                
+                // Format birth date for display
+                let birthDateDisplay = '';
+                if (formData.data_nascita) {
+                    const d = new Date(formData.data_nascita);
+                    if (!isNaN(d.getTime())) {
+                        birthDateDisplay = d.toLocaleDateString('it-IT');
+                    } else {
+                        birthDateDisplay = formData.data_nascita;
+                    }
+                }
+
+                element.innerHTML = `
+                <div style="padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
+                    
+                    <!-- HEADER -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 15px;">
+                        <div style="flex: 0 0 150px; height: 100px; display: flex; align-items: center; justify-content: flex-start;">
+                            ${logoBase64 ? `<img src="${logoBase64}" style="max-height: 100px; max-width: 150px; object-fit: contain;" />` : ''}
+                        </div>
+                        <div style="flex: 1; text-align: right; padding-left: 20px;">
+                            <h3 style="margin: 0; font-size: 16pt; font-weight: bold; line-height: 1.2;">${denomination}</h3>
+                            <div style="font-size: 10pt; margin-top: 5px; line-height: 1.3;">${address}</div>
+                            <div style="font-size: 10pt; margin-top: 2px;">${cfInfo}</div>
+                        </div>
+                    </div>
+
+                    <!-- TITLE -->
+                    <h1 style="text-align: center; font-size: 20pt; font-weight: bold; margin: 0 0 30px 0; text-transform: uppercase;">${modulo.descrizione}</h1>
+
+                    <!-- MEMBER TABLE -->
+                    <style>
+                        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 10pt; }
+                        .pdf-table td { border: 1px solid #000; padding: 8px; vertical-align: top; }
+                        .pdf-label { font-size: 8pt; text-transform: uppercase; color: #000; margin-bottom: 4px; font-weight: bold; }
+                        .pdf-value { min-height: 18px; font-weight: 500; }
+                    </style>
+                    <table class="pdf-table">
+                        <tr>
+                            <td style="width: 25%;">
+                                <div class="pdf-label">COGNOME</div>
+                                <div class="pdf-value">${formData.cognome || ''}</div>
+                            </td>
+                            <td style="width: 25%;">
+                                <div class="pdf-label">NOME</div>
+                                <div class="pdf-value">${formData.nome || ''}</div>
+                            </td>
+                            <td style="width: 25%;">
+                                <div class="pdf-label">DATA DI NASCITA</div>
+                                <div class="pdf-value">${birthDateDisplay}</div>
+                            </td>
+                            <td style="width: 25%;">
+                                <div class="pdf-label">LUOGO DI NASCITA</div>
+                                <div class="pdf-value">${formData.luogo_nascita || ''}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                             <td colspan="2">
+                                <div class="pdf-label">CODICE FISCALE</div>
+                                <div class="pdf-value">${formData.codice_fiscale || ''}</div>
+                            </td>
+                             <td>
+                                <div class="pdf-label">TELEFONO</div>
+                                <div class="pdf-value">${formData.telefono || ''}</div>
+                            </td>
+                            <td>
+                                <div class="pdf-label">EMAIL</div>
+                                <div class="pdf-value">${formData.email || ''}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">
+                                <div class="pdf-label">INDIRIZZO RESIDENZA</div>
+                                <div class="pdf-value">${formData.indirizzo || ''} ${formData.cap || ''} ${formData.comune || ''}</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- BODY CONTENT -->
+                    <div style="font-size: 11pt; line-height: 1.6; text-align: justify; margin-bottom: 60px;">
+                        ${modulo.htmlContent || modulo.testo || ''}
+                    </div>
+
+                    <!-- SIGNATURES -->
+                    <table style="width: 100%; margin-top: 50px; border: none;">
+                        <tr>
+                            <td style="width: 40%; vertical-align: bottom; font-size: 12pt;">
+                                ${today}
+                            </td>
+                            <td style="width: 20%;"></td>
+                            <td style="width: 40%; text-align: center; vertical-align: bottom;">
+                                <div style="font-size: 12pt; margin-bottom: 40px; text-align: left;">Firma</div>
+                                <div style="border-bottom: 1px solid #000; height: 1px;"></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                `;
+
+                const opt = {
+                    margin: 0.5,
+                    filename: `${modulo.descrizione.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${formData.cognome}_${formData.nome}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+
+                if (window.html2pdf) {
+                    setTimeout(() => {
+                        window.html2pdf().set(opt).from(element).save();
+                        setShowPrintModal(false);
+                    }, 500);
+                } else {
+                    alert("La libreria PDF sta caricando, riprova tra un secondo.");
+                }
+            };
+
+            if (logoUrl) {
+                getBase64Image(logoUrl)
+                    .then(base64 => generatePDF(base64))
+                    .catch(e => {
+                        console.error("Logo error", e);
+                        generatePDF();
+                    });
+            } else {
+                generatePDF();
+            }
+
+        } catch (e) {
+            console.error("Print Error:", e);
+            alert("Errore durante la generazione del modulo");
+        }
+    };
+
+    // Calculate Fiscal Year
+    useEffect(() => {
+        if (selectedSocietaId && societaList) {
+            const societa = societaList.find(s => s.id == selectedSocietaId);
+            if (societa) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1;
+                const day = now.getDate();
+                
+                let calculatedYear = year;
+                if (societa.tipo_anno_associativo === 'associativo') {
+                    if (month < 9) calculatedYear = year - 1;
+                } else if (societa.tipo_anno_associativo === 'personalizzato' && societa.data_inizio_anno_associativo) {
+                    const parts = societa.data_inizio_anno_associativo.split('-');
+                    if (parts.length === 2) {
+                        const cDay = parseInt(parts[0], 10);
+                        const cMonth = parseInt(parts[1], 10);
+                        if (month < cMonth || (month === cMonth && day < cDay)) {
+                            calculatedYear = year - 1;
+                        }
+                    }
+                }
+                setCurrentRefYear(calculatedYear);
+            }
+        }
+    }, [selectedSocietaId, societaList]);
+
+    // Fetch Subscription Status
+    useEffect(() => {
+        if (formData.id && currentRefYear) {
+            fetch(`/users/api/soci/${formData.id}/iscrizione`)
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        const active = data.find(i => i.anno === currentRefYear);
+                        setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
+                        setCurrentIscrizioneDate(active ? active.data_iscrizione : '');
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+    }, [formData.id, currentRefYear]);
+
+    const handleIscrizioneSubmit = async () => {
+        try {
+            const response = await fetch(`/users/api/soci/${formData.id}/iscrizione`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data_iscrizione: iscrizioneDate,
+                    tipo: 'senza_ricevuta'
+                })
+            });
+            if (response.ok) {
+                const data = await response.json(); // returns { iscrizione, status, anno }
+                // Confirm matches displayed year
+                if (data.anno === currentRefYear) {
+                     setIscrizioneStatus('ISCRITTO');
+                     setCurrentIscrizioneDate(data.iscrizione.data_iscrizione);
+                }
+                setShowIscrizioneModal(false);
+            }
+        } catch (e) {
+            console.error("Error creating iscrizione", e);
+        }
+    };
+
+    const handleAccettaSocioSubmit = async () => {
+        try {
+            // Update Livello to 'Socio' and set Data Ammissione
+            const updateRes = await fetch(`/users/api/soci/${formData.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    livello: 'Socio',
+                    data_ammissione: accettaSocioDate // Save the date from the modal
+                }) 
+            });
+            
+            if (!updateRes.ok) {
+                 const err = await updateRes.json();
+                 alert('Errore aggiornamento livello socio: ' + (err.error || err.message));
+                 return;
+            }
+
+            // Update local form data
+            setFormData(prev => ({ 
+                ...prev, 
+                livello: 'Socio',
+                data_ammissione: accettaSocioDate
+            }));
+            
+            setShowAccettaSocioModal(false);
+            
+            // Note: We do NOT create an Iscrizione (as per request), just update the socio status.
+        } catch (e) {
+            console.error("Error accepting socio", e);
+            alert("Errore di rete");
+        }
+    };
 
     // Effect to clear highlight
     useEffect(() => {
@@ -112,6 +480,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 recapito_2: socioData.recapito_2 || '',
                 recapito_3: socioData.recapito_3 || '',
                 scadenza_certificato: socioData.scadenza_certificato || '',
+                data_ammissione: socioData.data_ammissione || '',
                 livello: socioData.livello || 'ND',
                 valutazione: socioData.valutazione || 'N.D.',
                 tessera_societa: socioData.tessera_societa || '',
@@ -464,6 +833,28 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }
     };
 
+    const handleRevocaIscrizione = async () => {
+        if (!currentRefYear || !formData.id) return;
+        if (!window.confirm(`Sei sicuro di voler revocare l'iscrizione per l'anno ${currentRefYear}?`)) return;
+
+        try {
+            const response = await fetch(`/users/api/soci/${formData.id}/iscrizione`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anno: currentRefYear })
+            });
+            
+            if (response.ok) {
+                setIscrizioneStatus('NON ISCRITTO');
+                setCurrentIscrizioneDate('');
+            } else {
+                alert('Errore revoca iscrizione');
+            }
+        } catch (e) {
+             console.error("Error revoking iscrizione", e);
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
@@ -483,6 +874,110 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         <div className="modal-overlay">
             <div className="modal-card socio-modal" style={{maxWidth: '1200px', width: '95%', maxHeight: '95vh', display: 'flex', flexDirection: 'column'}}>
                 
+                {/* Top Header with Name and Actions */}
+                <div style={{
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '16px 24px', 
+                    borderBottom: '1px solid #e5e7eb',
+                    backgroundColor: '#fff'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                        <div>
+                             <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
+                                {isEditMode ? (
+                                    `${formData.nome || ''} ${formData.cognome || ''}`
+                                ) : (
+                                    'Nuovo Socio'
+                                )}
+                            </h2>
+                            {isEditMode && iscrizioneStatus && (
+                                <span style={{
+                                    fontSize: '0.75rem', 
+                                    fontWeight: 'bold', 
+                                    padding: '2px 8px', 
+                                    borderRadius: '4px',
+                                    backgroundColor: iscrizioneStatus === 'ISCRITTO' ? '#dcfce7' : '#fee2e2',
+                                    color: iscrizioneStatus === 'ISCRITTO' ? '#166534' : '#991b1b',
+                                    border: `1px solid ${iscrizioneStatus === 'ISCRITTO' ? '#22c55e' : '#ef4444'}`,
+                                    marginTop: '4px',
+                                    display: 'inline-block'
+                                }}>
+                                    {iscrizioneStatus} {currentRefYear ? `(${currentRefYear})` : ''}
+                                </span>
+                            )}
+                        </div>
+
+                        {isEditMode && (
+                            <select 
+                                className="md-select" 
+                                style={{ width: 'auto', minWidth: '120px', padding: '6px 12px', margin: 0 }}
+                                defaultValue=""
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'comunicazione') {
+                                        setShowComunicazioneModal(true);
+                                    } else if (val === 'nuovo_pagamento') {
+                                        setActiveTab('Pagamenti');
+                                    } else if (val === 'iscrizione_senza_ricevuta') {
+                                        setShowIscrizioneModal(true);
+                                    } else if (val === 'revoca_iscrizione') {
+                                        handleRevocaIscrizione();
+                                    } else if (val === 'accetta_socio') {
+                                        setShowAccettaSocioModal(true);
+                                    } else if (val === 'modulo_iscrizione') {
+                                        handlePrintRequest('MODULO ISCRIZIONE');
+                                    } else if (val === 'informativa_privacy') {
+                                        handlePrintRequest('INFORMATIVA PRIVACY');
+                                    } else if (val === 'altri_moduli') {
+                                        handlePrintRequest('altri_moduli');
+                                    } else {
+                                        console.log('Action selected:', val);
+                                    }
+                                    // Reset
+                                    e.target.value = "";
+                                }}
+                            >
+                                <option value="" disabled>Azioni</option>
+                                
+                                <option value="comunicazione">Invia comunicazione</option>
+                                <option value="iscrizione_senza_ricevuta">Iscrizione senza ricevuta</option>
+                                <option value="revoca_iscrizione">Revoca iscrizione</option>
+                                <option value="accetta_socio">Accetta come socio</option>
+                                <option value="nuovo_pagamento">Nuovo pagamento</option>
+                                
+                                <optgroup label="Modulistica">
+                                    <option value="modulo_iscrizione">MODULO ISCRIZIONE</option>
+                                    <option value="informativa_privacy">INFORMATIVA PRIVACY</option>
+                                    <option value="altri_moduli">Altri moduli</option>
+                                </optgroup>
+                            </select>
+                        )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button 
+                            onClick={onClose}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#6b7280',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <X size={24}/>
+                        </button>
+                    </div>
+                </div>
+
                 {/* Tabs Header */}
                 <div className="modal-tabs-header">
                     {isEditMode ? (
@@ -500,10 +995,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     ) : (
                         <div style={{padding: '10px 16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563'}}>
                             <User size={18}/>
-                            <span>Nuovo Socio</span>
+                            <span>Dati Anagrafici</span>
                         </div>
                     )}
-                    <button className="modal-close-icon" onClick={onClose}><X size={24}/></button>
+                    {/* Close button moved to top header */}
                 </div>
                 
                 {warningMessage && (
@@ -663,6 +1158,26 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 )}
 
                                 {/* Row 5 - Tessere */}
+                                <div className="form-group grid-span-3">
+                                    <label className="field-label">Data Iscrizione ({currentRefYear})</label>
+                                    <input 
+                                        className="md-input" 
+                                        type="date" 
+                                        value={currentIscrizioneDate} 
+                                        readOnly 
+                                        style={{ backgroundColor: '#f9fafb', color: '#374151' }}
+                                    />
+                                </div>
+                                <div className="form-group grid-span-3">
+                                    <label className="field-label">Data Ammissione (Libro Soci)</label>
+                                    <input 
+                                        className="md-input" 
+                                        type="date" 
+                                        name="data_ammissione" 
+                                        value={formData.data_ammissione} 
+                                        onChange={handleChange} 
+                                    />
+                                </div>
                                 <div className="form-group grid-span-2">
                                     <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', minHeight: '20px'}}>
                                         <input 
@@ -881,6 +1396,155 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         fetchComunicazioni();
                     }}
                  />
+            )}
+
+            {showIscrizioneModal && (
+                <div className="modal-overlay" style={{zIndex: 2000}}>
+                    <div className="modal-card" style={{maxWidth: '400px', width: '90%', padding: '24px'}}>
+                        <h3 style={{marginTop: 0}}>Iscrizione senza ricevuta</h3>
+                        <p style={{color: '#6b7280', fontSize: '0.9rem'}}>
+                            Registra l'iscrizione per l'anno {currentRefYear} senza generare movimenti contabili.
+                        </p>
+                        
+                        <div className="form-group" style={{marginTop: '16px'}}>
+                            <label className="field-label">Data Iscrizione</label>
+                            <input 
+                                className="md-input" 
+                                type="date" 
+                                value={iscrizioneDate} 
+                                onChange={(e) => setIscrizioneDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div style={{display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end'}}>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => setShowIscrizioneModal(false)}
+                                style={{padding: '8px 16px'}}
+                            >
+                                Annulla
+                            </button>
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleIscrizioneSubmit}
+                                style={{padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
+                            >
+                                Conferma Iscrizione
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAccettaSocioModal && (
+                <div className="modal-overlay" style={{zIndex: 2000}}>
+                    <div className="modal-card" style={{maxWidth: '400px', width: '90%', padding: '24px'}}>
+                        <h3 style={{marginTop: 0}}>Accetta come Socio</h3>
+                        <p style={{color: '#6b7280', fontSize: '0.9rem'}}>
+                            Imposta lo stato del socio come "Socio" e registra la data di ammissione nel libro soci.
+                        </p>
+                        
+                        <div className="form-group" style={{marginTop: '16px'}}>
+                            <label className="field-label">Data Ammissione</label>
+                            <input 
+                                className="md-input" 
+                                type="date" 
+                                value={accettaSocioDate} 
+                                onChange={(e) => setAccettaSocioDate(e.target.value)}
+                            />
+                        </div>
+
+                        <div style={{display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end'}}>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => setShowAccettaSocioModal(false)}
+                                style={{padding: '8px 16px'}}
+                            >
+                                Annulla
+                            </button>
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleAccettaSocioSubmit}
+                                style={{padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
+                            >
+                                Conferma
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showPrintModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', borderRadius: '8px', padding: '24px', width: '90%', maxWidth: '400px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#333' }}>
+                                {isCustomPrint ? 'Stampa Modulo' : `Stampa ${targetModuleName}`}
+                            </h3>
+                            <button onClick={() => setShowPrintModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            {isCustomPrint && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>Seleziona Modulo</label>
+                                    <select 
+                                        className="md-select" 
+                                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333' }}
+                                        value={targetModuleName || ''}
+                                        onChange={(e) => setTargetModuleName(e.target.value)}
+                                    >
+                                        {availableModules.map(m => (
+                                            <option key={m.id} value={m.descrizione}>{m.descrizione}</option>
+                                        ))}
+                                        {availableModules.length === 0 && <option value="" disabled>Nessun modulo disponibile</option>}
+                                    </select>
+                                </div>
+                            )}
+
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>Data del documento</label>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input 
+                                    type="date" 
+                                    className="md-input"
+                                    value={printDate} 
+                                    onChange={(e) => setPrintDate(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 35px 10px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333' }}
+                                />
+                                <Calendar 
+                                    size={18} 
+                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }} 
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                             <button
+                                onClick={() => setShowPrintModal(false)}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer'
+                                }}
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={executePrint}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer'
+                                }}
+                            >
+                                Conferma e Stampa
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

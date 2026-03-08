@@ -8,7 +8,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
-    const { selectedSocietaId } = useSocieta();
+    const { selectedSocietaId, societaList } = useSocieta();
     const [soci, setSoci] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -20,6 +20,35 @@ const Soci = ({ onLogout }) => {
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [currentRefYear, setCurrentRefYear] = useState(null);
+
+    // Calculate Fiscal Year
+    useEffect(() => {
+        if (selectedSocietaId && societaList) {
+            const societa = societaList.find(s => s.id == selectedSocietaId);
+            if (societa) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1;
+                const day = now.getDate();
+                
+                let calculatedYear = year;
+                if (societa.tipo_anno_associativo === 'associativo') {
+                    if (month < 9) calculatedYear = year - 1;
+                } else if (societa.tipo_anno_associativo === 'personalizzato' && societa.data_inizio_anno_associativo) {
+                    const parts = societa.data_inizio_anno_associativo.split('-');
+                    if (parts.length === 2) {
+                        const cDay = parseInt(parts[0], 10);
+                        const cMonth = parseInt(parts[1], 10);
+                        if (month < cMonth || (month === cMonth && day < cDay)) {
+                            calculatedYear = year - 1;
+                        }
+                    }
+                }
+                setCurrentRefYear(calculatedYear);
+            }
+        }
+    }, [selectedSocietaId, societaList]);
 
     useEffect(() => {
         // Fetch current user info for the menu
@@ -70,12 +99,17 @@ const Soci = ({ onLogout }) => {
         return '2'; // Valido
     };
 
+    const checkIscrizione = (socio) => {
+        if (!currentRefYear || !socio.iscrizioni) return false;
+        return socio.iscrizioni.some(i => i.anno === currentRefYear);
+    };
+
     const filteredSoci = soci.filter(socio => {
         if (filters.cognome && (!socio.cognome || !socio.cognome.toLowerCase().includes(filters.cognome.toLowerCase()))) return false;
         if (filters.nome && (!socio.nome || !socio.nome.toLowerCase().includes(filters.nome.toLowerCase()))) return false;
         
         if (filters.iscritto !== '') {
-            const isActive = socio.is_active ? '1' : '0';
+            const isActive = checkIscrizione(socio) ? '1' : '0';
             if (isActive !== filters.iscritto) return false;
         }
 
@@ -356,8 +390,8 @@ const Soci = ({ onLogout }) => {
                                             {socio.data_nascita}
                                         </td>
                                         <td>
-                                            <span className={`chip ${socio.is_active ? 'iscritto' : 'non-iscritto'}`}>
-                                                {socio.is_active ? 'ISCRITTO' : 'NON ISCRITTO'}
+                                            <span className={`chip ${checkIscrizione(socio) ? 'iscritto' : 'non-iscritto'}`}>
+                                                {checkIscrizione(socio) ? 'ISCRITTO' : 'NON ISCRITTO'}
                                             </span>
                                         </td>
                                         <td>

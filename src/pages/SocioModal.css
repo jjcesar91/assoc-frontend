@@ -125,6 +125,7 @@
     font-size: 0.9rem;
     color: #374151;
     background-color: white;
+    color-scheme: light; /* Force light mode controls for white background */
 }
 .md-input:focus, .md-select:focus {
     border-color: var(--success-color, #10b981);
