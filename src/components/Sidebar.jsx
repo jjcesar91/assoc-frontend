@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Home, Briefcase, Settings, ChevronDown, List, User, FileText } from 'lucide-react';
+import { X, Home, Briefcase, Settings, ChevronDown, List, User, FileText, ShoppingBag, CreditCard } from 'lucide-react';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -55,6 +55,16 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <div className="sidebar-item" onClick={() => handleNavigation('/soci')}>
                         <User size={20} />
                         <span>Soci</span>
+                    </div>
+
+                    <div className="sidebar-item" onClick={() => handleNavigation('/prodotti')}>
+                        <ShoppingBag size={20} />
+                        <span>Prodotti</span>
+                    </div>
+
+                    <div className="sidebar-item" onClick={() => handleNavigation('/pagamenti')}>
+                        <CreditCard size={20} />
+                        <span>Pagamenti</span>
                     </div>
 
                     <div className="sidebar-item" onClick={() => setIsModulisticaOpen(!isModulisticaOpen)}>
