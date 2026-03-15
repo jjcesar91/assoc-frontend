@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import './Soci.css';
 import SocioModal from './SocioModal';
 import EditProfileModal from './EditProfileModal';
@@ -21,6 +22,25 @@ const Soci = ({ onLogout }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [currentRefYear, setCurrentRefYear] = useState(null);
+
+    const location = useLocation();
+    const [hasOpenedFromUrl, setHasOpenedFromUrl] = useState(false);
+
+    useEffect(() => {
+        if (soci && soci.length > 0 && !hasOpenedFromUrl) {
+            const params = new URLSearchParams(location.search);
+            const apriSocioId = params.get('apriSocioPath');
+            if (apriSocioId) {
+                const socioDaAprire = soci.find(s => s.id.toString() === apriSocioId);
+                if (socioDaAprire) {
+                    setSelectedSocio(socioDaAprire);
+                    setShowModal(true);
+                    setHasOpenedFromUrl(true);
+                }
+            }
+        }
+    }, [soci, location.search, hasOpenedFromUrl]);
+    
 
     // Calculate Fiscal Year
     useEffect(() => {

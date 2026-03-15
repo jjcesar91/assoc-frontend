@@ -1,0 +1,155 @@
+.ricerva-socio-modal {
+    max-width: 800px;
+    width: 90%;
+    margin: 50px auto;
+    background-color: #f8fafc;
+}
+
+.ricerca-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.form-group-rm {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.form-group-rm label {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+.ricerca-list {
+    background: #fff;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.md-table-rm {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Let's style the header of the table if there is one, or just the rows */
+.md-table-rm tr {
+    border-bottom: 1px solid #eef0f3;
+}
+
+.md-table-rm td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 14px;
+    color: #333;
+}
+
+.badge-rm {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+
+.badge-success { background-color: #2ecc71; }
+.badge-danger { background-color: #e74c3c; }
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 1000;
+}
+
+.modal-container {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-top: 10vh;
+    max-height: 80vh;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+
+.md-input-rm {
+    padding: 8px 12px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
+}
+
+.btn-scheda-rm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.btn-seleziona-rm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}

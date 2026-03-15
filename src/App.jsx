@@ -10,7 +10,8 @@ import SocietaComunicazioni from './pages/SocietaComunicazioni'
 import Modulistica from './pages/Modulistica'
 import TemplateStampa from './pages/TemplateStampa'
 import Prodotti from './pages/Prodotti'
-import Pagamenti from './pages/Pagamenti'
+import Pagamenti from './pages/Pagamenti';
+import NuovoPagamento from './pages/NuovoPagamento';
 import { SocietaProvider } from './data/SocietaContext'
 
 function App() {
@@ -76,6 +77,11 @@ function App() {
           <Route path="/prodotti" element={isAuthenticated ? (
             <Layout onLogout={handleLogout} title="Prodotti">
               <Prodotti />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/nuovo-pagamento" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Nuovo Pagamento">
+              <NuovoPagamento />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/pagamenti" element={isAuthenticated ? (

@@ -1,0 +1,121 @@
+.dpm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dpm-modal {
+    background-color: white;
+    width: 100%;
+    max-width: 800px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.dpm-header {
+    background-color: #f1c40f;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.dpm-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dpm-title h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.dpm-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dpm-body {
+    padding: 20px;
+}
+
+.dpm-section {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.dpm-section-title {
+    background-color: #f0f2f5;
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 18px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.dpm-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 15px 20px;
+    gap: 20px;
+}
+
+.dpm-field label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 14px;
+}
+
+.dpm-value {
+    color: #333;
+    font-size: 14px;
+}
+
+.dpm-divider {
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 0;
+}
+
+.dpm-ricevuta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dpm-badge-valida {
+    background-color: #2ecc71;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dpm-quote-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 20px;
+    font-size: 14px;
+}

@@ -1,0 +1,146 @@
+.fast-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 50px;
+    z-index: 1000;
+}
+
+.fast-modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 600px;
+    max-width: 90%;
+    color: #333;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.fast-modal-header {
+    background-color: #f1c40f; 
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fast-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+.fast-modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fast-modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.fast-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fast-form-group label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.payment-mode-group {
+    display: flex;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.payment-mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fff;
+    border: none;
+    border-right: 1px solid #ddd;
+    padding: 10px 0;
+    font-size: 0.95rem;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.payment-mode-btn:last-child {
+    border-right: none;
+}
+
+.payment-mode-btn.active {
+    background-color: #2ecc71;
+    color: #fff;
+}
+
+.payment-mode-btn.active svg {
+    color: #fff;
+}
+
+.fast-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background-color: #fff;
+    color: #333;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.fast-input:focus {
+    outline: none;
+    border-color: #1976d2;
+}
+
+.fast-btn-generate {
+    background: #2ecc71;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.fast-btn-generate:hover {
+    background-color: #27ae60;
+}

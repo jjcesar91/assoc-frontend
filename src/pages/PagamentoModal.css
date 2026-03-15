@@ -1,3 +1,29 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 50px;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: relative;
+    color: #333;
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
 .pagamento-modal {
     max-width: 800px;
     width: 90%;
@@ -19,8 +45,18 @@
     font-size: 1.2rem;
 }
 
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
 }
 
 .section-header {
@@ -40,7 +76,7 @@
 
 .gray-bg {
     background-color: #f0f0f0;
-    padding: 10px;
+    padding: 10px 20px;
     margin: 0 -20px; /* stretch to edges */
     border-bottom: none;
 }
@@ -53,13 +89,16 @@
     background: #2ecc71;
     color: white;
     border: none;
-    padding: 6px 15px;
+    padding: 8px 20px;
     border-radius: 4px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     cursor: pointer;
     font-weight: bold;
+    width: max-content;
+    text-transform: uppercase;
 }
 
 .form-grid {
@@ -72,8 +111,38 @@
     grid-column: 1 / -1;
 }
 
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background-color: #fff;
+    color: #333;
+    font-family: inherit;
+}
+
+.form-group input:focus, 
+.form-group select:focus, 
+.form-group textarea:focus {
+    outline: none;
+    border-color: #1976d2;
+}
+
 .input-with-badge {
     padding: 8px 0;
+    display: flex;
+    align-items: center;
 }
 
 .badge-valid {
@@ -88,7 +157,8 @@
 
 .readonly-val {
     padding: 8px 0;
-    font-weight: bold;
+    font-weight: 600;
+    color: #333;
 }
 
 .quote-row {
@@ -103,18 +173,22 @@
 }
 
 .azioni-row {
-    padding: 15px 0 0 0;
+    padding: 15px 0;
     text-align: right;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .btn-annulla {
     background: #e74c3c;
     color: white;
     border: none;
-    padding: 8px 15px;
+    padding: 10px 20px;
     border-radius: 4px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
     cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
 }

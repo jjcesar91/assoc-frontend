@@ -1,15 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
-import PagamentoModal from './PagamentoModal';
+import { useNavigate } from 'react-router-dom';
+import PagamentoFastModal from './PagamentoFastModal';
+import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import './Soci.css';
 
 const Pagamenti = () => {
     const { selectedSocietaId } = useSocieta();
+    const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentPayment, setCurrentPayment] = useState(null);
+    const [showPaymentMenu, setShowPaymentMenu] = useState(false);
+    const [isFastModalOpen, setIsFastModalOpen] = useState(false);
+    const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowPaymentMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.addEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const [filters, setFilters] = useState({
         intestatario: '',
@@ -46,17 +64,6 @@ const Pagamenti = () => {
 
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
-    };
-
-    const openModal = (payment = null) => {
-        setCurrentPayment(payment);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setCurrentPayment(null);
-        setIsModalOpen(false);
-        fetchPayments();
     };
 
     const renderPaymentIcon = (modalita) => {
@@ -179,13 +186,80 @@ const Pagamenti = () => {
                             >
                                 <Printer size={14}/> Esporta elenco
                             </button>
-                            <button 
-                                className="btn-contained" 
-                                style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
-                                onClick={() => openModal()}
-                            >
-                                <Plus size={14}/> Nuovo Pagamento
-                            </button>
+                            <div style={{ position: 'relative' }} ref={menuRef}>
+                                <button 
+                                    className="btn-contained" 
+                                    style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                    onClick={() => setShowPaymentMenu(!showPaymentMenu)}
+                                >
+                                    <Plus size={14}/> Nuovo Pagamento <ChevronDown size={14}/>
+                                </button>
+                                
+                                {showPaymentMenu && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        right: 0,
+                                        marginTop: '5px',
+                                        backgroundColor: 'white',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                        minWidth: '150px',
+                                        zIndex: 100,
+                                        overflow: 'hidden',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        padding: '5px 0'
+                                    }}>
+                                        <button 
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 16px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                color: '#333',
+                                                textAlign: 'left'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                            onClick={() => {
+                                                setShowPaymentMenu(false);
+                                                navigate('/nuovo-pagamento');
+                                            }}
+                                        >
+                                            <span style={{fontSize: '18px', fontWeight: '400', width: '20px', textAlign: 'center'}}>€</span> Normale
+                                        </button>
+                                        <button 
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 16px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                color: '#333',
+                                                textAlign: 'left'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                            onClick={() => {
+                                                setShowPaymentMenu(false);
+                                                setIsFastModalOpen(true);
+                                            }}
+                                        >
+                                            <Zap size={18} style={{width: '20px'}} strokeWidth={1.5} /> Fast
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -222,7 +296,7 @@ const Pagamenti = () => {
                                         const isEntrata = amount >= 0;
                                         
                                         return (
-                                            <tr key={p.id} onDoubleClick={() => openModal(p)} style={{
+                                            <tr key={p.id} style={{
                                                 backgroundColor: isEntrata ? '#fff' : '#fceceb', 
                                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                                                 borderLeft: `5px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`
@@ -274,9 +348,15 @@ const Pagamenti = () => {
                                                 </td>
                                                 <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
                                                     <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
-                                                        <button style={{border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}} title="Dettaglio" onClick={() => openModal(p)}><Folder size={16} /></button>
-                                                        <button style={{border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa"><Printer size={16} /></button>
-                                                        <button style={{border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia"><Mail size={16} /></button>
+                                                        <button 
+                                                            style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}} 
+                                                            title="Dettaglio"
+                                                            onClick={() => setSelectedPaymentDetail(p)}
+                                                        >
+                                                            <Folder size={16} />
+                                                        </button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa"><Printer size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia"><Mail size={16} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -306,14 +386,17 @@ const Pagamenti = () => {
 
             </div>
 
-            {isModalOpen && (
-                <PagamentoModal 
-                    isOpen={isModalOpen} 
-                    onClose={closeModal} 
-                    payment={currentPayment} 
-                    societaId={selectedSocietaId}
-                />
-            )}
+            <PagamentoFastModal 
+                isOpen={isFastModalOpen} 
+                onClose={() => setIsFastModalOpen(false)} 
+                societaId={selectedSocietaId} 
+            />
+
+            <DettaglioPagamentoModal
+                isOpen={selectedPaymentDetail !== null}
+                onClose={() => setSelectedPaymentDetail(null)}
+                pagamento={selectedPaymentDetail}
+            />
         </div>
     );
 };

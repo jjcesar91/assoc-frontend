@@ -1,0 +1,259 @@
+.np-container {
+    padding: 24px;
+    background-color: #f7f9fc;
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+}
+
+.np-grid {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.np-col-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.np-col-right {
+    flex: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+@media (max-width: 900px) {
+    .np-grid {
+        flex-direction: column;
+    }
+}
+
+.np-card {
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    border: 1px solid #eef0f3;
+}
+
+.np-card-header {
+    padding: 14px 20px;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.np-header-default {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #eef0f3;
+    color: #111;
+}
+
+.np-header-yellow {
+    background-color: #f4b619;
+    color: #ffffff;
+}
+
+.np-header-green {
+    background-color: #37cc7b;
+    color: #ffffff;
+}
+
+.np-card-body {
+    padding: 20px;
+}
+
+/* Base button */
+.np-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.np-btn:hover {
+    filter: brightness(0.95);
+}
+
+.np-btn-yellow {
+    background-color: #f4b619;
+    color: white;
+}
+
+.np-btn-red {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.np-btn-light-green {
+    background-color: #8ce1b2;
+    color: white;
+    cursor: not-allowed;
+}
+
+.np-btn-green {
+    background-color: #37cc7b;
+    color: white;
+}
+
+.np-btn-outline-yellow {
+    background-color: transparent;
+    border: 1px solid #f4b619;
+    color: #f4b619;
+}
+.np-btn-outline-yellow:hover {
+    background-color: #fef9e8;
+}
+
+/* Inputs specifically white */
+.np-input, .np-select {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #dcdfe6;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+}
+.np-input::placeholder {
+    color: #999;
+}
+.np-input:focus, .np-select:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.np-search-group {
+    display: flex;
+    margin-bottom: 20px;
+}
+.np-search-group .np-input {
+    flex: 1;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.np-search-group .np-btn-search {
+    background: #f8f9fc;
+    border: 1px solid #dcdfe6;
+    border-left: none;
+    padding: 0 16px;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    color: #666;
+    cursor: pointer;
+}
+
+/* Tables */
+.np-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.np-table th {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eef0f3;
+}
+
+.np-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid #f5f6f9;
+}
+
+/* Specific green table */
+.np-table-green th {
+    color: #37cc7b;
+}
+
+.np-table-selectable tr {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.np-table-selectable tr:hover {
+    background: #fdfdfd;
+}
+
+.np-alert-red {
+    color: #e74c3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.np-badge-price {
+    background-color: #17b794; /* slightly distinct teal-green for price tags */
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Pagination */
+.np-pagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.np-page-btn {
+    background: white;
+    border: 1px solid #dcdfe6;
+    color: #1976d2;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.np-page-btn.active {
+    background: #1976d2;
+    color: white;
+    border-color: #1976d2;
+}
+
+.np-recent-payment-item {
+    border: 1px solid #fde7ac;
+    background-color: #fffdf6;
+    padding: 14px 16px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.np-cart-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.np-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+}
+.np-badge-danger {
+    background-color: #e74c3c;
+}
