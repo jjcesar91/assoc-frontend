@@ -119,3 +119,154 @@
     padding: 15px 20px;
     font-size: 14px;
 }
+
+.dpm-badge-annullata {
+    background-color: #e74c3c;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dpm-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
+}
+
+.dpm-footer-annullato {
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    background-color: #fdedec;
+    color: #c0392b;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.dpm-btn-annulla {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dpm-btn-annulla:hover {
+    background-color: #c0392b;
+}
+
+/* Modal conferma annullamento */
+.dpm-confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+}
+
+.dpm-confirm-modal {
+    background: white;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.dpm-confirm-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #e74c3c;
+    color: white;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.dpm-confirm-body {
+    padding: 20px 24px;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.dpm-confirm-body p {
+    margin: 0 0 12px 0;
+}
+
+.dpm-confirm-body p:last-child {
+    margin-bottom: 0;
+}
+
+.dpm-confirm-warning {
+    color: #c0392b;
+    font-weight: 600;
+    background-color: #fdedec;
+    border-left: 3px solid #e74c3c;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+}
+
+.dpm-confirm-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
+}
+
+.dpm-confirm-btn-cancel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    color: #555;
+    border: 1px solid #ccc;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dpm-confirm-btn-cancel:hover {
+    background-color: #f0f0f0;
+}
+
+.dpm-confirm-btn-ok {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dpm-confirm-btn-ok:hover {
+    background-color: #c0392b;
+}

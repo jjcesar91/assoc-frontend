@@ -7,7 +7,7 @@ import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import './Soci.css';
 
 const Pagamenti = () => {
-    const { selectedSocietaId } = useSocieta();
+    const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,13 +39,24 @@ const Pagamenti = () => {
     });
 
     useEffect(() => {
+        // Reset filtri e stato UI al cambio società
+        setFilters({
+            intestatario: '',
+            dataDa: '',
+            dataA: '',
+            utente: 'TUTTI',
+            statoPagamento: 'TUTTI',
+            modalitaPagamento: 'TUTTI'
+        });
+        setSelectedPaymentDetail(null);
+        setIsFastModalOpen(false);
         if (selectedSocietaId) {
             fetchPayments();
         } else {
             setPayments([]);
             setLoading(false);
         }
-    }, [selectedSocietaId]);
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchPayments = async () => {
         setLoading(true);
@@ -59,6 +70,168 @@ const Pagamenti = () => {
             console.error("Error fetching payments", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeletePayment = async (id) => {
+        if (!window.confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
+        try {
+            const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                setPayments(prev => prev.filter(p => p.id !== id));
+                if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
+            } else {
+                alert('Errore durante l\'eliminazione del pagamento');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Errore di rete');
+        }
+    };
+
+    const handlePrintPayment = (p) => {
+        const societa = societaList.find(s => s.id == selectedSocietaId);
+
+        const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
+
+        const modalitaMap = {
+            'Contanti': 'CONTANTI',
+            'POS': 'CARTA/BANCOMAT',
+            'Bonifico': 'BONIFICO',
+            'Assegno': 'ASSEGNO',
+            'Online': 'ONLINE',
+            'Carta/Bancomat': 'CARTA/BANCOMAT',
+        };
+        const modalitaLabel = modalitaMap[p.modalita_pagamento] || (p.modalita_pagamento?.toUpperCase() || '');
+
+        const importoFormatted = Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',');
+        const quoteItems = (p.quote || '').split(', ').filter(Boolean);
+
+        const quoteRows = quoteItems.map(q => `
+            <tr>
+                <td>${q}</td>
+                <td style="text-align:right">${quoteItems.length === 1 ? importoFormatted : ''}</td>
+            </tr>
+        `).join('');
+
+        const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
+        const footerText = societa?.footer_text ||
+            'Fuori campo iva art.4 dpr 633/72 - Esente imposte art.148 TUIR -<br/>Esente bollo L 30/12/2018 n. 145 art.1 c.646';
+        const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Ricevuta ${p.numero_ricevuta || p.id}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
+        .header { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+        .header-logo { margin-right: 20px; }
+        .header-logo img { max-height: 70px; }
+        .header-info { text-align: right; }
+        .header-info h2 { margin: 0 0 4px 0; font-size: 16px; }
+        .header-info div { font-size: 12px; color: #444; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        .info-table th { background: #f9f9f9; border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
+        .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
+        .items-table th:last-child { text-align: right; }
+        .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
+        .items-table td:last-child { text-align: right; }
+        .total-row td { font-weight: bold; border-top: 2px solid #333; }
+        .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
+        .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
+        @media print { body { padding: 0; } }
+        @page { margin: 10mm; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        ${logoUrl ? `<div class="header-logo"><img src="${logoUrl}" alt="Logo" /></div>` : ''}
+        <div class="header-info">
+            <h2>${societa?.denominazione || ''}</h2>
+            <div>${societaAddress}</div>
+            <div>CF: ${societa?.codice_fiscale || ''}</div>
+        </div>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <th>TIPO DOCUMENTO</th>
+            <th>NUMERO DOCUMENTO</th>
+            <th>PROGRESSIVO STAGIONE</th>
+            <th>DATA DOCUMENTO</th>
+            <th>STATO DOCUMENTO</th>
+        </tr>
+        <tr>
+            <td>RICEVUTA</td>
+            <td>${p.numero_ricevuta || ''}</td>
+            <td>${p.progressivo_stagione || ''}</td>
+            <td>${p.data_ricevuta || p.data_pagamento || ''}</td>
+            <td>${statoLabel}</td>
+        </tr>
+        <tr>
+            <th colspan="2">INTESTATARIO</th>
+            <th colspan="2">CODICE FISCALE / PARTITA IVA INTESTATARIO</th>
+            <th>MODALITA' PAGAMENTO</th>
+        </tr>
+        <tr>
+            <td colspan="2">${(p.intestatario || '').toUpperCase()}</td>
+            <td colspan="2">${p.codice_fiscale || p.partita_iva || ''}</td>
+            <td>${modalitaLabel}</td>
+        </tr>
+        <tr>
+            <th colspan="3">INDIRIZZO</th>
+            <th colspan="2">DATI DI CHI HA EFFETTUATO IL PAGAMENTO</th>
+        </tr>
+        <tr>
+            <td colspan="3"></td>
+            <td colspan="2">${p.codice_fiscale_genitore || ''}</td>
+        </tr>
+        <tr><th colspan="5">NOTE</th></tr>
+        <tr><td colspan="5">${p.note || ''}</td></tr>
+    </table>
+
+    <table class="items-table">
+        <tr>
+            <th>Descrizione</th>
+            <th>Subtotale</th>
+        </tr>
+        ${quoteRows}
+        <tr class="total-row">
+            <td>TOTALE</td>
+            <td>${importoFormatted}</td>
+        </tr>
+    </table>
+
+    <div class="footer-text">${footerText}</div>
+    <div class="separator">_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _</div>
+    <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+    };
+
+    const handleAnnullaRicevuta = async (id) => {
+        try {
+            const response = await fetch(`/payments/api/${id}/annulla`, { method: 'PATCH' });
+            if (response.ok) {
+                const updated = await response.json();
+                setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
+                setSelectedPaymentDetail(updated);
+            } else {
+                alert('Errore durante l\'annullamento della ricevuta');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Errore di rete');
         }
     };
 
@@ -85,8 +258,8 @@ const Pagamenti = () => {
         return true;
     });
 
-    const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0).reduce((acc, p) => acc + parseFloat(p.importo), 0);
-    const totalUscite = filteredPayments.filter(p => parseFloat(p.importo) < 0).reduce((acc, p) => acc + Math.abs(parseFloat(p.importo)), 0);
+    const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0 && !p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + parseFloat(p.importo), 0);
+    const totalUscite = filteredPayments.filter(p => parseFloat(p.importo) < 0 || p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + Math.abs(parseFloat(p.importo)), 0);
 
     return (
         <div className="soci-full-container">
@@ -190,11 +363,13 @@ const Pagamenti = () => {
                                 <button 
                                     className="btn-contained" 
                                     style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
-                                    onClick={() => setShowPaymentMenu(!showPaymentMenu)}
+                                    onClick={() => navigate('/nuovo-pagamento')}
                                 >
-                                    <Plus size={14}/> Nuovo Pagamento <ChevronDown size={14}/>
+                                    <Plus size={14}/> Nuovo Pagamento
                                 </button>
-                                
+                                {/* Payment type dropdown hidden - keep code for future use
+                                onClick={() => setShowPaymentMenu(!showPaymentMenu)}
+                                <ChevronDown size={14}/>
                                 {showPaymentMenu && (
                                     <div style={{
                                         position: 'absolute',
@@ -211,54 +386,15 @@ const Pagamenti = () => {
                                         flexDirection: 'column',
                                         padding: '5px 0'
                                     }}>
-                                        <button 
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 16px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                border: 'none',
-                                                background: 'transparent',
-                                                cursor: 'pointer',
-                                                fontSize: '1rem',
-                                                color: '#333',
-                                                textAlign: 'left'
-                                            }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                            onClick={() => {
-                                                setShowPaymentMenu(false);
-                                                navigate('/nuovo-pagamento');
-                                            }}
-                                        >
-                                            <span style={{fontSize: '18px', fontWeight: '400', width: '20px', textAlign: 'center'}}>€</span> Normale
+                                        <button onClick={() => { setShowPaymentMenu(false); navigate('/nuovo-pagamento'); }}>
+                                            <span>€</span> Normale
                                         </button>
-                                        <button 
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 16px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                border: 'none',
-                                                background: 'transparent',
-                                                cursor: 'pointer',
-                                                fontSize: '1rem',
-                                                color: '#333',
-                                                textAlign: 'left'
-                                            }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                            onClick={() => {
-                                                setShowPaymentMenu(false);
-                                                setIsFastModalOpen(true);
-                                            }}
-                                        >
-                                            <Zap size={18} style={{width: '20px'}} strokeWidth={1.5} /> Fast
+                                        <button onClick={() => { setShowPaymentMenu(false); setIsFastModalOpen(true); }}>
+                                            <Zap size={18} strokeWidth={1.5} /> Fast
                                         </button>
                                     </div>
                                 )}
+                                */}
                             </div>
                         </div>
                     </div>
@@ -293,58 +429,59 @@ const Pagamenti = () => {
                                 ) : (
                                     filteredPayments.map(p => {
                                         const amount = parseFloat(p.importo);
-                                        const isEntrata = amount >= 0;
+                                        const isAnnullato = p.stato_pagamento?.startsWith('3.');
+                                        const isEntrata = amount >= 0 && !isAnnullato;
                                         
                                         return (
                                             <tr key={p.id} style={{
-                                                backgroundColor: isEntrata ? '#fff' : '#fceceb', 
+                                                backgroundColor: isAnnullato ? '#fceceb' : (isEntrata ? '#fff' : '#fceceb'),
                                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                borderLeft: `5px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`
+                                                borderLeft: `5px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`,
+                                                opacity: isAnnullato ? 0.75 : 1
                                             }}>
                                                 <td style={{padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
                                                     <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                                                        <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isEntrata ? '#e8f8f5' : '#fdedec', color: isEntrata ? '#2ecc71' : '#e74c3c', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                                        <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isAnnullato ? '#fdedec' : (isEntrata ? '#e8f8f5' : '#fdedec'), color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'), display:'flex', alignItems:'center', justifyContent:'center'}}>
                                                             {renderPaymentIcon(p.modalita_pagamento)}
                                                         </div>
                                                         <div>
-                                                            <div style={{fontWeight:'600', color: 'var(--text-primary)'}}>{p.intestatario}</div>
+                                                            <div style={{fontWeight:'600', color: isAnnullato ? '#c0392b' : 'var(--text-primary)', textDecoration: isAnnullato ? 'line-through' : 'none'}}>{p.intestatario}</div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
                                                                 {p.data_pagamento} - h 12:00:00 <User size={12}/> {p.utente_nome || 'ADMIN'}
+                                                                {isAnnullato && <span style={{color:'#e74c3c', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td style={{padding: '12px'}}>
                                                     <span style={{
-                                                        border: `1px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`, 
-                                                        color: isEntrata ? '#2ecc71' : '#e74c3c',
-                                                        padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
+                                                        border: `1px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`, 
+                                                        color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                                                        padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
+                                                        textDecoration: isAnnullato ? 'line-through' : 'none'
                                                     }}>
-                                                        {p.numero_ricevuta} {p.progressivo_stagione ? `STAG: ${p.progressivo_stagione}` : ''}
+                                                        {p.numero_ricevuta || `#${p.id}`}
                                                     </span>
                                                 </td>
                                                 <td style={{padding: '12px'}}>
-                                                    <span style={{
-                                                        border: '1px solid #ccc', borderRadius: '12px', padding: '4px 10px', fontSize: '0.8rem', background: '#fff'
-                                                    }}>
-                                                        {p.quote}
-                                                    </span>
+                                                    <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                        {(p.quote || '').split(', ').map((q, i) => (
+                                                            <span key={i} style={{
+                                                                border: '1px solid #ccc', borderRadius: '12px', padding: '3px 10px', fontSize: '0.8rem', background: '#fff', display: 'inline-block'
+                                                            }}>
+                                                                {q}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </td>
                                                 <td style={{padding: '12px', textAlign:'right'}}>
-                                                    <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'10px'}}>
-                                                        <span style={{
-                                                            color: isEntrata ? '#2ecc71' : '#e74c3c',
-                                                            fontWeight: 'bold', fontSize: '1.1rem'
-                                                        }}>
-                                                            {Math.abs(amount).toFixed(2).replace('.', ',')}
-                                                        </span>
-                                                        <span style={{
-                                                            backgroundColor: isEntrata ? '#2ecc71' : '#f1948a',
-                                                            color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', minWidth: '80px', textAlign: 'right'
-                                                        }}>
-                                                            {Math.abs(amount).toFixed(2).replace('.', ',')}
-                                                        </span>
-                                                    </div>
+                                                    <span style={{
+                                                        backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#f1948a'),
+                                                        color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', minWidth: '80px', display: 'inline-block', textAlign: 'right',
+                                                        textDecoration: isAnnullato ? 'line-through' : 'none'
+                                                    }}>
+                                                        {Math.abs(amount).toFixed(2).replace('.', ',')}
+                                                    </span>
                                                 </td>
                                                 <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
                                                     <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
@@ -355,8 +492,9 @@ const Pagamenti = () => {
                                                         >
                                                             <Folder size={16} />
                                                         </button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa"><Printer size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
                                                         <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia"><Mail size={16} /></button>
+
                                                     </div>
                                                 </td>
                                             </tr>
@@ -396,6 +534,7 @@ const Pagamenti = () => {
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
+                onAnnulla={handleAnnullaRicevuta}
             />
         </div>
     );

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, List, CreditCard, Check, X, User, FileEdit, AlertTriangle, Folder } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import RicercaSocioModal from './RicercaSocioModal';
 import GeneraPagamentoModal from './GeneraPagamentoModal';
+import AbbonamentoDateModal from './AbbonamentoDateModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
@@ -19,11 +20,22 @@ const getCertStatus = (scadenza) => {
 const NuovoPagamento = () => {
     const { selectedSocietaId } = useSocieta();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isRicercaModalOpen, setIsRicercaModalOpen] = useState(false);
     const [isGeneraModalOpen, setIsGeneraModalOpen] = useState(false);
+    const [isAbbonamentoDateModalOpen, setIsAbbonamentoDateModalOpen] = useState(false);
+    const [subscriptionDuration, setSubscriptionDuration] = useState('');
+    const [subscriptionDates, setSubscriptionDates] = useState(null);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
-    const [selectedSocio, setSelectedSocio] = useState(null);
+    const [selectedSocio, setSelectedSocio] = useState(location.state?.socio ?? null);
+    const [snackbar, setSnackbar] = useState({ show: false, message: '', type: 'success' });
+
+    const showSnackbar = (message, type = 'success') => {
+        setSnackbar({ show: true, message, type });
+        setTimeout(() => setSnackbar(s => ({ ...s, show: false })), 3000);
+    };
     const [recentPayments, setRecentPayments] = useState([]);
+    const prevSocietaId = useRef(undefined);
     
     // Products
     const [products, setProducts] = useState([]);
@@ -34,10 +46,49 @@ const NuovoPagamento = () => {
     const [cart, setCart] = useState([]);
 
     useEffect(() => {
+        const prev = prevSocietaId.current;
+        prevSocietaId.current = selectedSocietaId;
+
+        // Resetta il socio solo se la società è cambiata da un valore già presente
+        // (non al mount iniziale o alla prima inizializzazione del context)
+        if (prev !== undefined && prev !== selectedSocietaId) {
+            setSelectedSocio(null);
+            setCart([]);
+            setProductSearch('');
+            setRecentPayments([]);
+            setIsRicercaModalOpen(false);
+            setIsGeneraModalOpen(false);
+            setSelectedPaymentDetail(null);
+        }
+
         if (selectedSocietaId) {
             fetchProducts();
+        } else {
+            setProducts([]);
+            setFilteredProducts([]);
         }
-    }, [selectedSocietaId]);
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Carica i pagamenti recenti se il socio proviene dalla navigazione
+    useEffect(() => {
+        const socioFromState = location.state?.socio;
+        if (!socioFromState || !selectedSocietaId) return;
+        const fetchRecent = async () => {
+            try {
+                const url = socioFromState.id
+                    ? `/payments/api?societa_id=${selectedSocietaId}&socio_id=${socioFromState.id}`
+                    : `/payments/api?societa_id=${selectedSocietaId}&codice_fiscale=${encodeURIComponent(socioFromState.codice_fiscale || '')}`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    setRecentPayments(data.slice(0, 3));
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchRecent();
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchProducts = async () => {
         try {
@@ -64,11 +115,13 @@ const NuovoPagamento = () => {
         setSelectedSocio(socio);
         setIsRicercaModalOpen(false);
         try {
-            const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}`);
+            const url = socio.id
+                ? `/payments/api?societa_id=${selectedSocietaId}&socio_id=${socio.id}`
+                : `/payments/api?societa_id=${selectedSocietaId}&codice_fiscale=${encodeURIComponent(socio.codice_fiscale || '')}`;
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
-                const userPayments = data.filter(p => p.codice_fiscale && p.codice_fiscale.toUpperCase() === (socio.codice_fiscale || '').toUpperCase()).slice(0, 3);
-                setRecentPayments(userPayments);
+                setRecentPayments(data.slice(0, 3));
             }
         } catch(e) {
             console.error(e);
@@ -77,7 +130,7 @@ const NuovoPagamento = () => {
 
     const addToCart = (product) => {
         if (cart.length >= 5) {
-            alert('Max 5 prodotti nel carrello');
+            showSnackbar('Max 5 prodotti nel carrello', 'error');
             return;
         }
         const existing = cart.find(item => item.id === product.id);
@@ -94,9 +147,22 @@ const NuovoPagamento = () => {
 
     const generatePayment = () => {
         if (cart.length === 0) {
-            alert("Aggiungi almeno un prodotto al carrello.");
+            showSnackbar('Aggiungi almeno un prodotto al carrello.', 'error');
             return;
         }
+        const subscriptionItem = cart.find(item => item.type === 'subscription');
+        if (subscriptionItem) {
+            setSubscriptionDuration(subscriptionItem.duration || '');
+            setSubscriptionDates(null);
+            setIsAbbonamentoDateModalOpen(true);
+        } else {
+            setIsGeneraModalOpen(true);
+        }
+    };
+
+    const handleAbbonamentoConfirm = (dates) => {
+        setSubscriptionDates(dates);
+        setIsAbbonamentoDateModalOpen(false);
         setIsGeneraModalOpen(true);
     };
 
@@ -115,15 +181,15 @@ const NuovoPagamento = () => {
             });
             
             if (response.ok) {
-                alert("Pagamento generato con successo!");
                 setIsGeneraModalOpen(false);
-                navigate('/pagamenti');
+                showSnackbar('Pagamento generato con successo!');
+                setTimeout(() => navigate('/pagamenti'), 1800);
             } else {
-                alert("Errore durante la generazione del pagamento");
+                showSnackbar('Errore durante la generazione del pagamento', 'error');
             }
         } catch (e) {
             console.error("Errore salvataggio pagamento", e);
-            alert("Errore durante la generazione del pagamento");
+            showSnackbar('Errore durante la generazione del pagamento', 'error');
         }
     };
 
@@ -138,6 +204,13 @@ const NuovoPagamento = () => {
                 societaId={selectedSocietaId}
             />
             
+            <AbbonamentoDateModal
+                isOpen={isAbbonamentoDateModalOpen}
+                onClose={() => setIsAbbonamentoDateModalOpen(false)}
+                onConfirm={handleAbbonamentoConfirm}
+                duration={subscriptionDuration}
+            />
+
             <GeneraPagamentoModal
                 isOpen={isGeneraModalOpen}
                 onClose={() => setIsGeneraModalOpen(false)}
@@ -145,6 +218,7 @@ const NuovoPagamento = () => {
                 totale={cartTotal}
                 socio={selectedSocio}
                 cart={cart}
+                subscriptionDates={subscriptionDates}
             />
 
             <DettaglioPagamentoModal
@@ -283,7 +357,7 @@ const NuovoPagamento = () => {
                                     {recentPayments.map((p, i) => (
                                         <div key={i} className="np-recent-payment-item">
                                             {p.numero_ricevuta ? (
-                                                <span style={{ fontWeight: 600 }}>N. {p.numero_ricevuta}</span>
+                                                <span style={{ fontWeight: 600 }}>{p.numero_ricevuta}</span>
                                             ) : (
                                                 <span style={{ fontWeight: 100, color: '#888' }}>NO RIC</span>
                                             )}
@@ -361,6 +435,15 @@ const NuovoPagamento = () => {
 
                 </div>
             </div>
+
+            {snackbar.show && (
+                <div className={`np-snackbar np-snackbar-${snackbar.type}`}>
+                    {snackbar.type === 'success'
+                        ? <Check size={18} strokeWidth={2.5} />
+                        : <X size={18} strokeWidth={2.5} />}
+                    {snackbar.message}
+                </div>
+            )}
         </div>
     );
 };

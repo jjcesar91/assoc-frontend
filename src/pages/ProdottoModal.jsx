@@ -52,6 +52,9 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        // Validate basePrice: only digits and comma
+        if (name === 'basePrice' && !/^\d*,?\d*$/.test(value)) return;
+
         // Handle boolean selects properly
         let finalValue = value;
         if (value === 'true') finalValue = true;
@@ -59,17 +62,14 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
 
         setFormData(prev => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : finalValue
+            [name]: type === 'checkbox' ? checked : finalValue,
+            ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {})
         }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (formData.type === 'schedule') {
-            setShowRateModal(true);
-        } else {
-            onSave(formData);
-        }
+        onSave(formData);
     };
 
     const handleRateSave = (installments) => {
@@ -82,17 +82,6 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
     // Render logic for specific fields based on type
     const renderSpecificFields = () => {
         switch (formData.type) {
-            case 'periodic_quota':
-                return (
-                     <div className="prodotto-form-group">
-                        <label>Periodicità</label>
-                        <select name="periodicity" value={formData.periodicity} onChange={handleChange} className="prodotto-form-control">
-                            <option value="">Seleziona...</option>
-                            <option value="mensile">Mensile</option>
-                            <option value="annuale">Annuale</option>
-                        </select>
-                    </div>
-                );
             case 'subscription':
                 return (
                     <div className="prodotto-form-row">
@@ -101,10 +90,12 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                 <label>Durata</label>
                                 <select name="duration" value={formData.duration} onChange={handleChange} className="prodotto-form-control">
                                     <option value="">Seleziona...</option>
-                                    <option value="1_mese">1 Mese</option>
-                                    <option value="3_mesi">3 Mesi</option>
-                                    <option value="6_mesi">6 Mesi</option>
-                                    <option value="12_mesi">12 Mesi</option>
+                                    <option value="1_mese">1 mese</option>
+                                    <option value="2_mesi">2 mesi</option>
+                                    <option value="3_mesi">3 mesi</option>
+                                    <option value="4_mesi">4 mesi</option>
+                                    <option value="6_mesi">6 mesi</option>
+                                    <option value="12_mesi">12 mesi</option>
                                 </select>
                             </div>
                         </div>
@@ -121,48 +112,29 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                          <div className="prodotto-form-col">
                              <div className="prodotto-form-group">
                                 <label>Numero ingressi</label>
-                                <select name="numEntries" value={formData.numEntries} onChange={handleChange} className="prodotto-form-control">
-                                    <option value="">Seleziona...</option>
-                                     <option value="10">10</option>
-                                     <option value="20">20</option>
-                                </select>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    name="numEntries"
+                                    value={formData.numEntries}
+                                    onChange={(e) => { if (/^\d*$/.test(e.target.value)) handleChange(e); }}
+                                    className="prodotto-form-control"
+                                    disabled={formData.unlimitedEntries === true}
+                                    placeholder="es. 10"
+                                />
                             </div>
                         </div>
                     </div>
                 );
-            case 'inscription':
-                 return (
-                     <div className="prodotto-form-group">
-                        <label>Stagione</label>
-                        <select name="season" value={formData.season} onChange={handleChange} className="prodotto-form-control">
+            case 'tesseramento':
+                return (
+                    <div className="prodotto-form-group">
+                        <label>Periodicità</label>
+                        <select name="periodicity" value={formData.periodicity} onChange={handleChange} className="prodotto-form-control">
                             <option value="">Seleziona...</option>
-                            <option value="2024/2025">2024/2025</option>
+                            <option value="anno_associativo">Anno Associativo</option>
+                            <option value="anno_solare">Anno Solare</option>
                         </select>
-                    </div>
-                );
-            case 'schedule':
-                 return (
-                    <div className="prodotto-form-row">
-                         <div className="prodotto-form-col">
-                             <div className="prodotto-form-group">
-                                <label>Stagione</label>
-                                <select name="season" value={formData.season} onChange={handleChange} className="prodotto-form-control">
-                                    <option value="">Seleziona...</option>
-                                    <option value="2024/2025">2024/2025</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="prodotto-form-col">
-                             <div className="prodotto-form-group">
-                                <label>Numero rate</label>
-                                <select name="numInstallments" value={formData.numInstallments} onChange={handleChange} className="prodotto-form-control">
-                                    <option value="">Seleziona...</option>
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((num) => (
-                                        <option key={num} value={num}>{num}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
                     </div>
                 );
             default:
@@ -187,10 +159,9 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                             <label>Tipo prodotto</label>
                             <select name="type" value={formData.type} onChange={handleChange} className="prodotto-form-control">
                                 <option value="generic">Prodotto generico</option>
-                                <option value="periodic_quota">Quota periodica</option>
                                 <option value="subscription">Abbonamento</option>
-                                <option value="inscription">Iscrizione</option>
-                                <option value="schedule">Scadenzario</option>
+                                <option value="quota_associativa">Quota associativa/Iscrizione</option>
+                                <option value="tesseramento">Tesseramento</option>
                             </select>
                         </div>
 
@@ -203,7 +174,10 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                              <div className="prodotto-form-col">
                                 <div className="prodotto-form-group">
                                     <label>Prezzo base</label>
-                                    <input type="number" step="0.01" name="basePrice" value={formData.basePrice} onChange={handleChange} className="prodotto-form-control" />
+                                    <div className="prodotto-input-euro-wrapper">
+                                        <input type="text" inputMode="decimal" name="basePrice" value={formData.basePrice} onChange={handleChange} className="prodotto-form-control prodotto-input-euro" />
+                                        <span className="prodotto-euro-symbol">€</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="prodotto-form-col">
@@ -217,27 +191,6 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                             </div>
                         </div>
                         
-                        <div className="prodotto-form-row">
-                             <div className="prodotto-form-col">
-                                <div className="prodotto-form-group">
-                                    <label>Vendibile online</label>
-                                    <select name="sellableOnline" value={formData.sellableOnline} onChange={handleChange} className="prodotto-form-control">
-                                        <option value={true}>Si</option>
-                                        <option value={false}>No</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="prodotto-form-col">
-                                <div className="prodotto-form-group">
-                                    <label>Visibile in fast</label>
-                                    <select name="visibleInFast" value={formData.visibleInFast} onChange={handleChange} className="prodotto-form-control">
-                                        <option value={true}>SI</option>
-                                        <option value={false}>NO</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
                         {renderSpecificFields()}
                     </div>
                      <div className="prodotto-modal-footer">

@@ -8,6 +8,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
     const [isSocietaOpen, setIsSocietaOpen] = React.useState(false);
     const [isModulisticaOpen, setIsModulisticaOpen] = React.useState(false);
+    const [isPagamentiOpen, setIsPagamentiOpen] = React.useState(false);
 
     const handleNavigation = (path) => {
         navigate(path);
@@ -49,6 +50,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                             >
                                 <span>Comunicazioni</span>
                             </div>
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/societa/impostazioni' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/societa/impostazioni')}
+                            >
+                                <span>Impostazioni</span>
+                            </div>
                         </div>
                     )}
 
@@ -62,10 +69,28 @@ const Sidebar = ({ isOpen, onClose }) => {
                         <span>Prodotti</span>
                     </div>
 
-                    <div className="sidebar-item" onClick={() => handleNavigation('/pagamenti')}>
+                    <div className="sidebar-item" onClick={() => setIsPagamentiOpen(!isPagamentiOpen)}>
                         <CreditCard size={20} />
                         <span>Pagamenti</span>
+                        <ChevronDown size={16} style={{ marginLeft: 'auto', transform: isPagamentiOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                     </div>
+
+                    {isPagamentiOpen && (
+                        <div className="sidebar-sub-menu">
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/pagamenti' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/pagamenti')}
+                            >
+                                <span>Lista pagamenti</span>
+                            </div>
+                            <div 
+                                className={`sidebar-sub-item ${location.pathname === '/pagamenti/conti' ? 'active' : ''}`}
+                                onClick={() => handleNavigation('/pagamenti/conti')}
+                            >
+                                <span>Conti</span>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="sidebar-item" onClick={() => setIsModulisticaOpen(!isModulisticaOpen)}>
                         <FileText size={20} />

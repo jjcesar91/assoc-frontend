@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './Soci.css';
 import SocioModal from './SocioModal';
 import EditProfileModal from './EditProfileModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
+import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
     const { selectedSocietaId, societaList } = useSocieta();
+    const { selectedAnno } = useAnno();
     const [soci, setSoci] = useState([]);
+    const [quotaPaymentCFs, setQuotaPaymentCFs] = useState(new Set());
+    const [pastQuotaPaymentCFs, setPastQuotaPaymentCFs] = useState(new Set());
+    const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
+    const [tessAnyPastCFs, setTessAnyPastCFs] = useState(new Set());
     const [showModal, setShowModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
@@ -21,9 +27,9 @@ const Soci = ({ onLogout }) => {
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
-    const [currentRefYear, setCurrentRefYear] = useState(null);
 
     const location = useLocation();
+    const navigate = useNavigate();
     const [hasOpenedFromUrl, setHasOpenedFromUrl] = useState(false);
 
     useEffect(() => {
@@ -42,33 +48,70 @@ const Soci = ({ onLogout }) => {
     }, [soci, location.search, hasOpenedFromUrl]);
     
 
-    // Calculate Fiscal Year
+    // Fetch pagamenti quota_associativa per la società e filtra per anno selezionato
     useEffect(() => {
-        if (selectedSocietaId && societaList) {
+        const fetchQuotaPayments = async () => {
+            if (!selectedSocietaId || !selectedAnno) return;
             const societa = societaList.find(s => s.id == selectedSocietaId);
-            if (societa) {
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth() + 1;
-                const day = now.getDate();
-                
-                let calculatedYear = year;
-                if (societa.tipo_anno_associativo === 'associativo') {
-                    if (month < 9) calculatedYear = year - 1;
-                } else if (societa.tipo_anno_associativo === 'personalizzato' && societa.data_inizio_anno_associativo) {
-                    const parts = societa.data_inizio_anno_associativo.split('-');
-                    if (parts.length === 2) {
-                        const cDay = parseInt(parts[0], 10);
-                        const cMonth = parseInt(parts[1], 10);
-                        if (month < cMonth || (month === cMonth && day < cDay)) {
-                            calculatedYear = year - 1;
-                        }
-                    }
-                }
-                setCurrentRefYear(calculatedYear);
+            const { start, end } = getAnnoDateRange(selectedAnno, societa);
+            try {
+                const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const iscrPagamenti = data.filter(p =>
+                    p.quote_types && p.quote_types.split(',').includes('quota_associativa') && p.codice_fiscale
+                );
+                const currCfs = new Set(
+                    iscrPagamenti
+                        .filter(p => {
+                            if (!p.data_pagamento) return false;
+                            const d = new Date(p.data_pagamento);
+                            return d >= start && d <= end;
+                        })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                const pastCfs = new Set(
+                    iscrPagamenti
+                        .filter(p => {
+                            if (!p.data_pagamento) return false;
+                            const d = new Date(p.data_pagamento);
+                            return d < start || d > end;
+                        })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                setQuotaPaymentCFs(currCfs);
+                setPastQuotaPaymentCFs(pastCfs);
+
+                // Tesseramento
+                const tessPagamenti = data.filter(p =>
+                    p.quote_types && p.quote_types.split(',').includes('tesseramento') && p.codice_fiscale
+                );
+                const tessCurrentSet = new Set(
+                    tessPagamenti
+                        .filter(p => {
+                            if (!p.data_pagamento) return false;
+                            const d = new Date(p.data_pagamento);
+                            return d >= start && d <= end;
+                        })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                const tessAnyPastSet = new Set(
+                    tessPagamenti
+                        .filter(p => {
+                            if (!p.data_pagamento) return false;
+                            const d = new Date(p.data_pagamento);
+                            return d < start;
+                        })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                setTessCurrentCFs(tessCurrentSet);
+                setTessAnyPastCFs(tessAnyPastSet);
+            } catch (e) {
+                console.error('Error fetching quota payments', e);
             }
-        }
-    }, [selectedSocietaId, societaList]);
+        };
+        fetchQuotaPayments();
+    }, [selectedSocietaId, selectedAnno, societaList]);
 
     useEffect(() => {
         // Fetch current user info for the menu
@@ -119,9 +162,27 @@ const Soci = ({ onLogout }) => {
         return '2'; // Valido
     };
 
-    const checkIscrizione = (socio) => {
-        if (!currentRefYear || !socio.iscrizioni) return false;
-        return socio.iscrizioni.some(i => i.anno === currentRefYear);
+    const getTesseratoLabel = (socio) => {
+        const cf = (socio.codice_fiscale || '').toUpperCase();
+        if (tessCurrentCFs.has(cf)) return 'REGOLARE';
+        // Se "Quota associativa e Tesseramento Unico" è attivo, ISCRITTO vale come REGOLARE
+        const currentSocieta = societaList.find(s => s.id == selectedSocietaId);
+        if (currentSocieta?.quota_tesseramento_unico && getIscrizioneLabel(socio) === 'ISCRITTO') return 'REGOLARE';
+        if (tessAnyPastCFs.has(cf)) return 'SCADUTO';
+        return 'NO';
+    };
+
+    const getIscrizioneLabel = (socio) => {
+        // SOCIO: ha data ammissione libro soci
+        if (socio.data_ammissione) return 'SOCIO';
+        const cf = (socio.codice_fiscale || '').toUpperCase();
+        // ISCRITTO: ha iscrizione per l'anno corrente o pagamento quota nell'anno corrente
+        const hasCurrentIscrizione = (socio.iscrizioni || []).some(i => i.anno === selectedAnno);
+        if (hasCurrentIscrizione || quotaPaymentCFs.has(cf)) return 'ISCRITTO';
+        // SCADUTO: ha iscrizioni per anni precedenti o pagamenti di anni precedenti
+        const hasPastIscrizione = (socio.iscrizioni || []).some(i => i.anno !== selectedAnno);
+        if (hasPastIscrizione || pastQuotaPaymentCFs.has(cf)) return 'SCADUTO';
+        return 'NO';
     };
 
     const filteredSoci = soci.filter(socio => {
@@ -129,8 +190,9 @@ const Soci = ({ onLogout }) => {
         if (filters.nome && (!socio.nome || !socio.nome.toLowerCase().includes(filters.nome.toLowerCase()))) return false;
         
         if (filters.iscritto !== '') {
-            const isActive = checkIscrizione(socio) ? '1' : '0';
-            if (isActive !== filters.iscritto) return false;
+            const label = getIscrizioneLabel(socio);
+            if (filters.iscritto === '1' && label !== 'ISCRITTO' && label !== 'SOCIO') return false;
+            if (filters.iscritto === '0' && (label === 'ISCRITTO' || label === 'SOCIO')) return false;
         }
 
         if (filters.certMedico !== '') {
@@ -142,10 +204,21 @@ const Soci = ({ onLogout }) => {
     });
 
     useEffect(() => {
+        // Reset UI state e ricarica dati al cambio società
+        setFilters({ cognome: '', nome: '', iscritto: '', certMedico: '', pagamenti: '', lista: '' });
+        setShowModal(false);
+        setShowEditProfileModal(false);
+        setShowComunicazioneModal(false);
+        setSelectedSocio(null);
+        setComunicazioneSocioId(null);
+        setShowAdvancedSearch(false);
+        setHasOpenedFromUrl(false);
         if (selectedSocietaId) {
             fetchSoci();
+        } else {
+            setSoci([]);
         }
-    }, [selectedSocietaId]);
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchSoci = async () => {
         if (!selectedSocietaId) return;
@@ -382,7 +455,8 @@ const Soci = ({ onLogout }) => {
                                     <th style={{width: '60px'}}></th>
                                     <th>Nominativo</th>
                                     <th>Dati di nascita</th>
-                                    <th>Stato Iscrizione</th>
+                                    <th>Iscrizione</th>
+                                    <th>Tesserato</th>
                                     <th>Certificato Medico</th>
                                     <th>Contatti</th>
                                     <th style={{textAlign:'right'}}>Azioni</th>
@@ -410,9 +484,27 @@ const Soci = ({ onLogout }) => {
                                             {socio.data_nascita}
                                         </td>
                                         <td>
-                                            <span className={`chip ${checkIscrizione(socio) ? 'iscritto' : 'non-iscritto'}`}>
-                                                {checkIscrizione(socio) ? 'ISCRITTO' : 'NON ISCRITTO'}
-                                            </span>
+                                            {(() => {
+                                                const label = getIscrizioneLabel(socio);
+                                                const chipClass = {
+                                                    'SOCIO': 'info',
+                                                    'ISCRITTO': 'iscritto',
+                                                    'SCADUTO': 'warning',
+                                                    'NO': 'non-iscritto'
+                                                }[label] || 'non-iscritto';
+                                                return <span className={`chip ${chipClass}`}>{label}</span>;
+                                            })()}
+                                        </td>
+                                        <td>
+                                            {(() => {
+                                                const label = getTesseratoLabel(socio);
+                                                const chipClass = {
+                                                    'REGOLARE': 'iscritto',
+                                                    'SCADUTO': 'warning',
+                                                    'NO': 'non-iscritto'
+                                                }[label] || 'non-iscritto';
+                                                return <span className={`chip ${chipClass}`}>{label}</span>;
+                                            })()}
                                         </td>
                                         <td>
                                             {(() => {
@@ -448,13 +540,13 @@ const Soci = ({ onLogout }) => {
                                             >
                                                 <Mail size={18}/>
                                             </button>
-                                            <button className="btn-icon-small"><Euro size={18}/></button>
+                                            <button className="btn-icon-small" title="Nuovo pagamento" onClick={() => navigate('/nuovo-pagamento', { state: { socio } })}><Euro size={18}/></button>
                                         </td>
                                     </tr>
                                 ))}
                                 {filteredSoci.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
+                                        <td colSpan="8" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
                                             Nessun socio trovato
                                         </td>
                                     </tr>

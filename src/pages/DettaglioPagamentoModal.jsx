@@ -1,8 +1,10 @@
-import React from 'react';
-import { Calendar, User, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, Ban, Calendar, User, X } from 'lucide-react';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento }) => {
+const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla }) => {
+    const [showConferma, setShowConferma] = useState(false);
+
     if (!isOpen || !pagamento) return null;
 
     const formatDate = (dateString) => {
@@ -13,6 +15,13 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento }) => {
 
     const formatCurrency = (amount) => {
         return parseFloat(amount || 0).toFixed(2).replace('.', ',');
+    };
+
+    const isAnnullato = pagamento.stato_pagamento?.startsWith('3.');
+
+    const handleConfermaAnnulla = () => {
+        setShowConferma(false);
+        if (onAnnulla) onAnnulla(pagamento.id);
     };
 
     return (
@@ -54,13 +63,17 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento }) => {
                             <div className="dpm-field">
                                 <label>Numero ricevuta</label>
                                 <div className="dpm-value dpm-ricevuta">
-                                    {pagamento.numero_ricevuta || ''}
-                                    {pagamento.numero_ricevuta && <span className="dpm-badge-valida">VALIDA</span>}
+                                    {pagamento.numero_ricevuta || '—'}
+                                    {pagamento.numero_ricevuta && (
+                                        isAnnullato
+                                            ? <span className="dpm-badge-annullata">ANNULLATA</span>
+                                            : <span className="dpm-badge-valida">VALIDA</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="dpm-field">
                                 <label>Progressivo stagione</label>
-                                <div className="dpm-value">{pagamento.progressivo_stagione || ''}</div>
+                                <div className="dpm-value">{pagamento.progressivo_stagione || '—'}</div>
                             </div>
                             <div className="dpm-field">
                                 <label>Data ricevuta</label>
@@ -78,7 +91,48 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Footer azioni */}
+                {!isAnnullato && (
+                    <div className="dpm-footer">
+                        <button className="dpm-btn-annulla" onClick={() => setShowConferma(true)}>
+                            <Ban size={16} />
+                            Annulla ricevuta
+                        </button>
+                    </div>
+                )}
+                {isAnnullato && (
+                    <div className="dpm-footer dpm-footer-annullato">
+                        <Ban size={16} />
+                        Ricevuta annullata
+                    </div>
+                )}
             </div>
+
+            {/* Modal di conferma annullamento */}
+            {showConferma && (
+                <div className="dpm-confirm-overlay">
+                    <div className="dpm-confirm-modal">
+                        <div className="dpm-confirm-header">
+                            <AlertTriangle size={22} />
+                            <span>Conferma annullamento</span>
+                        </div>
+                        <div className="dpm-confirm-body">
+                            <p>Stai per annullare la ricevuta <strong>{pagamento.numero_ricevuta}</strong> intestata a <strong>{pagamento.intestatario}</strong>.</p>
+                            <p>Il pagamento e la ricevuta verranno marcati come <strong>ANNULLATI</strong> e l'importo non verrà più conteggiato tra gli incassi validi.</p>
+                            <p className="dpm-confirm-warning">Questa operazione non può essere annullata.</p>
+                        </div>
+                        <div className="dpm-confirm-footer">
+                            <button className="dpm-confirm-btn-cancel" onClick={() => setShowConferma(false)}>
+                                <X size={15} /> No, torna indietro
+                            </button>
+                            <button className="dpm-confirm-btn-ok" onClick={handleConfermaAnnulla}>
+                                <Ban size={15} /> Sì, annulla ricevuta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

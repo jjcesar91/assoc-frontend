@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2 } from 'lucide-react';
+import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import { useSocieta } from '../data/SocietaContext';
+import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import './SocioModal.css';
+import './NuovoPagamento.css';
 
 const SocioModal = ({ onClose, onSave, socioData }) => {
     const { societaList, selectedSocietaId } = useSocieta();
+    const { selectedAnno } = useAnno();
+    const navigate = useNavigate();
     // Determine if we are editing an existing scio or creating a new one
     const isEditMode = !!socioData;
     
@@ -63,9 +69,21 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [warningMessage, setWarningMessage] = useState(null);
     const [highlightCF, setHighlightCF] = useState(false);
     const [emailError, setEmailError] = useState(null);
+    const [genitoreErrors, setGenitoreErrors] = useState({});
+    const [snackbar, setSnackbar] = useState({ show: false, message: '', type: 'success' });
+
+    const showSnackbar = (message, type = 'success') => {
+        setSnackbar({ show: true, message, type });
+        setTimeout(() => setSnackbar(s => ({ ...s, show: false })), 3500);
+    };
     const [haCertificato, setHaCertificato] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [comunicazioni, setComunicazioni] = useState([]);
+
+    // Pagamenti State
+    const [socioPagamenti, setSocioPagamenti] = useState([]);
+    const [pagamentiLoading, setPagamentiLoading] = useState(false);
+    const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
     
     // Iscrizione State
     const [showIscrizioneModal, setShowIscrizioneModal] = useState(false);
@@ -358,21 +376,39 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }
     }, [selectedSocietaId, societaList]);
 
-    // Fetch Subscription Status
+    // Fetch Subscription Status & Data Iscrizione
     useEffect(() => {
-        if (formData.id && currentRefYear) {
-            fetch(`/users/api/soci/${formData.id}/iscrizione`)
-                .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        const active = data.find(i => i.anno === currentRefYear);
-                        setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
-                        setCurrentIscrizioneDate(active ? active.data_iscrizione : '');
-                    }
-                })
-                .catch(e => console.error(e));
+        if (!formData.id || !selectedAnno) return;
+
+        const selectedSocieta = societaList?.find(s => s.id == selectedSocietaId);
+        const { start, end } = getAnnoDateRange(selectedAnno, selectedSocieta);
+
+        // Priorità 1: cerca un pagamento con "iscrizione" nelle quote per l'anno selezionato
+        const pagamentoIscrizione = socioPagamenti.find(p => {
+            const quotes = (p.quote || '').toLowerCase();
+            if (!quotes.includes('iscrizione')) return false;
+            const dataPag = p.data_pagamento ? new Date(p.data_pagamento) : null;
+            return dataPag && dataPag >= start && dataPag <= end;
+        });
+
+        if (pagamentoIscrizione) {
+            setCurrentIscrizioneDate(pagamentoIscrizione.data_pagamento);
+            setIscrizioneStatus('ISCRITTO');
+            return;
         }
-    }, [formData.id, currentRefYear]);
+
+        // Priorità 2: iscrizione senza ricevuta
+        fetch(`/users/api/soci/${formData.id}/iscrizione`)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const active = data.find(i => i.anno === selectedAnno);
+                    setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
+                    setCurrentIscrizioneDate(active ? active.data_iscrizione : '');
+                }
+            })
+            .catch(e => console.error(e));
+    }, [formData.id, selectedAnno, socioPagamenti]);
 
     const handleIscrizioneSubmit = async () => {
         try {
@@ -387,7 +423,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             if (response.ok) {
                 const data = await response.json(); // returns { iscrizione, status, anno }
                 // Confirm matches displayed year
-                if (data.anno === currentRefYear) {
+                if (data.anno === selectedAnno) {
                      setIscrizioneStatus('ISCRITTO');
                      setCurrentIscrizioneDate(data.iscrizione.data_iscrizione);
                 }
@@ -539,6 +575,54 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             fetchComunicazioni();
         }
     }, [activeTab, formData.id]);
+
+    const fetchSocioPagamenti = async () => {
+        if (!formData.id || !selectedSocietaId) return;
+        setPagamentiLoading(true);
+        try {
+            const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}&socio_id=${formData.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setSocioPagamenti(data);
+            }
+        } catch (error) {
+            console.error('Error fetching pagamenti socio:', error);
+        } finally {
+            setPagamentiLoading(false);
+        }
+    };
+
+    const handleDeleteSocioPagamento = async (id) => {
+        if (!window.confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
+        try {
+            const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                setSocioPagamenti(prev => prev.filter(p => p.id !== id));
+                if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
+            } else {
+                alert('Errore durante l\'eliminazione del pagamento');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Errore di rete');
+        }
+    };
+
+    useEffect(() => {
+        if (formData.id) {
+            fetchSocioPagamenti();
+        }
+    }, [formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const renderPaymentIcon = (modalita) => {
+        if (!modalita) return <Banknote size={20} />;
+        const m = modalita.toLowerCase();
+        if (m.includes('contanti')) return <Banknote size={20} strokeWidth={1.5} />;
+        if (m.includes('pos')) return <CreditCard size={20} strokeWidth={1.5} />;
+        if (m.includes('bonifico')) return <Landmark size={20} strokeWidth={1.5} />;
+        if (m.includes('assegno')) return <DollarSign size={20} strokeWidth={1.5} />;
+        return <Banknote size={20} strokeWidth={1.5} />;
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -857,13 +941,28 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (isMinorenne) {
+            const errors = {
+                cf_genitore: !formData.cf_genitore?.trim(),
+                nome_genitore: !formData.nome_genitore?.trim(),
+                cognome_genitore: !formData.cognome_genitore?.trim(),
+                recapito_2: !formData.recapito_2?.trim(),
+            };
+            if (Object.values(errors).some(Boolean)) {
+                setGenitoreErrors(errors);
+                setActiveTab('Anagrafica');
+                showSnackbar('Compila tutti i campi obbligatori del tutore/genitore', 'error');
+                return;
+            }
+        }
+        setGenitoreErrors({});
         onSave(formData);
     };
 
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
         // { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
-        { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: 0 },
+        { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: socioPagamenti.length },
         { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: 0 },
         // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
@@ -871,8 +970,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     ];
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-card socio-modal" style={{maxWidth: '1200px', width: '95%', maxHeight: '95vh', display: 'flex', flexDirection: 'column'}}>
+        <div className="modal-overlay" onClick={onClose} style={{alignItems: 'flex-start', paddingTop: '72px'}}>
+            <div className="modal-card socio-modal" style={{maxWidth: '1200px', width: '95%', maxHeight: 'calc(100vh - 88px)', display: 'flex', flexDirection: 'column'}} onClick={e => e.stopPropagation()}>
                 
                 {/* Top Header with Name and Actions */}
                 <div style={{
@@ -919,7 +1018,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     if (val === 'comunicazione') {
                                         setShowComunicazioneModal(true);
                                     } else if (val === 'nuovo_pagamento') {
-                                        setActiveTab('Pagamenti');
+                                        navigate('/nuovo-pagamento', { state: { socio: socioData } });
                                     } else if (val === 'iscrizione_senza_ricevuta') {
                                         setShowIscrizioneModal(true);
                                     } else if (val === 'revoca_iscrizione') {
@@ -1135,20 +1234,20 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                             Dati Tutore / Genitore
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Codice fiscale genitore</label>
-                                            <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={handleChange} />
+                                            <label className="field-label">Codice fiscale genitore <span style={{color:'#ef4444'}}>*</span></label>
+                                            <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cf_genitore: false})); }} style={genitoreErrors.cf_genitore ? {border: '1.5px solid #ef4444'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Nome genitore</label>
-                                            <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={handleChange} />
+                                            <label className="field-label">Nome genitore <span style={{color:'#ef4444'}}>*</span></label>
+                                            <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, nome_genitore: false})); }} style={genitoreErrors.nome_genitore ? {border: '1.5px solid #ef4444'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Cognome genitore</label>
-                                            <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={handleChange} />
+                                            <label className="field-label">Cognome genitore <span style={{color:'#ef4444'}}>*</span></label>
+                                            <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cognome_genitore: false})); }} style={genitoreErrors.cognome_genitore ? {border: '1.5px solid #ef4444'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-6">
-                                            <label className="field-label">Recapito 1 genitore</label>
-                                            <input className="md-input" name="recapito_2" placeholder="Recapito 1" value={formData.recapito_2} onChange={handleChange} />
+                                            <label className="field-label">Recapito 1 genitore <span style={{color:'#ef4444'}}>*</span></label>
+                                            <input className="md-input" name="recapito_2" placeholder="Recapito 1" value={formData.recapito_2} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, recapito_2: false})); }} style={genitoreErrors.recapito_2 ? {border: '1.5px solid #ef4444'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-6">
                                             <label className="field-label">Recapito 2 genitore</label>
@@ -1159,7 +1258,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                                 {/* Row 5 - Tessere */}
                                 <div className="form-group grid-span-3">
-                                    <label className="field-label">Data Iscrizione ({currentRefYear})</label>
+                                    <label className="field-label">Data Iscrizione</label>
                                     <input 
                                         className="md-input" 
                                         type="date" 
@@ -1371,7 +1470,127 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         )
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && (
+                    {activeTab === 'Pagamenti' && (
+                        <div>
+                            <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Pagamenti</h3>
+                                <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
+                                    {socioPagamenti.length} pagament{socioPagamenti.length === 1 ? 'o' : 'i'}
+                                </span>
+                            </div>
+                            <div className="table-responsive">
+                                <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent', width: '100%' }}>
+                                    <thead>
+                                        <tr style={{backgroundColor: '#f1c40f', color: '#fff'}}>
+                                            <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000'}}>Intestatario - Data - Operatore</th>
+                                            <th style={{padding: '12px', color:'#000'}}>Identificativi documento</th>
+                                            <th style={{padding: '12px', color:'#000'}}>Quote</th>
+                                            <th style={{padding: '12px', textAlign:'right', color:'#000'}}>Importo</th>
+                                            <th style={{padding: '12px', textAlign:'right', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', color:'#000'}}>Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pagamentiLoading ? (
+                                            <tr>
+                                                <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
+                                                    Caricamento...
+                                                </td>
+                                            </tr>
+                                        ) : socioPagamenti.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
+                                                    Nessun pagamento trovato
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            socioPagamenti.map(p => {
+                                                const amount = parseFloat(p.importo);
+                                                const isEntrata = amount >= 0;
+                                                return (
+                                                    <tr key={p.id} style={{
+                                                        backgroundColor: isEntrata ? '#fff' : '#fceceb',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                        borderLeft: `5px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`
+                                                    }}>
+                                                        <td style={{padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
+                                                            <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                                                                <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isEntrata ? '#e8f8f5' : '#fdedec', color: isEntrata ? '#2ecc71' : '#e74c3c', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                                                    {renderPaymentIcon(p.modalita_pagamento)}
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{fontWeight:'600', color: 'var(--text-primary)'}}>{p.intestatario}</div>
+                                                                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
+                                                                        {p.data_pagamento} <User size={12}/> {p.utente_nome || 'ADMIN'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{padding: '12px'}}>
+                                                            <span style={{
+                                                                border: `1px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`,
+                                                                color: isEntrata ? '#2ecc71' : '#e74c3c',
+                                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
+                                                            }}>
+                                                                {p.numero_ricevuta || `#${p.id}`}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{padding: '12px'}}>
+                                                            <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                                {(p.quote || '').split(', ').map((q, i) => (
+                                                                    <span key={i} style={{
+                                                                        border: '1px solid #ccc', borderRadius: '12px', padding: '3px 10px', fontSize: '0.8rem', background: '#fff', display: 'inline-block'
+                                                                    }}>
+                                                                        {q}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td style={{padding: '12px', textAlign:'right'}}>
+                                                            <span style={{
+                                                                backgroundColor: isEntrata ? '#2ecc71' : '#f1948a',
+                                                                color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', minWidth: '80px', display: 'inline-block', textAlign: 'right'
+                                                            }}>
+                                                                {Math.abs(amount).toFixed(2).replace('.', ',')}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
+                                                            <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
+                                                                <button
+                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}}
+                                                                    title="Dettaglio"
+                                                                    onClick={() => setSelectedPaymentDetail(p)}
+                                                                >
+                                                                    <Folder size={16} />
+                                                                </button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa"><Printer size={16} /></button>
+                                                                <button
+                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#e74c3c', color:'white'}}
+                                                                    title="Elimina"
+                                                                    onClick={() => handleDeleteSocioPagamento(p.id)}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {socioPagamenti.length > 0 && (
+                                <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', paddingTop:'12px', gap:'10px'}}>
+                                    <span style={{fontSize:'0.85rem', color:'#6b7280'}}>Totale entrate:</span>
+                                    <span style={{backgroundColor:'#2ecc71', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>
+                                        € {socioPagamenti.filter(p => parseFloat(p.importo) >= 0).reduce((acc, p) => acc + parseFloat(p.importo), 0).toFixed(2).replace('.', ',')}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
@@ -1397,6 +1616,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     }}
                  />
             )}
+
+            <DettaglioPagamentoModal
+                isOpen={selectedPaymentDetail !== null}
+                onClose={() => setSelectedPaymentDetail(null)}
+                pagamento={selectedPaymentDetail}
+            />
 
             {showIscrizioneModal && (
                 <div className="modal-overlay" style={{zIndex: 2000}}>
@@ -1544,6 +1769,15 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {snackbar.show && (
+                <div className={`np-snackbar np-snackbar-${snackbar.type}`}>
+                    {snackbar.type === 'success'
+                        ? <Check size={18} strokeWidth={2.5} />
+                        : <X size={18} strokeWidth={2.5} />}
+                    {snackbar.message}
                 </div>
             )}
         </div>

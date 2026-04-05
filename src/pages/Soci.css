@@ -178,6 +178,17 @@
   color: #c62828;
 }
 
+.chip.scaduto {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.chip.socio {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-weight: 700;
+}
+
 .chip.warning {
   background-color: #fff3e0;
   color: #ef6c00;

@@ -39,8 +39,11 @@ const Modulistica = () => {
     }, []);
 
     useEffect(() => {
+        // Chiudi modali aperti al cambio società
+        setIsModalOpen(false);
+        setIsPrintModalOpen(false);
         fetchModuli();
-    }, []);
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchModuli = async () => {
         try {

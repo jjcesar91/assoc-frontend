@@ -65,6 +65,25 @@
     margin-bottom: 16px;
 }
 
+.prodotto-input-euro-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.prodotto-input-euro {
+    padding-right: 28px;
+}
+
+.prodotto-euro-symbol {
+    position: absolute;
+    right: 10px;
+    color: #6b7280;
+    font-size: 0.95rem;
+    pointer-events: none;
+    user-select: none;
+}
+
 .prodotto-form-group label {
     display: block;
     margin-bottom: 6px;

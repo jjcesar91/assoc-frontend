@@ -1,0 +1,128 @@
+.adm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.adm-modal {
+    background-color: #fff;
+    width: 580px;
+    max-width: 95vw;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.adm-header {
+    background-color: #e91e8c;
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.adm-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.adm-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+    padding: 2px;
+    border-radius: 4px;
+    transition: opacity 0.15s;
+}
+.adm-close-btn:hover {
+    opacity: 1;
+}
+
+.adm-body {
+    padding: 28px 28px 20px;
+    background-color: #fff;
+}
+
+.adm-row {
+    display: flex;
+    gap: 24px;
+}
+
+.adm-field-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.adm-field-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.adm-input {
+    width: 100%;
+    padding: 8px 36px 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #374151;
+    background-color: white;
+    color-scheme: light;
+    box-sizing: border-box;
+}
+.adm-input:focus {
+    border-color: #e91e8c;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(233, 30, 140, 0.2);
+}
+.adm-input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+.adm-footer {
+    background-color: #f3f4f6;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #e5e7eb;
+}
+
+.adm-confirm-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+.adm-confirm-btn:hover {
+    background-color: #059669;
+}

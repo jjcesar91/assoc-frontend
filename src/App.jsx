@@ -5,6 +5,7 @@ import Login from './Login'
 import Soci from './pages/Soci'
 import Layout from './components/Layout'
 import SocietaAnagrafica from './pages/SocietaAnagrafica'
+import SocietaImpostazioni from './pages/SocietaImpostazioni'
 import AnnoContabile from './pages/AnnoContabile'
 import SocietaComunicazioni from './pages/SocietaComunicazioni'
 import Modulistica from './pages/Modulistica'
@@ -12,7 +13,9 @@ import TemplateStampa from './pages/TemplateStampa'
 import Prodotti from './pages/Prodotti'
 import Pagamenti from './pages/Pagamenti';
 import NuovoPagamento from './pages/NuovoPagamento';
+import Conti from './pages/Conti';
 import { SocietaProvider } from './data/SocietaContext'
+import { AnnoProvider } from './data/AnnoContext'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,7 +44,8 @@ function App() {
 
   return (
     <SocietaProvider>
-      <Router>
+      <AnnoProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={handleLogin} /> : <Navigate to="/soci" />} />
           <Route path="/soci" element={isAuthenticated ? (
@@ -62,6 +66,11 @@ function App() {
           <Route path="/societa/comunicazioni" element={isAuthenticated ? (
             <Layout onLogout={handleLogout} title="Comunicazioni">
               <SocietaComunicazioni />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/societa/impostazioni" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Impostazioni Società">
+              <SocietaImpostazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/modulistica" element={isAuthenticated ? (
@@ -89,9 +98,15 @@ function App() {
               <Pagamenti />
             </Layout>
           ) : <Navigate to="/login" />} />
+          <Route path="/pagamenti/conti" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Configurazione Conti">
+              <Conti />
+            </Layout>
+          ) : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to="/soci" />} />
         </Routes>
       </Router>
+      </AnnoProvider>
     </SocietaProvider>
   )
 }

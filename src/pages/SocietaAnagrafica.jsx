@@ -331,6 +331,7 @@ const SocietaAnagrafica = () => {
                         <input className="md-input" name="alias_email" value={formData.alias_email} onChange={handleChange} style={{ width: '100%', padding: '8px 12px' }} />
                     </div>
                 </div>
+
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #eee' }}>

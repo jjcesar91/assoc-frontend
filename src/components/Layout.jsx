@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Menu, LogOut, User, Edit } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useSocieta } from '../data/SocietaContext';
+import { useAnno } from '../data/AnnoContext';
 import EditProfileModal from '../pages/EditProfileModal'; // Assuming we can reuse this, or move it to components
 
 const Layout = ({ children, onLogout, title }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { societaList, selectedSocietaId, setSelectedSocietaId } = useSocieta();
+    const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel } = useAnno();
     
     // User menu state
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -56,7 +58,7 @@ const Layout = ({ children, onLogout, title }) => {
                     <h1 style={{ fontSize: '1.25rem', fontWeight: 500, margin: 0 }}>{title}</h1>
                 </div>
                 <div className="app-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ marginRight: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
                         <select
                             className="md-select"
                             style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
@@ -65,6 +67,16 @@ const Layout = ({ children, onLogout, title }) => {
                         >
                             {societaList.map(s => (
                                 <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
+                            ))}
+                        </select>
+                        <select
+                            className="md-select"
+                            style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                            value={selectedAnno ?? ''}
+                            onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
+                        >
+                            {annoOptions.map(anno => (
+                                <option key={anno} value={anno} style={{color: 'black'}}>{formatAnnoLabel(anno)}</option>
                             ))}
                         </select>
                     </div>

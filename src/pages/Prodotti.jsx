@@ -22,13 +22,18 @@ const Prodotti = () => {
     });
 
     useEffect(() => {
+        // Chiudi modali e ricarica al cambio società
+        setIsModalOpen(false);
+        setCurrentProduct(null);
+        setIsRateModalOpen(false);
+        setCurrentRateProduct(null);
         if (selectedSocietaId) {
             fetchProducts();
         } else {
             setProducts([]);
             setLoading(false);
         }
-    }, [selectedSocietaId]);
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -52,6 +57,13 @@ const Prodotti = () => {
             
             // Add societaId for new products
             const dataToSave = productData.id ? productData : { ...productData, societaId: selectedSocietaId };
+
+            // Normalize basePrice: convert comma-decimal string to float (e.g. "10,50" -> 10.50)
+            if (dataToSave.basePrice !== undefined && dataToSave.basePrice !== '') {
+                dataToSave.basePrice = parseFloat(String(dataToSave.basePrice).replace(',', '.')) || 0;
+            } else {
+                dataToSave.basePrice = 0;
+            }
 
             const response = await fetch(url, {
                 method: method,

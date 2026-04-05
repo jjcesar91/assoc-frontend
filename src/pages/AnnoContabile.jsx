@@ -7,6 +7,7 @@ const AnnoContabile = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [hasRicevute, setHasRicevute] = useState(false);
 
     const [formData, setFormData] = useState({
         tipo_anno_associativo: 'solare', 
@@ -16,6 +17,17 @@ const AnnoContabile = () => {
     // Parsed day/month for the custom picker
     const [customDay, setCustomDay] = useState('01');
     const [customMonth, setCustomMonth] = useState('01');
+
+    useEffect(() => {
+        if (selectedSocietaId) {
+            fetch(`/payments/api/?societa_id=${selectedSocietaId}`)
+                .then(r => r.json())
+                .then(data => setHasRicevute(Array.isArray(data) && data.length > 0))
+                .catch(() => setHasRicevute(false));
+        } else {
+            setHasRicevute(false);
+        }
+    }, [selectedSocietaId]);
 
     useEffect(() => {
         if (selectedSocietaId && societaList.length > 0) {
@@ -150,6 +162,20 @@ const AnnoContabile = () => {
         <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <h2 style={{ marginBottom: '24px', fontSize: '1.2rem', fontWeight: 600, color: '#333' }}>Anno Contabile</h2>
 
+            {hasRicevute && (
+                <div style={{
+                    padding: '12px 16px',
+                    marginBottom: '20px',
+                    borderRadius: '4px',
+                    backgroundColor: '#fff3e0',
+                    color: '#e65100',
+                    border: '1px solid #ffb74d',
+                    fontSize: '0.9rem'
+                }}>
+                    <strong>Modifica non consentita.</strong> Sono già presenti ricevute associate a questa società: la configurazione dell'anno associativo non può essere modificata per garantire la coerenza della numerazione delle ricevute.
+                </div>
+            )}
+
             {message && (
                 <div style={{ 
                     padding: '10px', 
@@ -171,7 +197,8 @@ const AnnoContabile = () => {
                             name="tipo_anno_associativo" 
                             value={formData.tipo_anno_associativo} 
                             onChange={handleTypeChange}
-                            style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: 'white' }}
+                            disabled={hasRicevute}
+                            style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                         >
                             <option value="solare">Anno Solare (01/01 - 31/12)</option>
                             <option value="associativo">Anno Sportivo (01/09 - 31/08)</option>
@@ -194,7 +221,8 @@ const AnnoContabile = () => {
                                     className="md-input" 
                                     value={customDay} 
                                     onChange={(e) => handleDatePartChange('day', e.target.value)}
-                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: 'white' }}
+                                    disabled={hasRicevute}
+                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                                 >
                                     {days.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
@@ -209,7 +237,8 @@ const AnnoContabile = () => {
                                     className="md-input" 
                                     value={customMonth} 
                                     onChange={(e) => handleDatePartChange('month', e.target.value)}
-                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: 'white' }}
+                                    disabled={hasRicevute}
+                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                                 >
                                     {months.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                                 </select>
@@ -250,7 +279,7 @@ const AnnoContabile = () => {
                 </button>
                 <button 
                     onClick={handleSave}
-                    disabled={loading}
+                    disabled={loading || hasRicevute}
                     style={{ 
                         padding: '10px 24px', 
                         borderRadius: '4px', 

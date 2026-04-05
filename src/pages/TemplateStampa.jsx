@@ -12,6 +12,10 @@ const TemplateStampa = () => {
     const [footerText, setFooterText] = useState('');
 
     useEffect(() => {
+        // Reset modifiche in corso al cambio società
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setMessage(null);
         if (selectedSocietaId && societaList.length > 0) {
             const societa = societaList.find(s => s.id == selectedSocietaId);
             if (societa) {
