@@ -75,7 +75,7 @@ const Soci = ({ onLogout }) => {
                         .filter(p => {
                             if (!p.data_pagamento) return false;
                             const d = new Date(p.data_pagamento);
-                            return d < start || d > end;
+                            return d < start;
                         })
                         .map(p => p.codice_fiscale.toUpperCase())
                 );
@@ -180,7 +180,7 @@ const Soci = ({ onLogout }) => {
         const hasCurrentIscrizione = (socio.iscrizioni || []).some(i => i.anno === selectedAnno);
         if (hasCurrentIscrizione || quotaPaymentCFs.has(cf)) return 'ISCRITTO';
         // SCADUTO: ha iscrizioni per anni precedenti o pagamenti di anni precedenti
-        const hasPastIscrizione = (socio.iscrizioni || []).some(i => i.anno !== selectedAnno);
+        const hasPastIscrizione = (socio.iscrizioni || []).some(i => i.anno < selectedAnno);
         if (hasPastIscrizione || pastQuotaPaymentCFs.has(cf)) return 'SCADUTO';
         return 'NO';
     };
@@ -455,7 +455,7 @@ const Soci = ({ onLogout }) => {
                                     <th style={{width: '60px'}}></th>
                                     <th>Nominativo</th>
                                     <th>Dati di nascita</th>
-                                    <th>Iscrizione</th>
+                                    <th>Socio</th>
                                     <th>Tesserato</th>
                                     <th>Certificato Medico</th>
                                     <th>Contatti</th>
@@ -468,7 +468,8 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{
                                                 width:'40px', height:'40px', borderRadius:'50%', 
-                                                backgroundColor:'#e3f2fd', color:'#1976d2',
+                                                backgroundColor: socio.sesso === 'F' ? '#fce4ec' : '#e3f2fd',
+                                                color: socio.sesso === 'F' ? '#e91e63' : '#1976d2',
                                                 display:'flex', alignItems:'center', justifyContent:'center'
                                             }}>
                                                 <User size={20}/>

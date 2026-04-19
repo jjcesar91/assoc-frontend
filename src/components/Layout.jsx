@@ -1,19 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, User, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Menu, LogOut, User, Edit, Star } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno } from '../data/AnnoContext';
 import EditProfileModal from '../pages/EditProfileModal'; // Assuming we can reuse this, or move it to components
+import FavoritesModal, { MENU_STRUCTURE } from './FavoritesModal';
+
+const favBtnStyle = {
+    background: 'rgba(255,255,255,0.15)',
+    border: '1px solid rgba(255,255,255,0.3)',
+    borderRadius: '6px',
+    padding: '5px',
+    cursor: 'pointer',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0px',
+    overflow: 'hidden',
+    width: '30px',
+    maxWidth: '30px',
+    transition: 'max-width 0.28s ease, width 0.28s ease, padding 0.2s ease, gap 0.2s ease, background 0.15s',
+    whiteSpace: 'nowrap',
+};
+
+const favBtnHoverStyle = {
+    ...favBtnStyle,
+    width: 'auto',
+    maxWidth: '220px',
+    padding: '5px 10px',
+    gap: '6px',
+    justifyContent: 'flex-start',
+    background: 'rgba(255,255,255,0.28)',
+};
+
+const FavShortcutBtn = ({ fav, Icon, onClick }) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={hovered ? favBtnHoverStyle : favBtnStyle}
+        >
+            <Icon size={18} style={{ flexShrink: 0 }} />
+            <span style={{
+                fontSize: '0.82rem',
+                fontWeight: 500,
+                opacity: hovered ? 1 : 0,
+                maxWidth: hovered ? '180px' : '0px',
+                transition: 'opacity 0.2s ease, max-width 0.28s ease',
+                overflow: 'hidden',
+                letterSpacing: '0.01em',
+            }}>
+                {fav.label}
+            </span>
+        </button>
+    );
+};
 
 const Layout = ({ children, onLogout, title }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { societaList, selectedSocietaId, setSelectedSocietaId } = useSocieta();
     const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel } = useAnno();
-    
+    const navigate = useNavigate();
+
     // User menu state
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
+    // Preferiti
+    const [favorites, setFavorites] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('header-favorites') || '{}'); } catch { return {}; }
+    });
+    const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+
+    const toggleFavorite = (itemId, label, path, parentId) => {
+        setFavorites(prev => {
+            const next = { ...prev };
+            if (next[itemId]) {
+                delete next[itemId];
+            } else {
+                next[itemId] = { label, path, parentId };
+            }
+            localStorage.setItem('header-favorites', JSON.stringify(next));
+            return next;
+        });
+    };
 
     useEffect(() => {
         // Fetch current user info
@@ -51,11 +126,36 @@ const Layout = ({ children, onLogout, title }) => {
                 padding: '0 16px',
                 flexShrink: 0
             }}>
-                <div style={{display:'flex', alignItems:'center', gap:'16px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
                     <button className="icon-btn profile-btn" onClick={() => setSidebarOpen(true)} style={{ color: 'white' }}>
                         <Menu size={24}/>
                     </button>
                     <h1 style={{ fontSize: '1.25rem', fontWeight: 500, margin: 0 }}>{title}</h1>
+                    {Object.entries(favorites).map(([id, fav]) => {
+                        const parentItem = MENU_STRUCTURE.find(m => m.id === fav.parentId);
+                        const Icon = parentItem?.Icon;
+                        if (!Icon) return null;
+                        return (
+                            <FavShortcutBtn key={id} fav={fav} Icon={Icon} onClick={() => navigate(fav.path)} />
+                        );
+                    })}
+                    <button
+                        onClick={() => setShowFavoritesModal(true)}
+                        title="Gestisci preferiti"
+                        style={{
+                            background: 'rgba(255,255,255,0.15)',
+                            border: '1px solid rgba(255,255,255,0.4)',
+                            borderRadius: '6px',
+                            padding: '5px',
+                            cursor: 'pointer',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Star size={16} />
+                    </button>
                 </div>
                 <div className="app-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
@@ -146,6 +246,12 @@ const Layout = ({ children, onLogout, title }) => {
             {showEditProfileModal && (
                 <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} />
             )}
+            <FavoritesModal
+                isOpen={showFavoritesModal}
+                onClose={() => setShowFavoritesModal(false)}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+            />
         </div>
     );
 };

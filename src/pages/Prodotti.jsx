@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, ShoppingCart } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
+import { useConfirm } from '../components/ConfirmModal';
 import ProdottoModal from './ProdottoModal';
 import RateScadenzarioModal from './RateScadenzarioModal';
 import './Prodotti.css';
 
 const Prodotti = () => {
     const { selectedSocietaId } = useSocieta();
+    const confirm = useConfirm();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,7 +85,7 @@ const Prodotti = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Sei sicuro di voler eliminare questo prodotto?")) return;
+        if (!await confirm('Sei sicuro di voler eliminare questo prodotto?')) return;
         try {
             await fetch(`/products/api/${id}`, { method: 'DELETE' });
             fetchProducts();

@@ -165,3 +165,7 @@
 .btn-save-full:hover {
     background-color: #059669; /* Darker green */
 }
+
+.date-custom-icon input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+}

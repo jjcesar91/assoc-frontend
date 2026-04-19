@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Ban, Calendar, User, X } from 'lucide-react';
+import { getAnnoDateRange } from '../data/AnnoContext';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla }) => {
+const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societa }) => {
     const [showConferma, setShowConferma] = useState(false);
 
     if (!isOpen || !pagamento) return null;
@@ -16,6 +17,46 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla }) => {
     const formatCurrency = (amount) => {
         return parseFloat(amount || 0).toFixed(2).replace('.', ',');
     };
+
+    // Calcola la data di scadenza del tesseramento
+    const getScadenzaTesseramento = () => {
+        const types = (pagamento.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+        if (!types.includes('tesseramento')) return null;
+        if (!pagamento.data_pagamento) return null;
+
+        const periodicity = pagamento.periodicity_tesseramento;
+        if (!periodicity) return null;
+
+        const d = new Date(pagamento.data_pagamento);
+
+        if (periodicity === 'anno_solare') {
+            const scad = new Date(d);
+            scad.setFullYear(scad.getFullYear() + 1);
+            scad.setDate(scad.getDate() - 1);
+            return scad;
+        }
+
+        if (periodicity === 'anno_associativo') {
+            const tipo = societa?.tipo_anno_associativo || 'solare';
+            let anno = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            if (tipo === 'associativo') {
+                if (m < 9) anno = d.getFullYear() - 1;
+            } else if (tipo === 'personalizzato' && societa?.data_inizio_anno_associativo) {
+                const parts = societa.data_inizio_anno_associativo.split('-');
+                const cDay = parseInt(parts[0], 10);
+                const cMonth = parseInt(parts[1], 10);
+                if (m < cMonth || (m === cMonth && day < cDay)) anno = d.getFullYear() - 1;
+            }
+            const { end } = getAnnoDateRange(anno, societa);
+            return end;
+        }
+
+        return null;
+    };
+
+    const scadenzaTess = getScadenzaTesseramento();
 
     const isAnnullato = pagamento.stato_pagamento?.startsWith('3.');
 
@@ -87,7 +128,14 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla }) => {
                         <div className="dpm-section-title">Quote</div>
                         <div className="dpm-quote-row">
                             <span>{pagamento.quote || ''}</span>
-                            <span>€ {formatCurrency(pagamento.importo)}</span>
+                            <span>
+                                € {formatCurrency(pagamento.importo)}
+                                {scadenzaTess && !(pagamento.quote || '').includes('(Scadenza') && (
+                                    <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
+                                        (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                                    </span>
+                                )}
+                            </span>
                         </div>
                     </div>
                 </div>

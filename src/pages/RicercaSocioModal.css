@@ -37,6 +37,20 @@
     border-collapse: collapse;
 }
 
+.md-table-rm thead tr {
+    background: #f0f4f8;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.md-table-rm th {
+    padding: 8px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+
 /* Let's style the header of the table if there is one, or just the rows */
 .md-table-rm tr {
     border-bottom: 1px solid #eef0f3;
@@ -50,17 +64,18 @@
 }
 
 .badge-rm {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
     color: white;
+    letter-spacing: 0.03em;
 }
 
 .badge-success { background-color: #2ecc71; }
 .badge-danger { background-color: #e74c3c; }
 
-.modal-overlay {
+.rsm-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -70,7 +85,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    z-index: 1000;
+    z-index: 1500;
 }
 
 .modal-container {

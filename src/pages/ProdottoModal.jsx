@@ -3,8 +3,21 @@ import { ShoppingCart } from 'lucide-react';
 import './ProdottoModal.css';
 import RateScadenzarioModal from './RateScadenzarioModal';
 
+const getDurationDays = (duration) => {
+    const map = {
+        '1_mese': 30,
+        '2_mesi': 60,
+        '3_mesi': 90,
+        '4_mesi': 120,
+        '6_mesi': 180,
+        '12_mesi': 365,
+    };
+    return map[duration] || 30;
+};
+
 const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
     const [showRateModal, setShowRateModal] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
     // Initial state based on `product` if editing
     const [formData, setFormData] = useState({
         type: 'generic', // Default
@@ -16,7 +29,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         hasRevenueCenter: false, // Default
         // Specifics
         periodicity: '',
-        duration: '',
+        duration: '1_mese',
+        giorniAvvisoScadenza: 7,
         unlimitedEntries: false,
         numEntries: '',
         season: '',
@@ -40,7 +54,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                 visibleInFast: false,
                 hasRevenueCenter: false,
                 periodicity: '',
-                duration: '',
+                duration: '1_mese',
+                giorniAvvisoScadenza: 7,
                 unlimitedEntries: false,
                 numEntries: '',
                 season: '',
@@ -60,15 +75,68 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         if (value === 'true') finalValue = true;
         if (value === 'false') finalValue = false;
 
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : finalValue,
-            ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {})
-        }));
+        setFormData(prev => {
+            const updated = {
+                ...prev,
+                [name]: type === 'checkbox' ? checked : finalValue,
+                ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {})
+            };
+            if (name === 'duration') {
+                const maxDays = getDurationDays(finalValue);
+                const current = parseInt(updated.giorniAvvisoScadenza, 10);
+                if (!isNaN(current) && current >= maxDays) {
+                    updated.giorniAvvisoScadenza = Math.max(2, maxDays - 1);
+                }
+            }
+            return updated;
+        });
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const errors = {};
+
+        if (!formData.description || !formData.description.trim()) {
+            errors.description = 'La descrizione è obbligatoria.';
+        }
+
+        const priceStr = String(formData.basePrice).replace(',', '.');
+        if (formData.basePrice === '' || formData.basePrice === null || isNaN(parseFloat(priceStr)) || parseFloat(priceStr) < 0) {
+            errors.basePrice = 'Inserire un prezzo valido (≥ 0).';
+        }
+
+        if (formData.type === 'subscription') {
+            if (!formData.duration) {
+                errors.duration = 'Selezionare la durata.';
+            }
+            if (formData.unlimitedEntries === '' || formData.unlimitedEntries === null || formData.unlimitedEntries === undefined) {
+                errors.unlimitedEntries = 'Specificare se l\'abbonamento è open.';
+            }
+            if (formData.unlimitedEntries === false || formData.unlimitedEntries === 'false') {
+                const n = parseInt(formData.numEntries, 10);
+                if (!formData.numEntries || isNaN(n) || n <= 0) {
+                    errors.numEntries = 'Inserire un numero di ingressi valido (> 0).';
+                }
+            }
+            const avviso = parseInt(formData.giorniAvvisoScadenza, 10);
+            const maxDays = getDurationDays(formData.duration);
+            if (isNaN(avviso) || avviso <= 1) {
+                errors.giorniAvvisoScadenza = 'Il valore deve essere un intero > 1.';
+            } else if (avviso >= maxDays) {
+                errors.giorniAvvisoScadenza = `Il valore deve essere inferiore alla durata (${maxDays} giorni).`;
+            }
+        }
+
+        if (formData.type === 'tesseramento' && !formData.periodicity) {
+            errors.periodicity = 'Selezionare la periodicità.';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+
+        setFormErrors({});
         onSave(formData);
     };
 
@@ -84,11 +152,12 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         switch (formData.type) {
             case 'subscription':
                 return (
+                    <>
                     <div className="prodotto-form-row">
                         <div className="prodotto-form-col">
                              <div className="prodotto-form-group">
                                 <label>Durata</label>
-                                <select name="duration" value={formData.duration} onChange={handleChange} className="prodotto-form-control">
+                                <select name="duration" value={formData.duration} onChange={handleChange} className={`prodotto-form-control${formErrors.duration ? ' prodotto-form-control-error' : ''}`}>
                                     <option value="">Seleziona...</option>
                                     <option value="1_mese">1 mese</option>
                                     <option value="2_mesi">2 mesi</option>
@@ -97,16 +166,18 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     <option value="6_mesi">6 mesi</option>
                                     <option value="12_mesi">12 mesi</option>
                                 </select>
+                                {formErrors.duration && <span className="prodotto-form-error">{formErrors.duration}</span>}
                             </div>
                         </div>
                         <div className="prodotto-form-col">
                              <div className="prodotto-form-group">
                                 <label>Open (ingressi illimitati)</label>
-                                <select name="unlimitedEntries" value={formData.unlimitedEntries} onChange={handleChange} className="prodotto-form-control">
+                                <select name="unlimitedEntries" value={formData.unlimitedEntries} onChange={handleChange} className={`prodotto-form-control${formErrors.unlimitedEntries ? ' prodotto-form-control-error' : ''}`}>
                                     <option value="">Seleziona...</option>
                                     <option value={true}>Si</option>
                                     <option value={false}>No</option>
                                 </select>
+                                {formErrors.unlimitedEntries && <span className="prodotto-form-error">{formErrors.unlimitedEntries}</span>}
                             </div>
                         </div>
                          <div className="prodotto-form-col">
@@ -118,23 +189,54 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     name="numEntries"
                                     value={formData.numEntries}
                                     onChange={(e) => { if (/^\d*$/.test(e.target.value)) handleChange(e); }}
-                                    className="prodotto-form-control"
+                                    className={`prodotto-form-control${formErrors.numEntries ? ' prodotto-form-control-error' : ''}`}
                                     disabled={formData.unlimitedEntries === true}
                                     placeholder="es. 10"
                                 />
+                                {formErrors.numEntries && <span className="prodotto-form-error">{formErrors.numEntries}</span>}
                             </div>
                         </div>
                     </div>
+                    <div className="prodotto-form-row">
+                        <div className="prodotto-form-col">
+                            <div className="prodotto-form-group">
+                                <label>Giorni di avviso scadenza</label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    name="giorniAvvisoScadenza"
+                                    value={formData.giorniAvvisoScadenza}
+                                    onChange={(e) => {
+                                        if (/^\d*$/.test(e.target.value)) handleChange(e);
+                                    }}
+                                    onBlur={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        const maxDays = getDurationDays(formData.duration);
+                                        if (isNaN(val) || val <= 1) {
+                                            setFormData(prev => ({ ...prev, giorniAvvisoScadenza: 2 }));
+                                        } else if (val >= maxDays) {
+                                            setFormData(prev => ({ ...prev, giorniAvvisoScadenza: maxDays - 1 }));
+                                        }
+                                    }}
+                                    className={`prodotto-form-control${formErrors.giorniAvvisoScadenza ? ' prodotto-form-control-error' : ''}`}
+                                    placeholder="es. 7"
+                                />
+                                {formErrors.giorniAvvisoScadenza && <span className="prodotto-form-error">{formErrors.giorniAvvisoScadenza}</span>}
+                            </div>
+                        </div>
+                    </div>
+                    </>
                 );
             case 'tesseramento':
                 return (
                     <div className="prodotto-form-group">
                         <label>Periodicità</label>
-                        <select name="periodicity" value={formData.periodicity} onChange={handleChange} className="prodotto-form-control">
+                        <select name="periodicity" value={formData.periodicity} onChange={handleChange} className={`prodotto-form-control${formErrors.periodicity ? ' prodotto-form-control-error' : ''}`}>
                             <option value="">Seleziona...</option>
                             <option value="anno_associativo">Anno Associativo</option>
-                            <option value="anno_solare">Anno Solare</option>
+                            <option value="anno_solare">365 Giorni</option>
                         </select>
+                        {formErrors.periodicity && <span className="prodotto-form-error">{formErrors.periodicity}</span>}
                     </div>
                 );
             default:
@@ -167,7 +269,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
 
                         <div className="prodotto-form-group">
                             <label>Descrizione</label>
-                            <input type="text" name="description" value={formData.description} onChange={handleChange} className="prodotto-form-control" />
+                            <input type="text" name="description" value={formData.description} onChange={handleChange} className={`prodotto-form-control${formErrors.description ? ' prodotto-form-control-error' : ''}`} />
+                            {formErrors.description && <span className="prodotto-form-error">{formErrors.description}</span>}
                         </div>
 
                         <div className="prodotto-form-row">
@@ -175,9 +278,10 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                 <div className="prodotto-form-group">
                                     <label>Prezzo base</label>
                                     <div className="prodotto-input-euro-wrapper">
-                                        <input type="text" inputMode="decimal" name="basePrice" value={formData.basePrice} onChange={handleChange} className="prodotto-form-control prodotto-input-euro" />
+                                        <input type="text" inputMode="decimal" name="basePrice" value={formData.basePrice} onChange={handleChange} className={`prodotto-form-control prodotto-input-euro${formErrors.basePrice ? ' prodotto-form-control-error' : ''}`} />
                                         <span className="prodotto-euro-symbol">€</span>
                                     </div>
+                                    {formErrors.basePrice && <span className="prodotto-form-error">{formErrors.basePrice}</span>}
                                 </div>
                             </div>
                             <div className="prodotto-form-col">

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2 } from 'lucide-react';
+import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
@@ -10,10 +11,65 @@ import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
+// ---------------------------------------------------------------------------
+// Scadenziario utils (rispecchia Scadenziario.jsx)
+// ---------------------------------------------------------------------------
+function computeScadenzaForPayment(p, societa) {
+    if (!p.data_pagamento) return null;
+    const type = (p.quote_types || '').trim().toLowerCase();
+
+    if (type === 'tesseramento') {
+        const periodicity = p.periodicity_tesseramento;
+        if (!periodicity) return null;
+        const d = new Date(p.data_pagamento);
+        if (periodicity === 'anno_solare') {
+            const scad = new Date(d);
+            scad.setFullYear(scad.getFullYear() + 1);
+            scad.setDate(scad.getDate() - 1);
+            return scad;
+        }
+        if (periodicity === 'anno_associativo') {
+            const tipo = societa?.tipo_anno_associativo || 'solare';
+            let anno = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            if (tipo === 'associativo') {
+                if (m < 9) anno = d.getFullYear() - 1;
+            } else if (tipo === 'personalizzato' && societa?.data_inizio_anno_associativo) {
+                const parts = societa.data_inizio_anno_associativo.split('-');
+                const cDay = parseInt(parts[0], 10);
+                const cMonth = parseInt(parts[1], 10);
+                if (m < cMonth || (m === cMonth && day < cDay)) anno = d.getFullYear() - 1;
+            }
+            const { end } = getAnnoDateRange(anno, societa);
+            return end;
+        }
+    }
+
+    if (type === 'subscription' && p.data_scadenza_abbonamento) {
+        return new Date(p.data_scadenza_abbonamento);
+    }
+
+    return null;
+}
+
+function computeStatoPagamentoScadenza(scadenzaDate) {
+    if (!scadenzaDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limit = new Date(today);
+    limit.setDate(limit.getDate() + 30);
+    if (scadenzaDate < today) return 'SCADUTO';
+    if (scadenzaDate <= limit) return 'IN SCADENZA';
+    return 'VALIDO';
+}
+// ---------------------------------------------------------------------------
+
 const SocioModal = ({ onClose, onSave, socioData }) => {
     const { societaList, selectedSocietaId } = useSocieta();
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
+    const confirm = useConfirm();
     // Determine if we are editing an existing scio or creating a new one
     const isEditMode = !!socioData;
     
@@ -84,13 +140,21 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [socioPagamenti, setSocioPagamenti] = useState([]);
     const [pagamentiLoading, setPagamentiLoading] = useState(false);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
+    // Filtri tab Pagamenti
+    const [pagFiltroDescrizione, setPagFiltroDescrizione] = useState('');
+    const [pagFiltroAnno, setPagFiltroAnno] = useState('TUTTI');
+    const [pagFiltroRicevuta, setPagFiltroRicevuta] = useState('');
     
     // Iscrizione State
     const [showIscrizioneModal, setShowIscrizioneModal] = useState(false);
     const [iscrizioneDate, setIscrizioneDate] = useState(new Date().toISOString().split('T')[0]);
     const [iscrizioneStatus, setIscrizioneStatus] = useState(null); // 'ISCRITTO' | 'NON ISCRITTO'
     const [currentIscrizioneDate, setCurrentIscrizioneDate] = useState(''); // Date string for display
+    const [socioIscrizioniDates, setSocioIscrizioniDates] = useState([]); // all data_iscrizione from iscrizione table
     const [currentRefYear, setCurrentRefYear] = useState(null);
+
+    // Data Tesseramento calcolata dai pagamenti dell'anno selezionato
+    const [dataTesseramento, setDataTesseramento] = useState('');
 
     // Accetta come Socio State
     const [showAccettaSocioModal, setShowAccettaSocioModal] = useState(false);
@@ -383,32 +447,51 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         const selectedSocieta = societaList?.find(s => s.id == selectedSocietaId);
         const { start, end } = getAnnoDateRange(selectedAnno, selectedSocieta);
 
-        // Priorità 1: cerca un pagamento con "iscrizione" nelle quote per l'anno selezionato
-        const pagamentoIscrizione = socioPagamenti.find(p => {
+        // Stato iscrizione per l'anno selezionato (non cambia)
+        const pagamentoIscrizioneAnno = socioPagamenti.find(p => {
             const quotes = (p.quote || '').toLowerCase();
             if (!quotes.includes('iscrizione')) return false;
             const dataPag = p.data_pagamento ? new Date(p.data_pagamento) : null;
             return dataPag && dataPag >= start && dataPag <= end;
         });
 
-        if (pagamentoIscrizione) {
-            setCurrentIscrizioneDate(pagamentoIscrizione.data_pagamento);
+        // Ultima data pagamento quota associativa/iscrizione su tutti gli anni
+        const pagamentiIscrizione = socioPagamenti.filter(p => {
+            const types = (p.quote_types || '').toLowerCase();
+            const quotes = (p.quote || '').toLowerCase();
+            return types.includes('quota_associativa') || quotes.includes('iscrizione');
+        });
+        const datesPagamenti = pagamentiIscrizione.map(p => p.data_pagamento).filter(Boolean).sort();
+        const latestPaymentDate = datesPagamenti.length ? datesPagamenti[datesPagamenti.length - 1] : null;
+
+        if (pagamentoIscrizioneAnno) {
             setIscrizioneStatus('ISCRITTO');
-            return;
         }
 
-        // Priorità 2: iscrizione senza ricevuta
+        // Recupera iscrizioni senza ricevuta per stato anno e data_iscrizione
         fetch(`/users/api/soci/${formData.id}/iscrizione`)
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
                     const active = data.find(i => i.anno === selectedAnno);
-                    setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
-                    setCurrentIscrizioneDate(active ? active.data_iscrizione : '');
+                    if (!pagamentoIscrizioneAnno) {
+                        setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
+                    }
+
+                    // Salva tutte le date iscrizione per uso nel calcolo data_ammissione
+                    const datesIscrizioni = data.map(i => i.data_iscrizione).filter(Boolean).sort();
+                    setSocioIscrizioniDates(datesIscrizioni);
+                    const latestIscrizioneDate = datesIscrizioni.length ? datesIscrizioni[datesIscrizioni.length - 1] : null;
+
+                    // La più recente tra pagamenti e iscrizioni senza ricevuta
+                    const candidates = [latestPaymentDate, latestIscrizioneDate].filter(Boolean).sort();
+                    const ultimaData = candidates.length ? candidates[candidates.length - 1] : '';
+                    setCurrentIscrizioneDate(ultimaData);
                 }
             })
             .catch(e => console.error(e));
-    }, [formData.id, selectedAnno, socioPagamenti]);
+
+    }, [formData.id, selectedAnno, socioPagamenti]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleIscrizioneSubmit = async () => {
         try {
@@ -592,8 +675,101 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }
     };
 
+    // Helper: restituisce l'anno di inizio stagione relativo a una data pagamento
+    const getRefYearForDate = (dateStr) => {
+        if (!dateStr) return null;
+        const societa = societaList?.find(s => s.id == selectedSocietaId);
+        const tipo = societa?.tipo_anno_associativo || 'solare';
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        if (tipo === 'solare') return year;
+        if (tipo === 'associativo') {
+            return (date.getMonth() + 1) < 9 ? year - 1 : year;
+        }
+        if (tipo === 'personalizzato' && societa?.data_inizio_anno_associativo) {
+            const parts = societa.data_inizio_anno_associativo.split('-');
+            if (parts.length === 2) {
+                const cDay = parseInt(parts[0], 10);
+                const cMonth = parseInt(parts[1], 10);
+                const m = date.getMonth() + 1;
+                const d = date.getDate();
+                if (m < cMonth || (m === cMonth && d < cDay)) return year - 1;
+            }
+        }
+        return year;
+    };
+
+    const formatAnnoLabel = (anno) => {
+        const societa = societaList?.find(s => s.id == selectedSocietaId);
+        const tipo = societa?.tipo_anno_associativo || 'solare';
+        return tipo === 'solare' ? String(anno) : `${anno}/${anno + 1}`;
+    };
+
+    // Opzioni anno/tipo derivate dai dati + pagamenti filtrati
+    const pagAnniDisponibili = [...new Set(
+        socioPagamenti.map(p => getRefYearForDate(p.data_pagamento)).filter(Boolean)
+    )].sort((a, b) => b - a);
+
+    const filteredPagamenti = socioPagamenti.filter(p => {
+        if (pagFiltroDescrizione) {
+            const q = pagFiltroDescrizione.toLowerCase();
+            if (!(p.quote || '').toLowerCase().includes(q)) return false;
+        }
+        if (pagFiltroAnno !== 'TUTTI') {
+            const refYear = getRefYearForDate(p.data_pagamento);
+            if (refYear !== parseInt(pagFiltroAnno, 10)) return false;
+        }
+        if (pagFiltroRicevuta && !(p.numero_ricevuta || '').includes(pagFiltroRicevuta)) return false;
+        return true;
+    });
+
+    // Calcola scadenze per ogni pagamento attivo del socio
+    const socioModalSocieta = useMemo(
+        () => societaList?.find(s => s.id == selectedSocietaId) || null,
+        [societaList, selectedSocietaId]
+    );
+
+    const scadenzaMap = useMemo(() => {
+        if (!socioModalSocieta) return {};
+        const map = {};
+        for (const p of socioPagamenti) {
+            if (p.stato_pagamento?.startsWith('3.')) continue; // annullati
+            const date = computeScadenzaForPayment(p, socioModalSocieta);
+            if (date) {
+                map[p.id] = {
+                    scadenzaDate: date,
+                    scadenzaStr: date.toISOString().split('T')[0],
+                    stato: computeStatoPagamentoScadenza(date),
+                    tipoKey: (p.quote_types || '').trim().toLowerCase(),
+                };
+            }
+        }
+        return map;
+    }, [socioPagamenti, socioModalSocieta]);
+
+    const scadenzeAlertCount = useMemo(
+        () => Object.values(scadenzaMap).filter(s => s.stato === 'SCADUTO' || s.stato === 'IN SCADENZA').length,
+        [scadenzaMap]
+    );
+
+    const handleRinnovaPagamento = (p) => {
+        navigate('/nuovo-pagamento', {
+            state: {
+                socio: {
+                    id: formData.id || p.socio_id || null,
+                    cognome: formData.cognome || '',
+                    nome: formData.nome || '',
+                    codice_fiscale: formData.codice_fiscale || p.codice_fiscale || '',
+                },
+                prefilledQuoteType: (p.quote_types || '').trim().toLowerCase(),
+                prefilledProductId: p.product_id || null,
+            }
+        });
+        onClose();
+    };
+
     const handleDeleteSocioPagamento = async (id) => {
-        if (!window.confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
+        if (!await confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
         try {
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
             if (response.ok) {
@@ -608,11 +784,236 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         }
     };
 
+    const handleAnnullaRicevuta = async (id) => {
+        try {
+            const response = await fetch(`/payments/api/${id}/annulla`, { method: 'PATCH' });
+            if (response.ok) {
+                const updated = await response.json();
+                setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
+                setSelectedPaymentDetail(updated);
+            } else {
+                alert('Errore durante l\'annullamento della ricevuta');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Errore di rete');
+        }
+    };
+
+    const handlePrintPayment = (p) => {
+        const societa = societaList.find(s => s.id == selectedSocietaId);
+
+        const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
+
+        const modalitaMap = {
+            'Contanti': 'CONTANTI',
+            'POS': 'CARTA/BANCOMAT',
+            'Bonifico': 'BONIFICO',
+            'Assegno': 'ASSEGNO',
+            'Online': 'ONLINE',
+            'Carta/Bancomat': 'CARTA/BANCOMAT',
+        };
+        const modalitaLabel = modalitaMap[p.modalita_pagamento] || (p.modalita_pagamento?.toUpperCase() || '');
+
+        const importoFormatted = Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',');
+        const quoteItems = (p.quote || '').split(', ').filter(Boolean);
+
+        const quoteRows = quoteItems.map(q => `
+            <tr>
+                <td>${q}</td>
+                <td style="text-align:right">${quoteItems.length === 1 ? importoFormatted : ''}</td>
+            </tr>
+        `).join('');
+
+        const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
+        const footerText = societa?.footer_text ||
+            'Fuori campo iva art.4 dpr 633/72 - Esente imposte art.148 TUIR -<br/>Esente bollo L 30/12/2018 n. 145 art.1 c.646';
+        const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
+
+        let datiPagatore = p.codice_fiscale_genitore || '';
+        if (formData.data_nascita && (formData.nome_genitore || formData.cognome_genitore || formData.cf_genitore)) {
+            const dataRif = new Date(p.data_pagamento || p.data_ricevuta || new Date());
+            const nascita = new Date(formData.data_nascita);
+            let eta = dataRif.getFullYear() - nascita.getFullYear();
+            const mDiff = dataRif.getMonth() - nascita.getMonth();
+            if (mDiff < 0 || (mDiff === 0 && dataRif.getDate() < nascita.getDate())) eta--;
+            if (eta < 18) {
+                const nomeGenitore = [formData.cognome_genitore, formData.nome_genitore].filter(Boolean).join(' ');
+                const cfGenitore = formData.cf_genitore || p.codice_fiscale_genitore || '';
+                datiPagatore = [nomeGenitore, cfGenitore].filter(Boolean).join(' - ');
+            }
+        }
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Ricevuta ${p.numero_ricevuta || p.id}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
+        .header { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+        .header-logo { margin-right: 20px; }
+        .header-logo img { max-height: 70px; }
+        .header-info { text-align: right; }
+        .header-info h2 { margin: 0 0 4px 0; font-size: 16px; }
+        .header-info div { font-size: 12px; color: #444; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        .info-table th { background: #f9f9f9; border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
+        .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
+        .items-table th:last-child { text-align: right; }
+        .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
+        .items-table td:last-child { text-align: right; }
+        .total-row td { font-weight: bold; border-top: 2px solid #333; }
+        .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
+        .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
+        @media print { body { padding: 0; } }
+        @page { margin: 10mm; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        ${logoUrl ? `<div class="header-logo"><img src="${logoUrl}" alt="Logo" /></div>` : ''}
+        <div class="header-info">
+            <h2>${societa?.denominazione || ''}</h2>
+            <div>${societaAddress}</div>
+            <div>CF: ${societa?.codice_fiscale || ''}</div>
+        </div>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <th>TIPO DOCUMENTO</th>
+            <th>NUMERO DOCUMENTO</th>
+            <th>PROGRESSIVO STAGIONE</th>
+            <th>DATA DOCUMENTO</th>
+            <th>STATO DOCUMENTO</th>
+        </tr>
+        <tr>
+            <td>RICEVUTA</td>
+            <td>${p.numero_ricevuta || ''}</td>
+            <td>${p.progressivo_stagione || ''}</td>
+            <td>${p.data_ricevuta || p.data_pagamento || ''}</td>
+            <td>${statoLabel}</td>
+        </tr>
+        <tr>
+            <th colspan="2">INTESTATARIO</th>
+            <th colspan="2">CODICE FISCALE / PARTITA IVA INTESTATARIO</th>
+            <th>MODALITA' PAGAMENTO</th>
+        </tr>
+        <tr>
+            <td colspan="2">${(p.intestatario || '').toUpperCase()}</td>
+            <td colspan="2">${p.codice_fiscale || p.partita_iva || ''}</td>
+            <td>${modalitaLabel}</td>
+        </tr>
+        <tr>
+            <th colspan="3">INDIRIZZO</th>
+            <th colspan="2">DATI DI CHI HA EFFETTUATO IL PAGAMENTO</th>
+        </tr>
+        <tr>
+            <td colspan="3"></td>
+            <td colspan="2">${datiPagatore}</td>
+        </tr>
+        <tr><th colspan="5">NOTE</th></tr>
+        <tr><td colspan="5">${p.note || ''}</td></tr>
+    </table>
+
+    <table class="items-table">
+        <tr>
+            <th>Descrizione</th>
+            <th>Subtotale</th>
+        </tr>
+        ${quoteRows}
+        <tr class="total-row">
+            <td>TOTALE</td>
+            <td>${importoFormatted}</td>
+        </tr>
+    </table>
+
+    <div class="footer-text">${footerText}</div>
+    <div class="separator">_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _</div>
+    <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+    };
+
     useEffect(() => {
         if (formData.id) {
             fetchSocioPagamenti();
         }
     }, [formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Calcola Data Ammissione come la più vecchia tra: data DB, pagamenti quota, date iscrizione da tabella
+    useEffect(() => {
+        const iscrizionePagamenti = socioPagamenti.filter(p => {
+            const types = (p.quote_types || '').toLowerCase();
+            const quote = (p.quote || '').toLowerCase();
+            return types.includes('quota_associativa') || quote.includes('iscrizione');
+        });
+
+        const datesPagamenti = iscrizionePagamenti
+            .map(p => p.data_pagamento)
+            .filter(Boolean)
+            .sort();
+        const oldestPaymentDate = datesPagamenti[0] || null;
+
+        // La più vecchia tra le date iscrizione dalla tabella Iscrizione
+        const oldestIscrizioneDate = socioIscrizioniDates.length ? socioIscrizioniDates[0] : null;
+
+        const dbDate = socioData?.data_ammissione || '';
+
+        const candidates = [oldestPaymentDate, oldestIscrizioneDate, dbDate].filter(Boolean).sort();
+        const bestDate = candidates[0] || '';
+
+        if (bestDate) {
+            setFormData(prev => ({ ...prev, data_ammissione: bestDate }));
+        }
+    }, [socioPagamenti, socioIscrizioniDates]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Calcola Data Tesseramento per l'anno selezionato
+    useEffect(() => {
+        if (!selectedAnno) {
+            setDataTesseramento('');
+            return;
+        }
+        const selectedSocieta = societaList?.find(s => s.id == selectedSocietaId);
+        const { start, end } = getAnnoDateRange(selectedAnno, selectedSocieta);
+        const quotaTessUnico = !!selectedSocieta?.quota_tesseramento_unico;
+
+        const pagamentoTess = socioPagamenti.find(p => {
+            const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+            if (!types.includes('tesseramento')) return false;
+            const d = p.data_pagamento ? new Date(p.data_pagamento) : null;
+            return d && d >= start && d <= end;
+        });
+
+        if (pagamentoTess) {
+            setDataTesseramento(pagamentoTess.data_pagamento ? pagamentoTess.data_pagamento.split('T')[0] : '');
+            return;
+        }
+
+        if (quotaTessUnico) {
+            const pagamentoIscr = socioPagamenti.find(p => {
+                const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+                if (!types.includes('quota_associativa')) return false;
+                const d = p.data_pagamento ? new Date(p.data_pagamento) : null;
+                return d && d >= start && d <= end;
+            });
+            if (pagamentoIscr) {
+                setDataTesseramento(pagamentoIscr.data_pagamento ? pagamentoIscr.data_pagamento.split('T')[0] : '');
+                return;
+            }
+        }
+
+        setDataTesseramento('');
+    }, [socioPagamenti, selectedAnno, societaList, selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const renderPaymentIcon = (modalita) => {
         if (!modalita) return <Banknote size={20} />;
@@ -919,7 +1320,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const handleRevocaIscrizione = async () => {
         if (!currentRefYear || !formData.id) return;
-        if (!window.confirm(`Sei sicuro di voler revocare l'iscrizione per l'anno ${currentRefYear}?`)) return;
+        if (!await confirm(`Sei sicuro di voler revocare l'iscrizione per l'anno ${currentRefYear}?`)) return;
 
         try {
             const response = await fetch(`/users/api/soci/${formData.id}/iscrizione`, {
@@ -1258,7 +1659,17 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                                 {/* Row 5 - Tessere */}
                                 <div className="form-group grid-span-3">
-                                    <label className="field-label">Data Iscrizione</label>
+                                    <label className="field-label">Data Ammissione (Libro Soci)</label>
+                                    <input 
+                                        className="md-input" 
+                                        type="date" 
+                                        name="data_ammissione" 
+                                        value={formData.data_ammissione} 
+                                        onChange={handleChange} 
+                                    />
+                                </div>
+                                <div className="form-group grid-span-3">
+                                    <label className="field-label">Ultima Iscrizione</label>
                                     <input 
                                         className="md-input" 
                                         type="date" 
@@ -1267,14 +1678,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         style={{ backgroundColor: '#f9fafb', color: '#374151' }}
                                     />
                                 </div>
-                                <div className="form-group grid-span-3">
-                                    <label className="field-label">Data Ammissione (Libro Soci)</label>
-                                    <input 
-                                        className="md-input" 
-                                        type="date" 
-                                        name="data_ammissione" 
-                                        value={formData.data_ammissione} 
-                                        onChange={handleChange} 
+                                <div className="form-group grid-span-2">
+                                    <label className="field-label" style={{marginBottom: '6px', minHeight: '20px', display: 'flex', alignItems: 'center'}}>Data Tesseramento</label>
+                                    <input
+                                        className="md-input"
+                                        type="date"
+                                        value={dataTesseramento}
+                                        readOnly
+                                        style={{ backgroundColor: '#f9fafb', color: dataTesseramento ? '#374151' : '#9ca3af' }}
                                     />
                                 </div>
                                 <div className="form-group grid-span-2">
@@ -1288,7 +1699,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         />
                                         Ha certificato
                                     </label>
-                                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                    <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
                                         <input 
                                             className="md-input" 
                                             type="date" 
@@ -1315,14 +1726,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                             onClick={(e) => haCertificato && e.currentTarget.previousElementSibling.showPicker?.()} 
                                         />
                                     </div>
-                                </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label" style={{marginBottom: '6px', minHeight: '20px', display: 'flex', alignItems: 'center'}}>Socio/Tesserato</label>
-                                    <select className="md-select" name="livello" value={formData.livello} onChange={handleChange}>
-                                        <option value="ND">ND</option>
-                                        <option value="Socio">Socio</option>
-                                        <option value="Tesserato">Tesserato</option>
-                                    </select>
                                 </div>
                                 
                                 {/* Row 6 - Note and Extra */}
@@ -1475,8 +1878,67 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                                 <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Pagamenti</h3>
                                 <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
-                                    {socioPagamenti.length} pagament{socioPagamenti.length === 1 ? 'o' : 'i'}
+                                    {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} pagament{filteredPagamenti.length === 1 ? 'o' : 'i'}
                                 </span>
+                            </div>
+                            {/* Banner scadenze */}
+                            {scadenzeAlertCount > 0 && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    backgroundColor: '#fff8e1', border: '1px solid #f59e0b',
+                                    borderRadius: '6px', padding: '9px 14px', marginBottom: '12px',
+                                    fontSize: '0.82rem', color: '#78350f'
+                                }}>
+                                    <AlertTriangle size={15} style={{color: '#f59e0b', flexShrink: 0}} />
+                                    <span>
+                                        <strong>{scadenzeAlertCount}</strong> quota{scadenzeAlertCount > 1 ? '/e' : ''} con scadenza imminente o scaduta —
+                                        usa <strong>Rinnova</strong> sulla riga corrispondente per registrare il rinnovo.
+                                    </span>
+                                </div>
+                            )}
+                            {/* Filtri live */}
+                            <div style={{display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'12px', alignItems:'flex-end'}}>
+                                <div style={{display:'flex', flexDirection:'column', flex:'2 1 160px', minWidth:'140px'}}>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>Descrizione</label>
+                                    <input
+                                        className="md-input"
+                                        placeholder="Cerca in quote..."
+                                        style={{padding:'5px 10px', fontSize:'0.85rem'}}
+                                        value={pagFiltroDescrizione}
+                                        onChange={e => setPagFiltroDescrizione(e.target.value)}
+                                    />
+                                </div>
+                                <div style={{display:'flex', flexDirection:'column', flex:'1 1 120px', minWidth:'110px'}}>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>Anno / Stagione</label>
+                                    <select
+                                        className="md-select"
+                                        style={{padding:'5px 10px', fontSize:'0.85rem'}}
+                                        value={pagFiltroAnno}
+                                        onChange={e => setPagFiltroAnno(e.target.value)}
+                                    >
+                                        <option value="TUTTI">Tutti</option>
+                                        {pagAnniDisponibili.map(anno => (
+                                            <option key={anno} value={anno}>{formatAnnoLabel(anno)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{display:'flex', flexDirection:'column', flex:'1 1 120px', minWidth:'110px'}}>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>N. Ricevuta</label>
+                                    <input
+                                        className="md-input"
+                                        placeholder="Es. 42"
+                                        style={{padding:'5px 10px', fontSize:'0.85rem'}}
+                                        value={pagFiltroRicevuta}
+                                        onChange={e => { if (/^\d*$/.test(e.target.value)) setPagFiltroRicevuta(e.target.value); }}
+                                        inputMode="numeric"
+                                    />
+                                </div>
+                                {(pagFiltroDescrizione || pagFiltroAnno !== 'TUTTI' || pagFiltroRicevuta) && (
+                                    <button
+                                        style={{alignSelf:'flex-end', padding:'5px 12px', fontSize:'0.8rem', border:'1px solid #d1d5db', borderRadius:'4px', background:'#f9fafb', cursor:'pointer', color:'#6b7280'}}
+                                        onClick={() => { setPagFiltroDescrizione(''); setPagFiltroAnno('TUTTI'); setPagFiltroRicevuta(''); }}
+                                    >Azzera</button>
+                                )}
                             </div>
                             <div className="table-responsive">
                                 <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent', width: '100%' }}>
@@ -1496,21 +1958,32 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                     Caricamento...
                                                 </td>
                                             </tr>
-                                        ) : socioPagamenti.length === 0 ? (
+                                        ) : filteredPagamenti.length === 0 ? (
                                             <tr>
                                                 <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
-                                                    Nessun pagamento trovato
+                                                    {socioPagamenti.length === 0 ? 'Nessun pagamento trovato' : 'Nessun pagamento corrisponde ai filtri'}
                                                 </td>
                                             </tr>
                                         ) : (
-                                            socioPagamenti.map(p => {
+                                            filteredPagamenti.map(p => {
                                                 const amount = parseFloat(p.importo);
                                                 const isEntrata = amount >= 0;
+                                                const scad = scadenzaMap[p.id];
+                                                const hasScadAlert = scad && (scad.stato === 'SCADUTO' || scad.stato === 'IN SCADENZA');
+                                                // Bordo e sfondo: la scadenza ha priorità rispetto al segno dell'importo
+                                                const borderColor = scad
+                                                    ? scad.stato === 'SCADUTO' ? '#e74c3c'
+                                                    : scad.stato === 'IN SCADENZA' ? '#f39c12'
+                                                    : '#2ecc71'
+                                                    : isEntrata ? '#2ecc71' : '#e74c3c';
+                                                const rowBg = scad?.stato === 'SCADUTO' ? '#fceceb'
+                                                    : scad?.stato === 'IN SCADENZA' ? '#fef9e7'
+                                                    : isEntrata ? '#fff' : '#fceceb';
                                                 return (
                                                     <tr key={p.id} style={{
-                                                        backgroundColor: isEntrata ? '#fff' : '#fceceb',
+                                                        backgroundColor: rowBg,
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                        borderLeft: `5px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`
+                                                        borderLeft: `5px solid ${borderColor}`
                                                     }}>
                                                         <td style={{padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
                                                             <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
@@ -1543,6 +2016,20 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                         {q}
                                                                     </span>
                                                                 ))}
+                                                                {scad && (
+                                                                    <div style={{display:'flex', alignItems:'center', gap:'5px', marginTop:'2px', flexWrap:'wrap'}}>
+                                                                        <span style={{
+                                                                            fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 7px', borderRadius: '10px',
+                                                                            backgroundColor: scad.stato === 'SCADUTO' ? '#e74c3c' : scad.stato === 'IN SCADENZA' ? '#f39c12' : '#2ecc71',
+                                                                            color: 'white', whiteSpace: 'nowrap'
+                                                                        }}>
+                                                                            {scad.stato}
+                                                                        </span>
+                                                                        <span style={{fontSize:'0.72rem', color:'#6b7280', whiteSpace:'nowrap'}}>
+                                                                            scad. {new Date(scad.scadenzaStr).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </td>
                                                         <td style={{padding: '12px', textAlign:'right'}}>
@@ -1554,7 +2041,22 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             </span>
                                                         </td>
                                                         <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
-                                                            <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
+                                                            <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'5px', flexWrap:'nowrap'}}>
+                                                                {isEntrata && (p.quote_types || '').trim().toLowerCase() === 'subscription' && (
+                                                                    <button
+                                                                        title="Rinnova abbonamento"
+                                                                        onClick={() => handleRinnovaPagamento(p)}
+                                                                        style={{
+                                                                            padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px',
+                                                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                            cursor: 'pointer',
+                                                                            backgroundColor: scad?.stato === 'SCADUTO' ? '#e74c3c' : scad?.stato === 'IN SCADENZA' ? '#f39c12' : '#6b7280',
+                                                                            color: 'white'
+                                                                        }}
+                                                                    >
+                                                                        <RefreshCw size={16} />
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}}
                                                                     title="Dettaglio"
@@ -1562,14 +2064,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                 >
                                                                     <Folder size={16} />
                                                                 </button>
-                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa"><Printer size={16} /></button>
-                                                                <button
-                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#e74c3c', color:'white'}}
-                                                                    title="Elimina"
-                                                                    onClick={() => handleDeleteSocioPagamento(p.id)}
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia email"><Mail size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1579,11 +2075,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     </tbody>
                                 </table>
                             </div>
-                            {socioPagamenti.length > 0 && (
+                            {filteredPagamenti.length > 0 && (
                                 <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', paddingTop:'12px', gap:'10px'}}>
                                     <span style={{fontSize:'0.85rem', color:'#6b7280'}}>Totale entrate:</span>
                                     <span style={{backgroundColor:'#2ecc71', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>
-                                        € {socioPagamenti.filter(p => parseFloat(p.importo) >= 0).reduce((acc, p) => acc + parseFloat(p.importo), 0).toFixed(2).replace('.', ',')}
+                                        € {filteredPagamenti.filter(p => parseFloat(p.importo) >= 0).reduce((acc, p) => acc + parseFloat(p.importo), 0).toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
                             )}
@@ -1621,6 +2117,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
+                onAnnulla={handleAnnullaRicevuta}
+                societa={societaList?.find(s => s.id == selectedSocietaId)}
             />
 
             {showIscrizioneModal && (

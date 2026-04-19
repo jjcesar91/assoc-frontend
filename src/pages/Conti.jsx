@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
 import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmModal';
 import './Soci.css';
 
 const API_GATEWAY = '/payments/api';
 
 const Conti = () => {
     const { selectedSocietaId } = useSocieta();
+    const confirm = useConfirm();
     const [conti, setConti] = useState([]);
     const [loading, setLoading] = useState(false);
     
@@ -96,7 +98,7 @@ const Conti = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Sei sicuro di voler eliminare questo conto?')) return;
+        if (!await confirm('Sei sicuro di voler eliminare questo conto?')) return;
         
         const token = localStorage.getItem('token');
         try {

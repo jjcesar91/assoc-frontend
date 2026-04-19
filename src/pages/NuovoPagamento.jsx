@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, List, CreditCard, Check, X, User, FileEdit, AlertTriangle, Folder } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
+import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import RicercaSocioModal from './RicercaSocioModal';
 import GeneraPagamentoModal from './GeneraPagamentoModal';
 import AbbonamentoDateModal from './AbbonamentoDateModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
+import IscrizioneCorsoDopoModal from './IscrizioneCorsoDopoModal';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
 const getCertStatus = (scadenza) => {
@@ -18,7 +20,8 @@ const getCertStatus = (scadenza) => {
 };
 
 const NuovoPagamento = () => {
-    const { selectedSocietaId } = useSocieta();
+    const { selectedSocietaId, societaList } = useSocieta();
+    const { selectedAnno } = useAnno();
     const navigate = useNavigate();
     const location = useLocation();
     const [isRicercaModalOpen, setIsRicercaModalOpen] = useState(false);
@@ -28,7 +31,13 @@ const NuovoPagamento = () => {
     const [subscriptionDates, setSubscriptionDates] = useState(null);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
     const [selectedSocio, setSelectedSocio] = useState(location.state?.socio ?? null);
+    const prefilledQuoteType = location.state?.prefilledQuoteType ?? null;
+    const prefilledProductId = location.state?.prefilledProductId ?? null;
     const [snackbar, setSnackbar] = useState({ show: false, message: '', type: 'success' });
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+    const [showAbbWarningModal, setShowAbbWarningModal] = useState(false);
+    const [isCorsoIscrizioneModalOpen, setIsCorsoIscrizioneModalOpen] = useState(false);
+    const [corsiPerAbbonamento, setCorsiPerAbbonamento] = useState([]);
 
     const showSnackbar = (message, type = 'success') => {
         setSnackbar({ show: true, message, type });
@@ -37,6 +46,10 @@ const NuovoPagamento = () => {
     const [recentPayments, setRecentPayments] = useState([]);
     const prevSocietaId = useRef(undefined);
     
+    // Iscrizione / Tesseramento CF sets (stessa logica di Soci.jsx)
+    const [quotaPaymentCFs, setQuotaPaymentCFs] = useState(new Set());
+    const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
+
     // Products
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -69,6 +82,37 @@ const NuovoPagamento = () => {
         }
     }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Carica i set CF iscritti/tesserati per l'anno corrente (stessa logica di Soci.jsx)
+    useEffect(() => {
+        const fetchQuotaPayments = async () => {
+            if (!selectedSocietaId || !selectedAnno) return;
+            const societa = societaList.find(s => s.id == selectedSocietaId);
+            const { start, end } = getAnnoDateRange(selectedAnno, societa);
+            try {
+                const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const quotaCFs = new Set(
+                    data
+                        .filter(p => p.quote_types && p.quote_types.split(',').includes('quota_associativa') && p.codice_fiscale)
+                        .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                const tessCFs = new Set(
+                    data
+                        .filter(p => p.quote_types && p.quote_types.split(',').includes('tesseramento') && p.codice_fiscale)
+                        .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .map(p => p.codice_fiscale.toUpperCase())
+                );
+                setQuotaPaymentCFs(quotaCFs);
+                setTessCurrentCFs(tessCFs);
+            } catch (e) {
+                console.error('Error fetching quota payments', e);
+            }
+        };
+        fetchQuotaPayments();
+    }, [selectedSocietaId, selectedAnno, societaList]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Carica i pagamenti recenti se il socio proviene dalla navigazione
     useEffect(() => {
         const socioFromState = location.state?.socio;
@@ -97,6 +141,15 @@ const NuovoPagamento = () => {
                 const data = await response.json();
                 setProducts(data);
                 setFilteredProducts(data);
+                // Se arriviamo dallo scadenziario, pre-aggiungiamo il prodotto del tipo in scadenza
+                if (prefilledQuoteType && cart.length === 0) {
+                    const match = prefilledProductId
+                        ? data.find(p => p.id === prefilledProductId) ?? data.find(p => p.type === prefilledQuoteType)
+                        : data.find(p => p.type === prefilledQuoteType);
+                    if (match) {
+                        setCart([{ ...match, qty: 1 }]);
+                    }
+                }
             }
         } catch (error) {
             console.error("Error fetching products", error);
@@ -128,7 +181,25 @@ const NuovoPagamento = () => {
         }
     };
 
+    const isSocioIscrittoOTesserato = (socio) => {
+        if (!socio) return false;
+        // SOCIO: iscritto nel libro soci
+        if (socio.data_ammissione) return true;
+        const cf = (socio.codice_fiscale || '').toUpperCase();
+        // ISCRITTO: ha pagato quota_associativa nell'anno corrente
+        if (quotaPaymentCFs.has(cf)) return true;
+        // TESSERATO: ha pagato tesseramento nell'anno corrente
+        if (tessCurrentCFs.has(cf)) return true;
+        // Controllo iscrizioni embedded (se presenti nell'oggetto socio)
+        if (socio.iscrizioni?.some(i => i.anno === selectedAnno)) return true;
+        return false;
+    };
+
     const addToCart = (product) => {
+        if (product.type === 'subscription' && !isSocioIscrittoOTesserato(selectedSocio)) {
+            setShowAbbWarningModal(true);
+            return;
+        }
         if (cart.length >= 5) {
             showSnackbar('Max 5 prodotti nel carrello', 'error');
             return;
@@ -182,8 +253,29 @@ const NuovoPagamento = () => {
             
             if (response.ok) {
                 setIsGeneraModalOpen(false);
-                showSnackbar('Pagamento generato con successo!');
-                setTimeout(() => navigate('/pagamenti'), 1800);
+
+                // Se ci sono abbonamenti nel carrello, cerca corsi associati
+                const subscriptionItems = cart.filter(item => item.type === 'subscription');
+                if (subscriptionItems.length > 0 && selectedSocio?.id) {
+                    try {
+                        const corsiRes = await fetch(`/activities/api/corsi?societaId=${selectedSocietaId}`);
+                        if (corsiRes.ok) {
+                            const allCorsi = await corsiRes.json();
+                            const abbonamentoIds = new Set(subscriptionItems.map(i => i.id));
+                            const matching = allCorsi.filter(c => abbonamentoIds.has(c.abbonamentoId));
+                            if (matching.length > 0) {
+                                setCorsiPerAbbonamento(matching);
+                                setIsCorsoIscrizioneModalOpen(true);
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Errore fetch corsi per abbonamento', e);
+                    }
+                }
+
+                setShowSuccessOverlay(true);
+                setTimeout(() => navigate('/pagamenti'), 2000);
             } else {
                 showSnackbar('Errore durante la generazione del pagamento', 'error');
             }
@@ -193,16 +285,81 @@ const NuovoPagamento = () => {
         }
     };
 
+    const handleCorsoModalClose = () => {
+        setIsCorsoIscrizioneModalOpen(false);
+        setShowSuccessOverlay(true);
+        setTimeout(() => navigate('/pagamenti'), 2000);
+    };
+
     const cartTotal = cart.reduce((acc, item) => acc + (parseFloat(item.basePrice || 0) * item.qty), 0);
 
     return (
         <div className="np-container">
+            {showSuccessOverlay && (
+                <div style={{
+                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+                    zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'all'
+                }}>
+                    <div style={{
+                        backgroundColor: '#fff', borderRadius: '12px', padding: '40px 50px',
+                        textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+                        minWidth: '320px'
+                    }}>
+                        <div style={{
+                            width: '60px', height: '60px', borderRadius: '50%',
+                            backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <Check size={32} strokeWidth={2.5} color="#059669" />
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Pagamento registrato</div>
+                        <div style={{ fontSize: '13px', color: '#6b7280' }}>Reindirizzamento in corso...</div>
+                    </div>
+                </div>
+            )}
             <RicercaSocioModal 
                 isOpen={isRicercaModalOpen} 
                 onClose={() => setIsRicercaModalOpen(false)} 
                 onSelect={handleSocioSelect}
                 societaId={selectedSocietaId}
             />
+
+            {/* MODAL AVVISO ABBONAMENTO NON ISCRITTO */}
+            {showAbbWarningModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+                    zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div style={{
+                        backgroundColor: '#fff', borderRadius: '12px', padding: '32px 36px',
+                        maxWidth: '440px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                        display: 'flex', flexDirection: 'column', gap: '16px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                                width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+                                backgroundColor: '#fff3cd', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <AlertTriangle size={24} color="#d97706" strokeWidth={2}/>
+                            </div>
+                            <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>
+                                Abbonamento non consentito
+                            </div>
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
+                            Solo i soci <strong>iscritti</strong> o <strong>tesserati</strong> possono avere un abbonamento attivo.
+                            <br/><br/>
+                            Il socio selezionato non risulta iscritto né tesserato per l'anno corrente. Verifica la sua posizione nella scheda socio prima di procedere.
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button className="np-btn np-btn-yellow" onClick={() => setShowAbbWarningModal(false)}>
+                                <Check size={16}/> Ho capito
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <AbbonamentoDateModal
                 isOpen={isAbbonamentoDateModalOpen}
@@ -225,6 +382,15 @@ const NuovoPagamento = () => {
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
+                societa={societaList?.find(s => s.id == selectedSocietaId)}
+            />
+
+            <IscrizioneCorsoDopoModal
+                isOpen={isCorsoIscrizioneModalOpen}
+                onClose={handleCorsoModalClose}
+                corsi={corsiPerAbbonamento}
+                socio={selectedSocio}
+                societaId={selectedSocietaId}
             />
             
             <div className="np-grid">
@@ -296,6 +462,13 @@ const NuovoPagamento = () => {
                             </span>
                         </div>
                         <div className="np-card-body">
+                            {!selectedSocio ? (
+                                <div className="np-alert-red">
+                                    <AlertTriangle size={18} strokeWidth={1.5}/>
+                                    Seleziona prima un intestatario per visualizzare i prodotti disponibili
+                                </div>
+                            ) : (
+                            <>
                             <div className="np-search-group">
                                 <input 
                                     type="text" 
@@ -334,6 +507,8 @@ const NuovoPagamento = () => {
                                 </div>
                                 <span style={{ fontSize: '13px', color: '#1976d2', fontWeight: 600 }}>Tot righe: {filteredProducts.length}</span>
                             </div>
+                            </>
+                            )}
                         </div>
                     </div>
                 </div>

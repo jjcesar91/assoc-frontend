@@ -14,8 +14,10 @@ const fetchAllComuni = async () => {
             return res.json();
         })
         .then(data => {
-            // Extract just the names from the objects
-            cachedComuni = data.map(c => c.nome);
+            cachedComuni = data.map(c => ({
+                nome: c.nome,
+                cap: Array.isArray(c.cap) ? (c.cap[0] || '') : (c.cap || '')
+            }));
             fetchPromise = null;
             return cachedComuni;
         })
@@ -28,12 +30,14 @@ const fetchAllComuni = async () => {
     return fetchPromise;
 };
 
-const CityAutocomplete = ({ label, value, onChange, name, required = false, disabled = false, style }) => {
+const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = false, disabled = false, style }) => {
     const [query, setQuery] = useState(value || '');
     const [suggestions, setSuggestions] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [dropdownRect, setDropdownRect] = useState(null);
     const wrapperRef = useRef(null);
+    const inputRef = useRef(null);
 
     // Sync internal state with props
     useEffect(() => {
@@ -50,6 +54,22 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Recompute dropdown position on scroll/resize while open
+    useEffect(() => {
+        if (!isOpen) return;
+        const update = () => {
+            if (inputRef.current) {
+                setDropdownRect(inputRef.current.getBoundingClientRect());
+            }
+        };
+        window.addEventListener('scroll', update, true);
+        window.addEventListener('resize', update);
+        return () => {
+            window.removeEventListener('scroll', update, true);
+            window.removeEventListener('resize', update);
+        };
+    }, [isOpen]);
 
     // Prefetch data on mount
     useEffect(() => {
@@ -75,16 +95,19 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
 
             const lowerSearch = searchText.toLowerCase();
             const filtered = allComuni.filter(c => 
-                c.toLowerCase().includes(lowerSearch)
+                c.nome.toLowerCase().includes(lowerSearch)
             ).sort((a, b) => {
-                const aStarts = a.toLowerCase().startsWith(lowerSearch);
-                const bStarts = b.toLowerCase().startsWith(lowerSearch);
+                const aStarts = a.nome.toLowerCase().startsWith(lowerSearch);
+                const bStarts = b.nome.toLowerCase().startsWith(lowerSearch);
                 if (aStarts && !bStarts) return -1;
                 if (!aStarts && bStarts) return 1;
-                return a.localeCompare(b);
+                return a.nome.localeCompare(b.nome);
             }).slice(0, 50);
             
             setSuggestions(filtered);
+            if (inputRef.current) {
+                setDropdownRect(inputRef.current.getBoundingClientRect());
+            }
             setIsOpen(true);
         } catch (error) {
             console.error("Error fetching comuni:", error);
@@ -103,9 +126,10 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
         fetchComuni(txt);
     };
 
-    const handleSelect = (city) => {
-        setQuery(city);
-        if(onChange) onChange({ target: { name, value: city } });
+    const handleSelect = (comuneObj) => {
+        setQuery(comuneObj.nome);
+        if(onChange) onChange({ target: { name, value: comuneObj.nome } });
+        if(onSelect) onSelect(comuneObj);
         setIsOpen(false);
     };
 
@@ -118,7 +142,8 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
             {label && <label className="field-label" style={{marginBottom:'6px', display:'block'}}>{label} {required && '*'}</label>}
             <div style={{position:'relative', display: 'flex'}}>
                 <input 
-                    className="md-input" 
+                    className="md-input"
+                    ref={inputRef}
                     name={name}
                     value={query}
                     onChange={handleInputChange}
@@ -135,28 +160,28 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
                 )}
             </div>
 
-            {isOpen && suggestions.length > 0 && (
+            {isOpen && suggestions.length > 0 && dropdownRect && (
                 <ul className="city-autocomplete-dropdown" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
+                    position: 'fixed',
+                    top: dropdownRect.bottom,
+                    left: dropdownRect.left,
+                    width: dropdownRect.width,
                     backgroundColor: 'var(--surface-color, white)',
                     border: '1px solid var(--border-color, #e0e0e0)',
                     borderTop: 'none',
                     borderRadius: '0 0 4px 4px',
                     maxHeight: '200px',
                     overflowY: 'auto',
-                    zIndex: 1000,
+                    zIndex: 9999,
                     listStyle: 'none',
                     padding: 0,
                     margin: 0,
                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                 }}>
-                    {suggestions.map((city, idx) => (
+                    {suggestions.map((comune, idx) => (
                         <li 
                             key={idx} 
-                            onClick={() => handleSelect(city)}
+                            onClick={() => handleSelect(comune)}
                             style={{
                                 padding: '10px 12px',
                                 cursor: 'pointer',
@@ -166,7 +191,7 @@ const CityAutocomplete = ({ label, value, onChange, name, required = false, disa
                             onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-color, #f5f5f5)'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         >
-                            {city}
+                            {comune.nome}
                         </li>
                     ))}
                 </ul>

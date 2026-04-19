@@ -14,8 +14,17 @@ import Prodotti from './pages/Prodotti'
 import Pagamenti from './pages/Pagamenti';
 import NuovoPagamento from './pages/NuovoPagamento';
 import Conti from './pages/Conti';
+import Scadenziario from './pages/Scadenziario';
+import Contabilita from './pages/Contabilita';
+import GruppiSottogruppi from './pages/GruppiSottogruppi';
+import FornitoriContabilita from './pages/FornitoriContabilita';
+import AttivitaStrutture from './pages/AttivitaStrutture';
+import AttivitaConfigurazione from './pages/AttivitaConfigurazione';
+import Staff from './pages/Staff';
+import Calendario from './pages/Calendario';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
+import { ConfirmProvider } from './components/ConfirmModal'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,6 +52,7 @@ function App() {
   if (loading) return <div>Loading...</div>;
 
   return (
+    <ConfirmProvider>
     <SocietaProvider>
       <AnnoProvider>
         <Router>
@@ -103,11 +113,53 @@ function App() {
               <Conti />
             </Layout>
           ) : <Navigate to="/login" />} />
+          <Route path="/scadenziario" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Scadenziario">
+              <Scadenziario />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/contabilita/operazioni" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Contabilità - Operazioni">
+              <Contabilita />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/contabilita" element={<Navigate to="/contabilita/operazioni" />} />
+          <Route path="/contabilita/gruppi" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Contabilità - Gruppi / Sottogruppi">
+              <GruppiSottogruppi />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/contabilita/fornitori" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Contabilità - Fornitori">
+              <FornitoriContabilita />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/attivita/calendario" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Attività - Calendario">
+              <Calendario />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/attivita/strutture" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Attività - Strutture">
+              <AttivitaStrutture />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/attivita/configurazione" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Attività - Tipo Attività">
+              <AttivitaConfigurazione />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/attivita/tecnici" element={isAuthenticated ? (
+            <Layout onLogout={handleLogout} title="Attività - Staff">
+              <Staff />
+            </Layout>
+          ) : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to="/soci" />} />
         </Routes>
       </Router>
       </AnnoProvider>
     </SocietaProvider>
+    </ConfirmProvider>
   )
 }
 

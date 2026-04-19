@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useNavigate } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
@@ -9,6 +10,7 @@ import './Soci.css';
 const Pagamenti = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
+    const confirm = useConfirm();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showPaymentMenu, setShowPaymentMenu] = useState(false);
@@ -74,7 +76,7 @@ const Pagamenti = () => {
     };
 
     const handleDeletePayment = async (id) => {
-        if (!window.confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
+        if (!await confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
         try {
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
             if (response.ok) {
@@ -89,7 +91,7 @@ const Pagamenti = () => {
         }
     };
 
-    const handlePrintPayment = (p) => {
+    const handlePrintPayment = async (p) => {
         const societa = societaList.find(s => s.id == selectedSocietaId);
 
         const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
@@ -104,20 +106,63 @@ const Pagamenti = () => {
         };
         const modalitaLabel = modalitaMap[p.modalita_pagamento] || (p.modalita_pagamento?.toUpperCase() || '');
 
-        const importoFormatted = Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',');
-        const quoteItems = (p.quote || '').split(', ').filter(Boolean);
+        // Carica tutti gli item della stessa ricevuta (stesso numero_ricevuta)
+        let allItems = [p];
+        if (p.numero_ricevuta) {
+            try {
+                const token = localStorage.getItem('token');
+                const sibRes = await fetch(
+                    `/payments/api?societa_id=${p.societa_id}&numero_ricevuta=${encodeURIComponent(p.numero_ricevuta)}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                if (sibRes.ok) {
+                    const siblings = await sibRes.json();
+                    if (siblings.length > 0) allItems = siblings;
+                }
+            } catch (e) {
+                console.error('Errore recupero items ricevuta:', e);
+            }
+        }
 
-        const quoteRows = quoteItems.map(q => `
-            <tr>
-                <td>${q}</td>
-                <td style="text-align:right">${quoteItems.length === 1 ? importoFormatted : ''}</td>
-            </tr>
-        `).join('');
+        const totalAmount = allItems.reduce((acc, item) => acc + Math.abs(parseFloat(item.importo || 0)), 0);
+        const importoFormatted = totalAmount.toFixed(2).replace('.', ',');
+
+        const quoteRows = allItems.map(item => {
+            const itemImporto = Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',');
+            return `<tr><td>${item.quote || ''}</td><td style="text-align:right">${itemImporto}</td></tr>`;
+        }).join('');
 
         const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
         const footerText = societa?.footer_text ||
             'Fuori campo iva art.4 dpr 633/72 - Esente imposte art.148 TUIR -<br/>Esente bollo L 30/12/2018 n. 145 art.1 c.646';
         const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
+
+        let datiPagatore = p.codice_fiscale_genitore || '';
+        if (p.socio_id) {
+            try {
+                const token = localStorage.getItem('token');
+                const socioRes = await fetch(`/users/api/soci/${p.socio_id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (socioRes.ok) {
+                    const socio = await socioRes.json();
+                    if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
+                        const dataRif = new Date(p.data_pagamento || p.data_ricevuta || new Date());
+                        const nascita = new Date(socio.data_nascita);
+                        let eta = dataRif.getFullYear() - nascita.getFullYear();
+                        const mDiff = dataRif.getMonth() - nascita.getMonth();
+                        if (mDiff < 0 || (mDiff === 0 && dataRif.getDate() < nascita.getDate())) eta--;
+                        if (eta < 18) {
+                            const nomeGenitore = [socio.cognome_genitore, socio.nome_genitore].filter(Boolean).join(' ');
+                            const cfGenitore = socio.cf_genitore || p.codice_fiscale_genitore || '';
+                            datiPagatore = [nomeGenitore, cfGenitore].filter(Boolean).join(' - ');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Errore recupero dati socio per stampa:', e);
+            }
+        }
 
         const html = `<!DOCTYPE html>
 <html>
@@ -188,7 +233,7 @@ const Pagamenti = () => {
         </tr>
         <tr>
             <td colspan="3"></td>
-            <td colspan="2">${p.codice_fiscale_genitore || ''}</td>
+            <td colspan="2">${datiPagatore}</td>
         </tr>
         <tr><th colspan="5">NOTE</th></tr>
         <tr><td colspan="5">${p.note || ''}</td></tr>
@@ -249,6 +294,17 @@ const Pagamenti = () => {
         return <Banknote size={20} strokeWidth={1.5} />;
     };
 
+    const [sort, setSort] = useState({ key: 'data', dir: 'desc' });
+
+    const handleSort = (key) => {
+        setSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
+    };
+
+    const SortIcon = ({ col }) => {
+        if (sort.key !== col) return <span style={{ opacity: 0.35, fontSize: '0.7rem', marginLeft: '4px' }}>⇅</span>;
+        return <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>{sort.dir === 'asc' ? '↑' : '↓'}</span>;
+    };
+
     const filteredPayments = payments.filter(p => {
         if (filters.intestatario && !p.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
         if (filters.modalitaPagamento !== 'TUTTI' && p.modalita_pagamento !== filters.modalitaPagamento) return false;
@@ -256,6 +312,28 @@ const Pagamenti = () => {
         if (filters.dataDa && p.data_pagamento < filters.dataDa) return false;
         if (filters.dataA && p.data_pagamento > filters.dataA) return false;
         return true;
+    }).sort((a, b) => {
+        let va, vb;
+        if (sort.key === 'data') {
+            va = a.data_pagamento || '';
+            vb = b.data_pagamento || '';
+        } else if (sort.key === 'numero_ricevuta') {
+            const parseNum = (p) => {
+                const raw = p.numero_ricevuta || '';
+                const n = parseInt(raw.split('/')[0], 10);
+                return isNaN(n) ? p.id : n;
+            };
+            va = parseNum(a);
+            vb = parseNum(b);
+            return sort.dir === 'asc' ? va - vb : vb - va;
+        } else if (sort.key === 'importo') {
+            va = Math.abs(parseFloat(a.importo));
+            vb = Math.abs(parseFloat(b.importo));
+            return sort.dir === 'asc' ? va - vb : vb - va;
+        }
+        if (va < vb) return sort.dir === 'asc' ? -1 : 1;
+        if (va > vb) return sort.dir === 'asc' ? 1 : -1;
+        return 0;
     });
 
     const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0 && !p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + parseFloat(p.importo), 0);
@@ -401,15 +479,15 @@ const Pagamenti = () => {
                 </div>
 
                 {/* Table Block */}
-                <div style={{marginTop: '20px', flex:1, display:'flex', flexDirection:'column'}} className="card">
+                <div style={{marginTop: '8px', flex:1, display:'flex', flexDirection:'column'}} className="card">
                     <div className="table-responsive">
                         <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent' }}>
                             <thead>
                                 <tr style={{backgroundColor: '#f1c40f', color: '#fff'}}>
-                                    <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000'}}>Intestatario - Data - operatore</th>
-                                    <th style={{padding: '12px', color:'#000'}}>Identificativi documento</th>
+                                    <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('data')}>Intestatario - Data - operatore<SortIcon col="data" /></th>
+                                    <th style={{padding: '12px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('numero_ricevuta')}>Identificativi documento<SortIcon col="numero_ricevuta" /></th>
                                     <th style={{padding: '12px', color:'#000'}}>Quote</th>
-                                    <th style={{padding: '12px', textAlign:'right', color:'#000'}}>Importo</th>
+                                    <th style={{padding: '12px', textAlign:'right', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('importo')}>Importo<SortIcon col="importo" /></th>
                                     <th style={{padding: '12px', textAlign:'right', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', color:'#000'}}>Azioni</th>
                                 </tr>
                             </thead>
@@ -535,6 +613,7 @@ const Pagamenti = () => {
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
+                societa={societaList?.find(s => s.id == selectedSocietaId)}
             />
         </div>
     );

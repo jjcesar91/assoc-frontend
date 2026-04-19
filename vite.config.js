@@ -32,6 +32,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/activities': {
+        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

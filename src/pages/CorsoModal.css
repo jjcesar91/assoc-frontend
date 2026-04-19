@@ -1,0 +1,313 @@
+/* ── Overlay ─────────────────────────────────────────────────── */
+.cm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+}
+
+/* ── Modal container ─────────────────────────────────────────── */
+.cm-modal {
+    background: #fff;
+    color: #1f2937;
+    border-radius: 8px;
+    width: 760px;
+    max-width: 95%;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.cm-header {
+    background: var(--primary-color, #1976d2);
+    color: #fff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    border-radius: 8px 8px 0 0;
+}
+
+.cm-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 500;
+    flex: 1;
+}
+
+.cm-header-close {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.cm-header-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────── */
+.cm-tabs {
+    display: flex;
+    background: #e5e7eb;
+    padding: 8px 8px 0;
+    border-bottom: 1px solid #d1d5db;
+    flex-shrink: 0;
+    gap: 4px;
+}
+
+.cm-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #4b5563;
+    border-radius: 6px 6px 0 0;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.cm-tab-btn:hover:not(:disabled) {
+    background: #d1d5db;
+}
+
+.cm-tab-btn.active {
+    background: var(--primary-color, #1976d2);
+    color: #fff;
+}
+
+.cm-tab-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.cm-tab-badge {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.cm-tab-btn:not(.active) .cm-tab-badge {
+    background: #9ca3af;
+    color: #fff;
+}
+
+/* ── Scrollable body ─────────────────────────────────────────── */
+.cm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 16px;
+}
+
+/* ── Form layout ─────────────────────────────────────────────── */
+.cm-form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.cm-form-field {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 120px;
+}
+
+.cm-form-field label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary, rgba(0, 0, 0, 0.54));
+    margin-bottom: 6px;
+}
+
+.cm-form-field label .required {
+    color: var(--danger-color, #f44336);
+    margin-left: 2px;
+}
+
+/* Make inputs/selects fill field width */
+.cm-form-field .md-input,
+.cm-form-field .md-select {
+    width: 100%;
+}
+
+.cm-form-field .md-select-error {
+    border-color: var(--danger-color, #f44336) !important;
+    background: #fff5f5 !important;
+}
+
+.cm-form-field .cm-error-text {
+    color: var(--danger-color, #f44336);
+    font-size: 0.78rem;
+    margin-top: 4px;
+}
+
+/* Specific col widths */
+.cm-col-2 { flex: 2; }
+.cm-col-1 { flex: 1; }
+
+/* ── Iscritti tab body ───────────────────────────────────────── */
+.cm-iscritti-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.cm-iscritti-count {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.cm-iscritti-loading,
+.cm-iscritti-empty {
+    padding: 32px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+/* ── Iscritti table ──────────────────────────────────────────── */
+.cm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+}
+
+.cm-table thead tr {
+    background: #f0f4f8;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.cm-table th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.cm-table th.center { text-align: center; }
+
+.cm-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.cm-table td.center { text-align: center; }
+
+.cm-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.cm-table tbody tr.row-warning {
+    background: #fffde7;
+}
+
+.cm-table tbody tr.row-expired {
+    background: #fff8f8;
+}
+
+.cm-socio-name {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.cm-socio-id {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.cm-date-missing {
+    color: #d1d5db;
+}
+
+.cm-abb-missing {
+    color: #e65100;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* Status badge */
+.cm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    margin-left: 6px;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.cm-badge-warning {
+    background: #fff8e1;
+    color: #e65100;
+    border: 1px solid #ffe082;
+}
+
+.cm-badge-expired {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+/* Remove button in table */
+.cm-btn-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--danger-color, #f44336);
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.cm-btn-remove:hover {
+    background: #ffebee;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.cm-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    background: #fafafa;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    border-radius: 0 0 8px 8px;
+}

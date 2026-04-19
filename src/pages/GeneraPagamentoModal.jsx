@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar } from 'lucide-react';
 import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
-import { useAnno } from '../data/AnnoContext';
+import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 
 const GeneraPagamentoModal = ({ 
     isOpen, 
@@ -13,8 +13,12 @@ const GeneraPagamentoModal = ({
     cart,
     subscriptionDates
 }) => {
-    const { selectedSocietaId } = useSocieta();
+    const { selectedSocietaId, societaList } = useSocieta();
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
+    const selectedSocieta = useMemo(
+        () => societaList?.find(s => s.id == selectedSocietaId) || null,
+        [societaList, selectedSocietaId]
+    );
     const [conti, setConti] = useState([]);
     
     const todayStr = new Date().toISOString().split('T')[0];
@@ -29,12 +33,26 @@ const GeneraPagamentoModal = ({
     const [dataRicevuta, setDataRicevuta] = useState(todayStr); // YYYY-MM-DD
     const [nextNumeroRicevuta, setNextNumeroRicevuta] = useState(null);
     const [minDataRicevuta, setMinDataRicevuta] = useState('');
+
+    const maxDataRicevuta = useMemo(() => {
+        if (!annoRicevuta) return todayStr;
+        const { end } = getAnnoDateRange(annoRicevuta, selectedSocieta);
+        const endStr = end.toISOString().split('T')[0];
+        return endStr < todayStr ? endStr : todayStr;
+    }, [annoRicevuta, selectedSocieta, todayStr]);
     
     const [codiceFiscale, setCodiceFiscale] = useState('');
     const [codiceFiscaleGenitore, setCodiceFiscaleGenitore] = useState('');
     const [partitaIva, setPartitaIva] = useState('');
     
     const [note, setNote] = useState('');
+
+    // Clamp dataRicevuta quando il massimo cambia (es. cambio anno ricevuta)
+    useEffect(() => {
+        if (dataRicevuta > maxDataRicevuta) {
+            setDataRicevuta(maxDataRicevuta);
+        }
+    }, [maxDataRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (isOpen) {
@@ -132,8 +150,55 @@ const GeneraPagamentoModal = ({
         const periodoStr = (hasSubscription && subscriptionDates)
             ? ` [${formatDateIT(subscriptionDates.dataInizio)} - ${formatDateIT(subscriptionDates.dataFine)}]`
             : '';
+
+        const getScadenzaTesseramentoStr = (periodicity) => {
+            if (!periodicity || !dataRicevuta) return '';
+            const d = new Date(dataRicevuta);
+            if (periodicity === 'anno_solare') {
+                const scad = new Date(d);
+                scad.setFullYear(scad.getFullYear() + 1);
+                scad.setDate(scad.getDate() - 1);
+                return scad.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+            if (periodicity === 'anno_associativo') {
+                const tipo = selectedSocieta?.tipo_anno_associativo || 'solare';
+                let anno = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const day = d.getDate();
+                if (tipo === 'associativo') {
+                    if (m < 9) anno = d.getFullYear() - 1;
+                } else if (tipo === 'personalizzato' && selectedSocieta?.data_inizio_anno_associativo) {
+                    const parts = selectedSocieta.data_inizio_anno_associativo.split('-');
+                    const cDay = parseInt(parts[0], 10);
+                    const cMonth = parseInt(parts[1], 10);
+                    if (m < cMonth || (m === cMonth && day < cDay)) anno = d.getFullYear() - 1;
+                }
+                const { end } = getAnnoDateRange(anno, selectedSocieta);
+                return end.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+            return '';
+        };
+
+        const items = cart.map(i => {
+            let suffix = '';
+            if (i.type === 'subscription') suffix = periodoStr;
+            else if (i.type === 'tesseramento') {
+                const scad = getScadenzaTesseramentoStr(i.periodicity);
+                if (scad) suffix = ` (Scadenza ${scad})`;
+            }
+            return {
+                product_id: i.id,
+                importo: parseFloat(i.basePrice || 0) * i.qty,
+                quote: `${i.description || i.name} (x${i.qty}) €${(parseFloat(i.basePrice || 0) * i.qty).toFixed(2).replace('.', ',')}${suffix}`,
+                quote_types: i.type || '',
+                periodicity_tesseramento: i.type === 'tesseramento' ? (i.periodicity || null) : null,
+                data_inizio_abbonamento: i.type === 'subscription' ? (subscriptionDates?.dataInizio || null) : null,
+                data_scadenza_abbonamento: i.type === 'subscription' ? (subscriptionDates?.dataFine || null) : null,
+            };
+        });
+
         const payload = {
-            importo: totale,
+            items,
             modalita_pagamento: modalita,
             conto_destinazione: contoDestinazione,
             intestatario: intestatario,
@@ -145,11 +210,7 @@ const GeneraPagamentoModal = ({
             note: note,
             emetti_ricevuta: emettiRicevuta,
             anno_ricevuta: annoRicevuta,
-            quote: cart.map(i => `${i.description || i.name} (x${i.qty}) €${(parseFloat(i.basePrice || 0) * i.qty).toFixed(2).replace('.', ',')}${i.type === 'subscription' ? periodoStr : ''}`).join(', '),
-            quote_types: [...new Set(cart.map(i => i.type).filter(Boolean))].join(','),
             socio_id: socio?.id || null,
-            data_inizio_abbonamento: subscriptionDates?.dataInizio || null,
-            data_scadenza_abbonamento: subscriptionDates?.dataFine || null
         };
         onConfirm(payload);
     };
@@ -244,7 +305,7 @@ const GeneraPagamentoModal = ({
                                     className="gpm-input" 
                                     value={dataRicevuta} 
                                     min={minDataRicevuta || undefined}
-                                    max={todayStr}
+                                    max={maxDataRicevuta}
                                     style={{ width: '100%', paddingRight: '35px' }}
                                     onChange={(e) => setDataRicevuta(e.target.value)}
                                 />

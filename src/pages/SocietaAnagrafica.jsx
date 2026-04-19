@@ -26,6 +26,7 @@ const SocietaAnagrafica = () => {
         comune: '',
         cap: '',
         affiliazioni: [],
+        tipo_associazione: 'ASD',
         cognome_rappr_legale: '',
         nome_rappr_legale: '',
         alias_sms: '',
@@ -51,6 +52,7 @@ const SocietaAnagrafica = () => {
                     comune: societa.comune || '',
                     cap: societa.cap || '',
                     affiliazioni: societa.affiliazioni || [],
+                    tipo_associazione: societa.tipo_associazione || 'ASD',
                     cognome_rappr_legale: societa.cognome_rappr_legale || '',
                     nome_rappr_legale: societa.nome_rappr_legale || '',
                     alias_sms: societa.alias_sms || '',
@@ -103,6 +105,7 @@ const SocietaAnagrafica = () => {
             if (response.ok) {
                 const updatedSocieta = await response.json();
                 setMessage({ type: 'success', text: 'Dati salvati con successo' });
+                document.querySelector('.content-area')?.scrollTo({ top: 0, behavior: 'smooth' });
                 // Update form data with the response
                 setFormData(prev => ({
                     ...prev,
@@ -138,6 +141,7 @@ const SocietaAnagrafica = () => {
                     comune: societa.comune || '',
                     cap: societa.cap || '',
                     affiliazioni: societa.affiliazioni || [],
+                    tipo_associazione: societa.tipo_associazione || 'ASD',
                     cognome_rappr_legale: societa.cognome_rappr_legale || '',
                     nome_rappr_legale: societa.nome_rappr_legale || '',
                     alias_sms: societa.alias_sms || '',
@@ -225,6 +229,21 @@ const SocietaAnagrafica = () => {
                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' }}>Cap</label>
                         <input className="md-input" name="cap" value={formData.cap} onChange={handleChange} style={{ width: '100%', padding: '8px 12px' }} />
                     </div>
+                </div>
+
+                {/* Tipo Associazione */}
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' }}>Tipo Associazione</label>
+                    <select
+                        className="md-input"
+                        name="tipo_associazione"
+                        value={formData.tipo_associazione}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: '8px 12px' }}
+                    >
+                        <option value="ASD">Associazione Sportiva Dilettantistica (ASD)</option>
+                        <option value="APS">Associazione di Promozione Sociale (APS)</option>
+                    </select>
                 </div>
 
                 {/* Affiliazioni Section */}

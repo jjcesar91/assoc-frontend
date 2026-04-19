@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, Calendar } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
+import { useConfirm } from '../components/ConfirmModal';
 
 const Modulistica = () => {
     const { selectedSocietaId, societaList } = useSocieta();
+    const confirm = useConfirm();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ descrizione: '', testo: '' });
@@ -257,7 +259,7 @@ const Modulistica = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Sei sicuro di voler eliminare questo modulo?')) {
+        if (await confirm('Sei sicuro di voler eliminare questo modulo?')) {
             try {
                 const response = await fetch(`/documents/api/moduli/${id}`, {
                     method: 'DELETE'
