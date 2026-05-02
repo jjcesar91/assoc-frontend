@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Shirt, Clock, Mail } from 'lucide-react';
+import { Plus, Shirt, Mail } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import StaffModal from './StaffModal';
 import './Staff.css';
@@ -119,9 +119,6 @@ const Staff = () => {
                         </div>
                     </form>
                     <div className="staff-toolbar-actions">
-                        <button className="btn-teal" onClick={() => {}}>
-                            <Clock size={16} /> Fogli ore
-                        </button>
                         <button className="btn-success" onClick={() => { setCurrentStaff(null); setIsModalOpen(true); }}>
                             <Plus size={16} /> Nuovo staff
                         </button>

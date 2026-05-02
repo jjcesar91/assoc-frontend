@@ -4,13 +4,13 @@ import { AlertTriangle, X } from 'lucide-react';
 const ConfirmContext = createContext(null);
 
 export const ConfirmProvider = ({ children }) => {
-    const [state, setState] = useState({ open: false, message: '', title: '' });
+    const [state, setState] = useState({ open: false, message: '', title: '', confirmLabel: 'Elimina', confirmColor: '#f44336' });
     const resolveRef = useRef(null);
 
-    const confirm = (message, title = 'Conferma') =>
+    const confirm = (message, title = 'Conferma', { confirmLabel = 'Elimina', confirmColor = '#f44336' } = {}) =>
         new Promise((resolve) => {
             resolveRef.current = resolve;
-            setState({ open: true, message, title });
+            setState({ open: true, message, title, confirmLabel, confirmColor });
         });
 
     const handleAnswer = (answer) => {
@@ -35,7 +35,7 @@ export const ConfirmProvider = ({ children }) => {
                     }}>
                         {/* Header */}
                         <div style={{
-                            background: '#f44336', color: '#fff',
+                            background: state.confirmColor, color: '#fff',
                             padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
                         }}>
                             <AlertTriangle size={20} />
@@ -70,11 +70,11 @@ export const ConfirmProvider = ({ children }) => {
                                 onClick={() => handleAnswer(true)}
                                 style={{
                                     padding: '8px 20px', borderRadius: 6, border: 'none',
-                                    background: '#f44336', color: '#fff', cursor: 'pointer',
+                                    background: state.confirmColor, color: '#fff', cursor: 'pointer',
                                     fontWeight: 600, fontSize: '0.9rem',
                                 }}
                             >
-                                Elimina
+                                {state.confirmLabel}
                             </button>
                         </div>
                     </div>

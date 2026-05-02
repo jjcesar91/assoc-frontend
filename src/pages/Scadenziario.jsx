@@ -611,7 +611,11 @@ const Scadenziario = () => {
                                             borderLeft: `5px solid ${borderColor}`,
                                         }}>
                                             <td style={{ padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px' }}>
-                                                <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{p.intestatario}</div>
+                                                <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    {p.socio_id ? (
+                                                        <a href={`/soci?apriSocioPath=${p.socio_id}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>{p.intestatario}</a>
+                                                    ) : p.intestatario}
+                                                </div>
                                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                                     {row.tipo} · {formatDate(p.data_pagamento)} · {p.numero_ricevuta || `#${p.id}`}
                                                 </div>

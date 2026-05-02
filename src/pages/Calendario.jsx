@@ -3,6 +3,7 @@ import { Plus, Users, AlertTriangle, Pencil, Trash2, Printer } from 'lucide-reac
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import CorsoModal from './CorsoModal';
+import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import './Calendario.css';
 
 const GIORNI = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
@@ -180,7 +181,7 @@ const Calendario = () => {
                     let expiredCount = 0;
                     socioIds.forEach(socioId => {
                         const socio = sociById[socioId];
-                        const certStatus = getStatus(socio?.scadenza_certificato, giorniAvviso);
+                        const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
                         const abbPay = (paymentsBySocio[socioId] || [])
                             .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
                             .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];

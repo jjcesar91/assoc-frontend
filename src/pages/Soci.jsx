@@ -7,6 +7,7 @@ import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
@@ -17,6 +18,10 @@ const Soci = ({ onLogout }) => {
     const [pastQuotaPaymentCFs, setPastQuotaPaymentCFs] = useState(new Set());
     const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
     const [tessAnyPastCFs, setTessAnyPastCFs] = useState(new Set());
+    const [quotaPaymentSocioIds, setQuotaPaymentSocioIds] = useState(new Set());
+    const [pastQuotaPaymentSocioIds, setPastQuotaPaymentSocioIds] = useState(new Set());
+    const [tessCurrentSocioIds, setTessCurrentSocioIds] = useState(new Set());
+    const [tessAnyPastSocioIds, setTessAnyPastSocioIds] = useState(new Set());
     const [showModal, setShowModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
@@ -59,53 +64,69 @@ const Soci = ({ onLogout }) => {
                 if (!response.ok) return;
                 const data = await response.json();
                 const iscrPagamenti = data.filter(p =>
-                    p.quote_types && p.quote_types.split(',').includes('quota_associativa') && p.codice_fiscale
+                    p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('quota_associativa') && (p.codice_fiscale || p.socio_id)
                 );
                 const currCfs = new Set(
                     iscrPagamenti
-                        .filter(p => {
-                            if (!p.data_pagamento) return false;
-                            const d = new Date(p.data_pagamento);
-                            return d >= start && d <= end;
-                        })
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .filter(p => p.codice_fiscale)
                         .map(p => p.codice_fiscale.toUpperCase())
                 );
                 const pastCfs = new Set(
                     iscrPagamenti
-                        .filter(p => {
-                            if (!p.data_pagamento) return false;
-                            const d = new Date(p.data_pagamento);
-                            return d < start;
-                        })
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d < start; })
+                        .filter(p => p.codice_fiscale)
                         .map(p => p.codice_fiscale.toUpperCase())
+                );
+                const currSocioIds = new Set(
+                    iscrPagamenti
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .filter(p => p.socio_id)
+                        .map(p => p.socio_id)
+                );
+                const pastSocioIds = new Set(
+                    iscrPagamenti
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d < start; })
+                        .filter(p => p.socio_id)
+                        .map(p => p.socio_id)
                 );
                 setQuotaPaymentCFs(currCfs);
                 setPastQuotaPaymentCFs(pastCfs);
+                setQuotaPaymentSocioIds(currSocioIds);
+                setPastQuotaPaymentSocioIds(pastSocioIds);
 
                 // Tesseramento
                 const tessPagamenti = data.filter(p =>
-                    p.quote_types && p.quote_types.split(',').includes('tesseramento') && p.codice_fiscale
+                    p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('tesseramento') && (p.codice_fiscale || p.socio_id)
                 );
                 const tessCurrentSet = new Set(
                     tessPagamenti
-                        .filter(p => {
-                            if (!p.data_pagamento) return false;
-                            const d = new Date(p.data_pagamento);
-                            return d >= start && d <= end;
-                        })
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .filter(p => p.codice_fiscale)
                         .map(p => p.codice_fiscale.toUpperCase())
                 );
                 const tessAnyPastSet = new Set(
                     tessPagamenti
-                        .filter(p => {
-                            if (!p.data_pagamento) return false;
-                            const d = new Date(p.data_pagamento);
-                            return d < start;
-                        })
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d < start; })
+                        .filter(p => p.codice_fiscale)
                         .map(p => p.codice_fiscale.toUpperCase())
+                );
+                const tessCurrentSocioSet = new Set(
+                    tessPagamenti
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .filter(p => p.socio_id)
+                        .map(p => p.socio_id)
+                );
+                const tessAnyPastSocioSet = new Set(
+                    tessPagamenti
+                        .filter(p => { if (!p.data_pagamento) return false; const d = new Date(p.data_pagamento); return d < start; })
+                        .filter(p => p.socio_id)
+                        .map(p => p.socio_id)
                 );
                 setTessCurrentCFs(tessCurrentSet);
                 setTessAnyPastCFs(tessAnyPastSet);
+                setTessCurrentSocioIds(tessCurrentSocioSet);
+                setTessAnyPastSocioIds(tessAnyPastSocioSet);
             } catch (e) {
                 console.error('Error fetching quota payments', e);
             }
@@ -146,29 +167,27 @@ const Soci = ({ onLogout }) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
 
-    const getCertStatus = (dateString) => {
-        if (!dateString) return 'MISSING';
-        const date = new Date(dateString);
-        const today = new Date();
-        const d = new Date(date); d.setHours(0,0,0,0);
-        const t = new Date(today); t.setHours(0,0,0,0);
-        
+    const getCertStatus = (dataPresentazione) => {
+        if (!dataPresentazione) return 'MISSING';
+        // Calcola scadenza: data presentazione + 1 anno - 1 giorno
+        const scadenzaStr = computeScadenzaCertificatoStr(dataPresentazione);
+        if (!scadenzaStr) return 'MISSING';
+        const d = new Date(scadenzaStr); d.setHours(0, 0, 0, 0);
+        const t = new Date(); t.setHours(0, 0, 0, 0);
         if (d < t) return '0'; // Scaduto
-        
         const diffTime = d - t;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
         if (diffDays <= 30) return '1'; // In scadenza
         return '2'; // Valido
     };
 
     const getTesseratoLabel = (socio) => {
         const cf = (socio.codice_fiscale || '').toUpperCase();
-        if (tessCurrentCFs.has(cf)) return 'REGOLARE';
+        if (tessCurrentCFs.has(cf) || tessCurrentSocioIds.has(socio.id)) return 'REGOLARE';
         // Se "Quota associativa e Tesseramento Unico" è attivo, ISCRITTO vale come REGOLARE
         const currentSocieta = societaList.find(s => s.id == selectedSocietaId);
         if (currentSocieta?.quota_tesseramento_unico && getIscrizioneLabel(socio) === 'ISCRITTO') return 'REGOLARE';
-        if (tessAnyPastCFs.has(cf)) return 'SCADUTO';
+        if (tessAnyPastCFs.has(cf) || tessAnyPastSocioIds.has(socio.id)) return 'SCADUTO';
         return 'NO';
     };
 
@@ -178,10 +197,10 @@ const Soci = ({ onLogout }) => {
         const cf = (socio.codice_fiscale || '').toUpperCase();
         // ISCRITTO: ha iscrizione per l'anno corrente o pagamento quota nell'anno corrente
         const hasCurrentIscrizione = (socio.iscrizioni || []).some(i => i.anno === selectedAnno);
-        if (hasCurrentIscrizione || quotaPaymentCFs.has(cf)) return 'ISCRITTO';
+        if (hasCurrentIscrizione || quotaPaymentCFs.has(cf) || quotaPaymentSocioIds.has(socio.id)) return 'ISCRITTO';
         // SCADUTO: ha iscrizioni per anni precedenti o pagamenti di anni precedenti
         const hasPastIscrizione = (socio.iscrizioni || []).some(i => i.anno < selectedAnno);
-        if (hasPastIscrizione || pastQuotaPaymentCFs.has(cf)) return 'SCADUTO';
+        if (hasPastIscrizione || pastQuotaPaymentCFs.has(cf) || pastQuotaPaymentSocioIds.has(socio.id)) return 'SCADUTO';
         return 'NO';
     };
 
@@ -511,7 +530,8 @@ const Soci = ({ onLogout }) => {
                                             {(() => {
                                                 const status = getCertStatus(socio.scadenza_certificato);
                                                 let color = 'inherit';
-                                                let text = socio.scadenza_certificato;
+                                                const scadenzaStr = computeScadenzaCertificatoStr(socio.scadenza_certificato);
+                                                let text = scadenzaStr || socio.scadenza_certificato;
 
                                                 if (status === 'MISSING') {
                                                     color = 'var(--danger-color)';

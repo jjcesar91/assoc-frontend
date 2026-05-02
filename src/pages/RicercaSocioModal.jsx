@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, User, MousePointerClick, Contact } from 'lucide-react';
+import { computeScadenzaCertificato } from '../utils/certificatoUtils';
 import './RicercaSocioModal.css';
 
 const getCertStatus = (scadenza) => {
     if (!scadenza) return 'NON ISCRITTO';
-    const scadenzaDate = new Date(scadenza);
+    // Calcola scadenza: data presentazione + 1 anno - 1 giorno
+    const scadenzaDate = computeScadenzaCertificato(scadenza);
+    if (!scadenzaDate) return 'NON ISCRITTO';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -20,12 +23,16 @@ const getCertStatus = (scadenza) => {
     }
 };
 
-const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId, abbonamentoNome }) => {
+const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId, abbonamentoNome, enrolledIds = [] }) => {
+    const enrolledSet = new Set(enrolledIds);
+    const enrolledKey = enrolledIds.join(',');
     const [soci, setSoci] = useState([]);
     const [filteredSoci, setFilteredSoci] = useState([]);
     const [filters, setFilters] = useState({ cognome: '', nome: '' });
     // map socioId -> last payment date (for abbonamento filter mode)
     const [lastPaymentMap, setLastPaymentMap] = useState({});
+    // map socioId -> scadenza passepartout valida (solo soci NON nel lastPaymentMap)
+    const [passepartoutMap, setPassepartoutMap] = useState({});
 
     useEffect(() => {
         if (!societaId || !isOpen) return;
@@ -56,15 +63,49 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                     });
                     setLastPaymentMap(map);
 
-                    // Keep only soci that have at least one payment for this product
+                    // Fetch passepartout products and their non-expired payments
+                    let ppMap = {};
+                    try {
+                        const prodRes = await fetch(`/products/api?societaId=${societaId}`);
+                        const prodData = prodRes.ok ? await prodRes.json() : [];
+                        const ppProducts = prodData.filter(p => p.passepartout && p.type === 'subscription');
+                        if (ppProducts.length > 0) {
+                            const oggi = new Date();
+                            oggi.setHours(0, 0, 0, 0);
+                            const ppPaymentsAll = await Promise.all(
+                                ppProducts.map(pp =>
+                                    fetch(`/payments/api?societa_id=${societaId}&product_id=${pp.id}`)
+                                        .then(r => r.ok ? r.json() : [])
+                                )
+                            );
+                            ppPaymentsAll.flat().forEach(p => {
+                                if (!p.socio_id || !p.data_scadenza_abbonamento) return;
+                                const scad = new Date(p.data_scadenza_abbonamento);
+                                scad.setHours(0, 0, 0, 0);
+                                if (scad < oggi) return; // scaduto
+                                const existing = ppMap[p.socio_id];
+                                if (!existing || scad > new Date(existing.scadenza)) {
+                                    ppMap[p.socio_id] = { scadenza: p.data_scadenza_abbonamento, pagamento: p.data_pagamento };
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error fetching passepartout products', e);
+                    }
+                    setPassepartoutMap(ppMap);
+
+                    // Include soci with specific abbonamento OR valid passepartout
                     const socioIds = new Set(Object.keys(map).map(Number));
+                    const ppIds = new Set(Object.keys(ppMap).map(Number));
+                    const allIds = new Set([...socioIds, ...ppIds]);
                     const filtered = Array.isArray(sociData)
-                        ? sociData.filter(s => socioIds.has(s.id))
+                        ? sociData.filter(s => allIds.has(s.id))
                         : [];
                     setSoci(filtered);
                     setFilteredSoci(filtered);
                 } else {
                     setLastPaymentMap({});
+                    setPassepartoutMap({});
                     if (Array.isArray(sociData)) {
                         setSoci(sociData);
                         setFilteredSoci(sociData);
@@ -86,8 +127,14 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
         if (filters.nome) {
             result = result.filter(s => s.nome.toLowerCase().includes(filters.nome.toLowerCase()));
         }
+        // Già iscritti in fondo
+        result = [...result].sort((a, b) => {
+            const aEnr = enrolledSet.has(a.id) ? 1 : 0;
+            const bEnr = enrolledSet.has(b.id) ? 1 : 0;
+            return aEnr - bEnr;
+        });
         setFilteredSoci(result);
-    }, [filters, soci]);
+    }, [filters, soci, enrolledKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!isOpen) return null;
 
@@ -157,12 +204,21 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                                 : 'Nessun socio trovato'}
                                         </td>
                                     </tr>
-                                ) : filteredSoci.map(socio => (
-                                    <tr key={socio.id}>
+                                ) : filteredSoci.map(socio => {
+                                    const isEnrolled = enrolledSet.has(socio.id);
+                                    return (
+                                    <tr key={socio.id} style={isEnrolled ? { opacity: 0.5, background: '#f3f4f6' } : {}}>
                                         <td style={{width: abbonamentoId ? '35%' : '40%'}}>
-                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: socio.sesso === 'F' ? '#ff4081' : '#1976d2', fontWeight: 'bold'}}>
+                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? '#9ca3af' : (socio.sesso === 'F' ? '#ff4081' : '#1976d2'), fontWeight: 'bold'}}>
                                                 <User size={18}/>
-                                                <span>{socio.id} {socio.cognome} {socio.nome}</span>
+                                                <span
+                                                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                                    onClick={() => window.open(`/soci?apriSocioPath=${socio.id}`, '_blank')}
+                                                >{socio.cognome} {socio.nome}</span>
+                                                {isEnrolled && <span style={{fontSize:'0.72rem', background:'#e5e7eb', color:'#6b7280', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>già iscritto</span>}
+                                                {!isEnrolled && abbonamentoId && !lastPaymentMap[socio.id] && passepartoutMap[socio.id] && (
+                                                    <span style={{fontSize:'0.72rem', background:'#fef3c7', color:'#92400e', border:'1px solid #fcd34d', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>jolly</span>
+                                                )}
                                             </div>
                                         </td>
                                         <td style={{width: '18%'}}>
@@ -172,7 +228,20 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                             <td style={{width: '20%'}}>
                                                 {(() => {
                                                     const entry = lastPaymentMap[socio.id];
-                                                    if (!entry) return '—';
+                                                    if (!entry) {
+                                                        const ppEntry = passepartoutMap[socio.id];
+                                                        if (!ppEntry) return '—';
+                                                        const scad = new Date(ppEntry.scadenza);
+                                                        scad.setHours(0,0,0,0);
+                                                        const oggi = new Date();
+                                                        oggi.setHours(0,0,0,0);
+                                                        const diff = Math.round((scad - oggi) / 86400000);
+                                                        let nota = null;
+                                                        if (diff === 0) nota = <small style={{color:'#e65100', display:'block'}}>scade oggi</small>;
+                                                        else nota = <small style={{color:'#2e7d32', display:'block'}}>{diff} gg alla scad.</small>;
+                                                        const dateStr = ppEntry.pagamento ? new Date(ppEntry.pagamento).toLocaleDateString('it-IT') : '—';
+                                                        return <>{dateStr}{nota}</>;
+                                                    }
                                                     const dateStr = entry.dataPagamento
                                                         ? new Date(entry.dataPagamento).toLocaleDateString('it-IT')
                                                         : '—';
@@ -205,13 +274,19 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                                 <button className="btn-scheda-rm" onClick={() => window.open(`/soci?apriSocioPath=${socio.id}`, '_blank')}>
                                                     <Contact size={14}/> Scheda
                                                 </button>
-                                                <button className="btn-seleziona-rm" onClick={() => onSelect(socio)}>
+                                                <button
+                                                    className="btn-seleziona-rm"
+                                                    onClick={() => !isEnrolled && onSelect(socio)}
+                                                    disabled={isEnrolled}
+                                                    style={isEnrolled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                                                >
                                                     <MousePointerClick size={14}/> Seleziona
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>                        </table>
                     </div>
                 </div>

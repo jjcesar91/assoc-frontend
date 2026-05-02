@@ -523,9 +523,13 @@ const Pagamenti = () => {
                                                             {renderPaymentIcon(p.modalita_pagamento)}
                                                         </div>
                                                         <div>
-                                                            <div style={{fontWeight:'600', color: isAnnullato ? '#c0392b' : 'var(--text-primary)', textDecoration: isAnnullato ? 'line-through' : 'none'}}>{p.intestatario}</div>
+                                                            <div style={{fontWeight:'600', color: isAnnullato ? '#c0392b' : 'var(--text-primary)', textDecoration: isAnnullato ? 'line-through' : 'none'}}>
+                                                                {p.socio_id ? (
+                                                                    <a href={`/soci?apriSocioPath=${p.socio_id}`} target="_blank" rel="noreferrer" style={{color:'inherit', textDecoration:'underline', cursor:'pointer'}} onClick={e => e.stopPropagation()}>{p.intestatario}</a>
+                                                                ) : p.intestatario}
+                                                            </div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
-                                                                {p.data_pagamento} - h 12:00:00 <User size={12}/> {p.utente_nome || 'ADMIN'}
+                                                                {p.data_pagamento} {p.createdAt ? `- h ${new Date(p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''} <User size={12}/> {p.utente_nome || 'ADMIN'}
                                                                 {isAnnullato && <span style={{color:'#e74c3c', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>

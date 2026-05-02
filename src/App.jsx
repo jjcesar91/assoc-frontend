@@ -22,34 +22,75 @@ import AttivitaStrutture from './pages/AttivitaStrutture';
 import AttivitaConfigurazione from './pages/AttivitaConfigurazione';
 import Staff from './pages/Staff';
 import Calendario from './pages/Calendario';
+import Utenti from './pages/Utenti';
+import SuperuserSocieta from './pages/SuperuserSocieta';
+import SocioDashboard from './pages/SocioDashboard';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
 
+// Decodifica ruolo dal JWT senza librerie esterne
+function getRoleFromToken(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1])).role || 'user';
+  } catch {
+    return 'user';
+  }
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState('user');
   const [loading, setLoading] = useState(true);
 
+  const fetchAndStoreUserInfo = async (token) => {
+    try {
+      const res = await fetch('/auth/api/me', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const user = await res.json();
+        localStorage.setItem('user_role', user.role || 'user');
+        localStorage.setItem('user_features', JSON.stringify(user.features ?? null));
+        return user.role || 'user';
+      }
+    } catch (e) {
+      console.error('Errore caricamento profilo utente', e);
+    }
+    return getRoleFromToken(token);
+  };
+
   useEffect(() => {
-    // Check if token exists
     const token = localStorage.getItem('token');
     if (token) {
-      setIsAuthenticated(true);
+      fetchAndStoreUserInfo(token).then(role => {
+        setUserRole(role);
+        setIsAuthenticated(true);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const handleLogin = (token) => {
+  const handleLogin = async (token) => {
     localStorage.setItem('token', token);
+    const role = await fetchAndStoreUserInfo(token);
+    setUserRole(role);
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_features');
     setIsAuthenticated(false);
-  }
+    setUserRole('user');
+  };
 
   if (loading) return <div>Loading...</div>;
+
+  const isSocio = userRole === 'socio';
 
   return (
     <ConfirmProvider>
@@ -57,104 +98,135 @@ function App() {
       <AnnoProvider>
         <Router>
         <Routes>
-          <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={handleLogin} /> : <Navigate to="/soci" />} />
-          <Route path="/soci" element={isAuthenticated ? (
+          {/* Login: se autenticato come socio → dashboard, altrimenti → /soci */}
+          <Route path="/login" element={
+            !isAuthenticated
+              ? <Login onLoginSuccess={handleLogin} />
+              : isSocio
+                ? <Navigate to="/area-soci" />
+                : <Navigate to="/soci" />
+          } />
+
+          {/* ── Area Soci (solo role=socio) ── */}
+          <Route path="/area-soci" element={
+            isAuthenticated && isSocio
+              ? <SocioDashboard onLogout={handleLogout} />
+              : isAuthenticated
+                ? <Navigate to="/soci" />
+                : <Navigate to="/login" />
+          } />
+
+          {/* ── Route admin/staff (non accessibili ai soci) ── */}
+          <Route path="/soci" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Soci">
               <Soci />
             </Layout>
-          ) : <Navigate to="/login" />} />
-          <Route path="/societa/anagrafica" element={isAuthenticated ? (
+          ) : isAuthenticated ? <Navigate to="/area-soci" /> : <Navigate to="/login" />} />
+          <Route path="/societa/anagrafica" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Anagrafica Società">
               <SocietaAnagrafica />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/societa/anno-contabile" element={isAuthenticated ? (
+          <Route path="/societa/anno-contabile" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Anno Contabile">
               <AnnoContabile />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/societa/comunicazioni" element={isAuthenticated ? (
+          <Route path="/societa/comunicazioni" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Comunicazioni">
               <SocietaComunicazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/societa/impostazioni" element={isAuthenticated ? (
+          <Route path="/societa/impostazioni" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Impostazioni Società">
               <SocietaImpostazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/modulistica" element={isAuthenticated ? (
+          <Route path="/modulistica" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Modulistica">
               <Modulistica />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/modulistica/template" element={isAuthenticated ? (
+          <Route path="/modulistica/template" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Template di Stampa">
               <TemplateStampa />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/prodotti" element={isAuthenticated ? (
+          <Route path="/prodotti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Prodotti">
               <Prodotti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/nuovo-pagamento" element={isAuthenticated ? (
+          <Route path="/nuovo-pagamento" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Nuovo Pagamento">
               <NuovoPagamento />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/pagamenti" element={isAuthenticated ? (
+          <Route path="/pagamenti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Pagamenti">
               <Pagamenti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/pagamenti/conti" element={isAuthenticated ? (
+          <Route path="/pagamenti/conti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Configurazione Conti">
               <Conti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/scadenziario" element={isAuthenticated ? (
+          <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Scadenziario">
               <Scadenziario />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/contabilita/operazioni" element={isAuthenticated ? (
+          <Route path="/contabilita/operazioni" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Contabilità - Operazioni">
               <Contabilita />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/contabilita" element={<Navigate to="/contabilita/operazioni" />} />
-          <Route path="/contabilita/gruppi" element={isAuthenticated ? (
+          <Route path="/contabilita/gruppi" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Contabilità - Gruppi / Sottogruppi">
               <GruppiSottogruppi />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/contabilita/fornitori" element={isAuthenticated ? (
+          <Route path="/contabilita/fornitori" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Contabilità - Fornitori">
               <FornitoriContabilita />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/attivita/calendario" element={isAuthenticated ? (
+          <Route path="/attivita/calendario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Attività - Calendario">
               <Calendario />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/attivita/strutture" element={isAuthenticated ? (
+          <Route path="/attivita/strutture" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Attività - Strutture">
               <AttivitaStrutture />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/attivita/configurazione" element={isAuthenticated ? (
+          <Route path="/attivita/configurazione" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Attività - Tipo Attività">
               <AttivitaConfigurazione />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/attivita/tecnici" element={isAuthenticated ? (
+          <Route path="/attivita/tecnici" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Attività - Staff">
               <Staff />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/" element={<Navigate to="/soci" />} />
+          <Route path="/amministrazione/utenti" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Amministrazione - Utenti">
+              <Utenti />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/amministrazione/societa" element={isAuthenticated && userRole === 'superuser' ? (
+            <Layout onLogout={handleLogout} title="Amministrazione - Società">
+              <SuperuserSocieta />
+            </Layout>
+          ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
+          <Route path="/" element={isAuthenticated
+            ? isSocio ? <Navigate to="/area-soci" /> : <Navigate to="/soci" />
+            : <Navigate to="/login" />
+          } />
         </Routes>
       </Router>
       </AnnoProvider>

@@ -311,3 +311,111 @@
     flex-shrink: 0;
     border-radius: 0 0 8px 8px;
 }
+
+/* ── Presenze tab ─────────────────────────────────────────────── */
+.cm-presenze-toolbar {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cm-presenza-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.86rem;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.cm-presenza-saved {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.cm-presenza-unsaved {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fed7aa;
+}
+
+.cm-presenza-counter {
+    margin-left: auto;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.cm-presenze-table td {
+    padding: 7px 12px;
+}
+
+.cm-btn-print {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f0f4f8;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    transition: background 0.15s;
+    margin-bottom: 4px;
+}
+
+.cm-btn-print:hover {
+    background: #e2e8f0;
+}
+
+/* ── Toggle switch ───────────────────────────────────────────── */
+.cm-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    cursor: pointer;
+}
+
+.cm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.cm-switch-slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 22px;
+    transition: background 0.2s;
+}
+
+.cm-switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.cm-switch input:checked + .cm-switch-slider {
+    background: #16a34a;
+}
+
+.cm-switch input:checked + .cm-switch-slider::before {
+    transform: translateX(18px);
+}

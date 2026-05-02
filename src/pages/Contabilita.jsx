@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, Edit2, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search } from 'lucide-react';
+import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
@@ -13,6 +14,7 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
     const [query, setQuery] = useState('');
     const [preferite, setPreferite] = useState([]);
     const dropdownRef = useRef(null);
+    const confirm = useConfirm();
 
     useEffect(() => {
         if (!open) return;
@@ -32,6 +34,16 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [open]);
+
+    const handleDeletePreferita = async (e, pref) => {
+        e.stopPropagation();
+        const ok = await confirm(`Eliminare la preferita "${pref.nome}"?`, 'Elimina preferita');
+        if (!ok) return;
+        const key = `op_preferite_${societaId}`;
+        const updated = preferite.filter(p => p.id !== pref.id);
+        localStorage.setItem(key, JSON.stringify(updated));
+        setPreferite(updated);
+    };
 
     const filtered = useMemo(() => {
         if (!query.trim()) return preferite;
@@ -113,7 +125,27 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                                 onClick={() => { onSelect(pref.snapshot); setOpen(false); }}
                             >
                                 <Star size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
-                                <span style={{ fontWeight: '500' }}>{pref.nome}</span>
+                                <span style={{ fontWeight: '500', flex: 1 }}>{pref.nome}</span>
+                                <button
+                                    title="Elimina preferita"
+                                    onClick={e => handleDeletePreferita(e, pref)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: '2px 4px',
+                                        color: '#9ca3af',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        borderRadius: '4px',
+                                        flexShrink: 0,
+                                        transition: 'color 0.15s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
+                                >
+                                    <Trash2 size={13} />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -124,9 +156,98 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Modal: Dettaglio Operazione
+// ---------------------------------------------------------------------------
+const DettaglioOperazioneModal = ({ payment, onClose }) => {
+    if (!payment) return null;
+
+    const importo = parseFloat(payment.importo || 0);
+    const isAnnullato = payment.stato_pagamento?.startsWith('3.');
+    const isEntrata = importo >= 0 && !isAnnullato;
+
+    const formatDate = (s) => {
+        if (!s) return '—';
+        const [y, m, d] = s.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
+    const rows = [
+        { icon: <Tag size={15} />, label: 'Operazione', value: payment.quote || payment.numero_ricevuta || `#${payment.id}` },
+        { icon: <Calendar size={15} />, label: 'Data', value: formatDate(payment.data_pagamento) },
+        { icon: <User size={15} />, label: 'Intestatario', value: payment.intestatario || '—' },
+        { icon: <CreditCard size={15} />, label: 'Modalità pagamento', value: payment.modalita_pagamento || '—' },
+        { icon: <FileText size={15} />, label: 'Conto', value: payment.conto_destinazione || '—' },
+        ...(payment.note ? [{ icon: <FileText size={15} />, label: 'Note', value: payment.note }] : []),
+        { icon: <FileText size={15} />, label: 'Stato', value: (payment.stato_pagamento || '—').replace(/^\d+\.\s*/, '') },
+    ];
+
+    return (
+        <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+            onClick={onClose}
+        >
+            <div
+                style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid #f0f0f0', background: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c') }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff' }}>
+                        <FolderOpen size={20} />
+                        <span style={{ fontWeight: '700', fontSize: '1rem' }}>Dettaglio Operazione</span>
+                    </div>
+                    <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* Importo prominente */}
+                <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
+                    <span style={{
+                        display: 'inline-block',
+                        backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                        color: '#fff',
+                        padding: '8px 24px',
+                        borderRadius: '8px',
+                        fontWeight: '700',
+                        fontSize: '1.4rem',
+                        textDecoration: isAnnullato ? 'line-through' : 'none',
+                    }}>
+                        {isEntrata ? '+ ' : '− '}{Math.abs(importo).toFixed(2).replace('.', ',')} €
+                    </span>
+                </div>
+
+                {/* Campi */}
+                <div style={{ padding: '16px 20px 20px' }}>
+                    {rows.map((row, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: i < rows.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+                            <div style={{ color: '#9ca3af', marginTop: '1px', flexShrink: 0 }}>{row.icon}</div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{row.label}</div>
+                                <div style={{ fontSize: '0.95rem', color: '#1f2937', fontWeight: '500' }}>{row.value}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        onClick={onClose}
+                        style={{ padding: '8px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}
+                    >
+                        Chiudi
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
-const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita }) => {
+const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onDettaglio, onElimina }) => {
     const dateRange = useMemo(() => {
         if (!selectedAnno || !societa) {
             const y = new Date().getFullYear();
@@ -469,17 +590,21 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                         <td style={{ padding: '10px 16px', textAlign: 'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px' }}>
                                                 <button
-                                                    style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#f1c40f', color: 'white' }}
-                                                    title="Modifica"
+                                                    style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#3b82f6', color: 'white' }}
+                                                    title="Dettaglio"
+                                                    onClick={() => onDettaglio(p)}
                                                 >
-                                                    <Edit2 size={14} />
+                                                    <FolderOpen size={14} />
                                                 </button>
-                                                <button
-                                                    style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white' }}
-                                                    title="Elimina"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                                {p.quote_types === 'operazione_manuale' && (
+                                                    <button
+                                                        style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white' }}
+                                                        title="Elimina"
+                                                        onClick={() => onElimina(p)}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -508,10 +633,11 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 // ---------------------------------------------------------------------------
 // Mapping automatico quote_types → codice sottogruppo APS
 const QUOTE_TYPE_TO_CODICE = {
-    inscription:  'AE1',
-    subscription: 'AE3',
-    tesseramento: 'AE3',
-    generic:      'AE3',
+    quota_associativa: 'AE1',
+    inscription:       'AE1', // retrocompatibilità pagamenti precedenti alla migrazione
+    subscription:      'AE3',
+    tesseramento:      'AE3',
+    generic:           'AE3',
 };
 
 // Tab: Bilancio (Mod. D - Rendiconto per Cassa)
@@ -961,6 +1087,8 @@ const Contabilita = () => {
     const [loading, setLoading] = useState(false);
     const [nuovaOpModalOpen, setNuovaOpModalOpen] = useState(false);
     const [nuovaOpInitialData, setNuovaOpInitialData] = useState(null);
+    const [dettaglioPayment, setDettaglioPayment] = useState(null);
+    const confirm = useConfirm();
 
     const societa = useMemo(
         () => societaList?.find(s => s.id == selectedSocietaId) || null,
@@ -982,6 +1110,21 @@ const Contabilita = () => {
             .catch(() => setPayments([]))
             .finally(() => setLoading(false));
     }, [selectedSocietaId]);
+
+    const handleElimina = async (payment) => {
+        const ok = await confirm(`Eliminare l'operazione "${payment.quote || payment.numero_ricevuta || '#' + payment.id}"?`, 'Elimina operazione');
+        if (!ok) return;
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/payments/api/${payment.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (res.ok) refreshPayments();
+        } catch (err) {
+            console.error('Errore eliminazione operazione:', err);
+        }
+    };
 
     const refreshPayments = () => {
         if (!selectedSocietaId) return;
@@ -1065,6 +1208,8 @@ const Contabilita = () => {
                         societa={societa}
                         onNuovaOperazione={() => { setNuovaOpInitialData(null); setNuovaOpModalOpen(true); }}
                         onNuovaOperazioneDaPreferita={(snapshot) => { setNuovaOpInitialData(snapshot); setNuovaOpModalOpen(true); }}
+                        onDettaglio={(p) => setDettaglioPayment(p)}
+                        onElimina={handleElimina}
                     />
                 )}
 
@@ -1083,6 +1228,11 @@ const Contabilita = () => {
                     onSaved={refreshPayments}
                     societaId={selectedSocietaId}
                     initialData={nuovaOpInitialData}
+                />
+
+                <DettaglioOperazioneModal
+                    payment={dettaglioPayment}
+                    onClose={() => setDettaglioPayment(null)}
                 />
             </div>
         </div>

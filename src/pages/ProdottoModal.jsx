@@ -33,6 +33,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         giorniAvvisoScadenza: 7,
         unlimitedEntries: false,
         numEntries: '',
+        passepartout: false,
         season: '',
         numInstallments: '',
         installments: []
@@ -58,6 +59,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                 giorniAvvisoScadenza: 7,
                 unlimitedEntries: false,
                 numEntries: '',
+                passepartout: false,
                 season: '',
                 numInstallments: '',
                 installments: []
@@ -194,6 +196,22 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     placeholder="es. 10"
                                 />
                                 {formErrors.numEntries && <span className="prodotto-form-error">{formErrors.numEntries}</span>}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="prodotto-form-row">
+                        <div className="prodotto-form-col">
+                            <div className="prodotto-form-group">
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="passepartout"
+                                        checked={!!formData.passepartout}
+                                        onChange={handleChange}
+                                        style={{ width: 16, height: 16 }}
+                                    />
+                                    Abbonamento passepartout
+                                </label>
                             </div>
                         </div>
                     </div>

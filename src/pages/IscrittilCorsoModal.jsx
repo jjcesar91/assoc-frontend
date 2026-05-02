@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Users, UserPlus, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import RicercaSocioModal from './RicercaSocioModal';
+import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 
 const today = () => {
     const d = new Date();
@@ -177,7 +178,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                         const rank = (i) => {
                                             const socio = sociMap[i.socioId];
                                             const payments = paymentsMap[i.socioId] || [];
-                                            const certStatus = getStatus(socio?.scadenza_certificato, giorniAvviso);
+                                            const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
                                             const abbPay = payments
                                                 .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
                                                 .sort((x, y) => new Date(y.data_scadenza_abbonamento) - new Date(x.data_scadenza_abbonamento))[0];
@@ -196,7 +197,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                         const payments = paymentsMap[i.socioId] || [];
 
                                         // Cert medico
-                                        const certStatus = getStatus(socio?.scadenza_certificato, giorniAvviso);
+                                        const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
 
                                         // Abbonamento: cerca il pagamento più recente con product_id = corso.abbonamentoId
                                         const abbPay = payments
@@ -214,14 +215,14 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                             <tr key={i.socioId} style={{ borderBottom: '1px solid #eee', background: rowBg }}>
                                                 <td style={{ padding: '8px 10px' }}>
                                                     {socio
-                                                        ? <span style={{ fontWeight: 500 }}>{socio.cognome} {socio.nome}</span>
+                                                        ? <a href={`/soci?apriSocioPath=${i.socioId}`} target="_blank" rel="noreferrer" style={{ fontWeight: 500, color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>{socio.cognome} {socio.nome}</a>
                                                         : <span style={{ color: '#aaa' }}>#{i.socioId}</span>
                                                     }
                                                 </td>
                                                 <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                                                     {socio?.scadenza_certificato
                                                         ? <>
-                                                            <span style={{ fontSize: '0.82rem' }}>{new Date(socio.scadenza_certificato).toLocaleDateString('it-IT')}</span>
+                                                            <span style={{ fontSize: '0.82rem' }}>{new Date(computeScadenzaCertificatoStr(socio.scadenza_certificato) || socio.scadenza_certificato).toLocaleDateString('it-IT')}</span>
                                                             <StatusBadge status={certStatus} label={certStatus === 'expired' ? 'SCADUTO' : 'IN SCADENZA'} />
                                                           </>
                                                         : <span style={{ color: '#ccc' }}>—</span>
@@ -282,6 +283,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                 onClose={() => setShowRicerca(false)}
                 onSelect={handleAddSocio}
                 societaId={societaId}
+                enrolledIds={iscrizioni.map(i => i.socioId)}
             />
         </>
     );

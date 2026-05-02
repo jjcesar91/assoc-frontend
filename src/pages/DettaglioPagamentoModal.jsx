@@ -126,17 +126,32 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societ
                     {/* Quote Section */}
                     <div className="dpm-section dpm-section-quote">
                         <div className="dpm-section-title">Quote</div>
-                        <div className="dpm-quote-row">
-                            <span>{pagamento.quote || ''}</span>
-                            <span>
-                                € {formatCurrency(pagamento.importo)}
-                                {scadenzaTess && !(pagamento.quote || '').includes('(Scadenza') && (
-                                    <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
-                                        (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
-                                    </span>
-                                )}
-                            </span>
-                        </div>
+                        {Array.isArray(pagamento.payment_items) && pagamento.payment_items.length > 1 ? (
+                            <>
+                                {pagamento.payment_items.map((item, idx) => (
+                                    <div key={idx} className="dpm-quote-row">
+                                        <span>{item.quote || ''}</span>
+                                        <span>€ {formatCurrency(item.importo)}</span>
+                                    </div>
+                                ))}
+                                <div className="dpm-quote-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
+                                    <span>Totale</span>
+                                    <span>€ {formatCurrency(pagamento.importo)}</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="dpm-quote-row">
+                                <span>{pagamento.quote || ''}</span>
+                                <span>
+                                    € {formatCurrency(pagamento.importo)}
+                                    {scadenzaTess && !(pagamento.quote || '').includes('(Scadenza') && (
+                                        <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
+                                            (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

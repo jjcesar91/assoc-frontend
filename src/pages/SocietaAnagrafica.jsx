@@ -221,7 +221,8 @@ const SocietaAnagrafica = () => {
                          {/* Remove the extra relative div wrapper and let CityAutocomplete handle it or wrap tightly */}
                          <CityAutocomplete 
                              value={formData.comune} 
-                             onChange={(val) => setFormData(prev => ({ ...prev, comune: val }))} 
+                             onChange={(e) => setFormData(prev => ({ ...prev, comune: e.target.value }))} 
+                             onSelect={(c) => setFormData(prev => ({ ...prev, comune: c.nome, cap: c.cap || prev.cap }))}
                              style={{ marginTop: 0, width: '100%' }} 
                          />
                     </div>

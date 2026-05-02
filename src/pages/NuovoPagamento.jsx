@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, List, CreditCard, Check, X, User, FileEdit, AlertTriangle, Folder } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { computeScadenzaCertificato } from '../utils/certificatoUtils';
 import RicercaSocioModal from './RicercaSocioModal';
 import GeneraPagamentoModal from './GeneraPagamentoModal';
 import AbbonamentoDateModal from './AbbonamentoDateModal';
@@ -12,7 +13,9 @@ import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated n
 
 const getCertStatus = (scadenza) => {
     if (!scadenza) return 'NON ISCRITTO';
-    const scadenzaDate = new Date(scadenza);
+    // Calcola scadenza: data presentazione + 1 anno - 1 giorno
+    const scadenzaDate = computeScadenzaCertificato(scadenza);
+    if (!scadenzaDate) return 'NON ISCRITTO';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (scadenzaDate < today) return 'SCADUTO';
@@ -35,6 +38,7 @@ const NuovoPagamento = () => {
     const prefilledProductId = location.state?.prefilledProductId ?? null;
     const [snackbar, setSnackbar] = useState({ show: false, message: '', type: 'success' });
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+
     const [showAbbWarningModal, setShowAbbWarningModal] = useState(false);
     const [isCorsoIscrizioneModalOpen, setIsCorsoIscrizioneModalOpen] = useState(false);
     const [corsiPerAbbonamento, setCorsiPerAbbonamento] = useState([]);
@@ -49,6 +53,8 @@ const NuovoPagamento = () => {
     // Iscrizione / Tesseramento CF sets (stessa logica di Soci.jsx)
     const [quotaPaymentCFs, setQuotaPaymentCFs] = useState(new Set());
     const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
+    const [quotaPaymentSocioIds, setQuotaPaymentSocioIds] = useState(new Set());
+    const [tessCurrentSocioIds, setTessCurrentSocioIds] = useState(new Set());
 
     // Products
     const [products, setProducts] = useState([]);
@@ -94,18 +100,32 @@ const NuovoPagamento = () => {
                 const data = await response.json();
                 const quotaCFs = new Set(
                     data
-                        .filter(p => p.quote_types && p.quote_types.split(',').includes('quota_associativa') && p.codice_fiscale)
+                        .filter(p => p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('quota_associativa') && p.codice_fiscale)
                         .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
                         .map(p => p.codice_fiscale.toUpperCase())
                 );
                 const tessCFs = new Set(
                     data
-                        .filter(p => p.quote_types && p.quote_types.split(',').includes('tesseramento') && p.codice_fiscale)
+                        .filter(p => p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('tesseramento') && p.codice_fiscale)
                         .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
                         .map(p => p.codice_fiscale.toUpperCase())
                 );
+                const quotaSocioIds = new Set(
+                    data
+                        .filter(p => p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('quota_associativa') && p.socio_id)
+                        .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .map(p => p.socio_id)
+                );
+                const tessSocioIds = new Set(
+                    data
+                        .filter(p => p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('tesseramento') && p.socio_id)
+                        .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
+                        .map(p => p.socio_id)
+                );
                 setQuotaPaymentCFs(quotaCFs);
                 setTessCurrentCFs(tessCFs);
+                setQuotaPaymentSocioIds(quotaSocioIds);
+                setTessCurrentSocioIds(tessSocioIds);
             } catch (e) {
                 console.error('Error fetching quota payments', e);
             }
@@ -147,7 +167,8 @@ const NuovoPagamento = () => {
                         ? data.find(p => p.id === prefilledProductId) ?? data.find(p => p.type === prefilledQuoteType)
                         : data.find(p => p.type === prefilledQuoteType);
                     if (match) {
-                        setCart([{ ...match, qty: 1 }]);
+                        const initPrice = parseFloat(match.basePrice || 0).toFixed(2).replace('.', ',');
+                        setCart([{ ...match, qty: 1, qtyStr: '1', unitPriceStr: initPrice }]);
                     }
                 }
             }
@@ -186,17 +207,22 @@ const NuovoPagamento = () => {
         // SOCIO: iscritto nel libro soci
         if (socio.data_ammissione) return true;
         const cf = (socio.codice_fiscale || '').toUpperCase();
-        // ISCRITTO: ha pagato quota_associativa nell'anno corrente
-        if (quotaPaymentCFs.has(cf)) return true;
+        // ISCRITTO: ha pagato quota_associativa nell'anno corrente (per CF o per socio_id)
+        if (cf && quotaPaymentCFs.has(cf)) return true;
+        if (socio.id && quotaPaymentSocioIds.has(socio.id)) return true;
         // TESSERATO: ha pagato tesseramento nell'anno corrente
-        if (tessCurrentCFs.has(cf)) return true;
+        if (cf && tessCurrentCFs.has(cf)) return true;
+        if (socio.id && tessCurrentSocioIds.has(socio.id)) return true;
         // Controllo iscrizioni embedded (se presenti nell'oggetto socio)
         if (socio.iscrizioni?.some(i => i.anno === selectedAnno)) return true;
         return false;
     };
 
+    const cartHasIscrizione = () =>
+        cart.some(item => item.type === 'quota_associativa' || item.type === 'tesseramento');
+
     const addToCart = (product) => {
-        if (product.type === 'subscription' && !isSocioIscrittoOTesserato(selectedSocio)) {
+        if (product.type === 'subscription' && !isSocioIscrittoOTesserato(selectedSocio) && !cartHasIscrizione()) {
             setShowAbbWarningModal(true);
             return;
         }
@@ -208,12 +234,36 @@ const NuovoPagamento = () => {
         if (existing) {
             setCart(cart.map(item => item.id === product.id ? {...item, qty: item.qty + 1} : item));
         } else {
-            setCart([...cart, { ...product, qty: 1 }]);
+            const initPrice = parseFloat(product.basePrice || 0).toFixed(2).replace('.', ',');
+            setCart([...cart, { ...product, qty: 1, qtyStr: '1', unitPriceStr: initPrice }]);
+        }
+    };
+
+    const updateCartQty = (productId, val) => {
+        if (/^\d*$/.test(val)) {
+            const qty = parseInt(val) || 1;
+            setCart(cart.map(item => item.id === productId ? { ...item, qty, qtyStr: val } : item));
+        }
+    };
+
+    const updateCartUnitPrice = (productId, val) => {
+        if (/^\d*[,]?\d*$/.test(val)) {
+            setCart(cart.map(item => item.id === productId ? { ...item, unitPriceStr: val } : item));
         }
     };
 
     const removeFromCart = (productId) => {
-        setCart(cart.filter(item => item.id !== productId));
+        const removed = cart.find(item => item.id === productId);
+        const isRemovedIscrizione = removed && (removed.type === 'quota_associativa' || removed.type === 'tesseramento');
+        const newCart = cart.filter(item => item.id !== productId);
+        if (isRemovedIscrizione && !isSocioIscrittoOTesserato(selectedSocio)) {
+            const stillHasIscrizione = newCart.some(item => item.type === 'quota_associativa' || item.type === 'tesseramento');
+            if (!stillHasIscrizione) {
+                setCart(newCart.filter(item => item.type !== 'subscription'));
+                return;
+            }
+        }
+        setCart(newCart);
     };
 
     const generatePayment = () => {
@@ -275,7 +325,7 @@ const NuovoPagamento = () => {
                 }
 
                 setShowSuccessOverlay(true);
-                setTimeout(() => navigate('/pagamenti'), 2000);
+                setTimeout(() => navigate('/pagamenti', { replace: true }), 1200);
             } else {
                 showSnackbar('Errore durante la generazione del pagamento', 'error');
             }
@@ -288,10 +338,11 @@ const NuovoPagamento = () => {
     const handleCorsoModalClose = () => {
         setIsCorsoIscrizioneModalOpen(false);
         setShowSuccessOverlay(true);
-        setTimeout(() => navigate('/pagamenti'), 2000);
+        setTimeout(() => navigate('/pagamenti', { replace: true }), 1200);
     };
 
-    const cartTotal = cart.reduce((acc, item) => acc + (parseFloat(item.basePrice || 0) * item.qty), 0);
+    const getItemUnitPrice = (item) => parseFloat((item.unitPriceStr || '0').replace(',', '.')) || 0;
+    const cartTotal = cart.reduce((acc, item) => acc + (getItemUnitPrice(item) * (item.qty || 1)), 0);
 
     return (
         <div className="np-container">
@@ -420,7 +471,7 @@ const NuovoPagamento = () => {
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
-                                            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{selectedSocio.id} {selectedSocio.cognome} {selectedSocio.nome}</h3>
+                                            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{selectedSocio.cognome} {selectedSocio.nome}</h3>
                                             <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
                                                 Data nascita {selectedSocio.data_nascita ? new Date(selectedSocio.data_nascita).toLocaleDateString('it-IT') : ''} - Codice fiscale {selectedSocio.codice_fiscale}
                                             </div>
@@ -587,9 +638,25 @@ const NuovoPagamento = () => {
                                                             <X size={16}/>
                                                         </button>
                                                     </td>
-                                                    <td style={{ borderRight: '1px solid #eef0f3' }}>{parseFloat(item.basePrice || 0).toFixed(2).replace('.', ',')}</td>
-                                                    <td style={{ borderRight: '1px solid #eef0f3' }}>{item.qty}</td>
-                                                    <td style={{ fontWeight: 600 }}>{(parseFloat(item.basePrice || 0) * item.qty).toFixed(2).replace('.', ',')}</td>
+                                                    <td style={{ borderRight: '1px solid #eef0f3', padding: '8px 12px' }}>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            value={item.unitPriceStr ?? parseFloat(item.basePrice || 0).toFixed(2).replace('.', ',')}
+                                                            onChange={e => updateCartUnitPrice(item.id, e.target.value)}
+                                                            className="np-cart-input"
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #eef0f3', padding: '8px 12px' }}>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            value={item.qtyStr ?? item.qty}
+                                                            onChange={e => updateCartQty(item.id, e.target.value)}
+                                                            className="np-cart-input"
+                                                        />
+                                                    </td>
+                                                    <td style={{ fontWeight: 600 }}>{(getItemUnitPrice(item) * (item.qty || 1)).toFixed(2).replace('.', ',')}</td>
                                                 </tr>
                                             ))
                                         )}

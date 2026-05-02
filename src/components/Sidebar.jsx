@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronDown } from 'lucide-react';
-import { MENU_STRUCTURE } from './menuConfig';
+import { getVisibleMenu } from './menuConfig';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, bannerHeight = 0 }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [openGroups, setOpenGroups] = React.useState({});
@@ -16,16 +16,18 @@ const Sidebar = ({ isOpen, onClose }) => {
         onClose();
     };
 
+    const visibleMenu = getVisibleMenu();
+
     return (
         <>
-            {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
-            <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+            {isOpen && <div className="sidebar-overlay" onClick={onClose} style={{ top: bannerHeight }}></div>}
+            <div className={`sidebar ${isOpen ? 'open' : ''}`} style={{ top: bannerHeight }}>
                 <div className="sidebar-header">
                     <h2>Menu</h2>
                     <button className="icon-btn" onClick={onClose}><X size={24} /></button>
                 </div>
                 <div className="sidebar-content">
-                    {MENU_STRUCTURE.map(item => (
+                    {visibleMenu.map(item => (
                         <React.Fragment key={item.id}>
                             {item.children ? (
                                 <>

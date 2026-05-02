@@ -27,6 +27,13 @@ const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) 
         }
     }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Auto-chiude dopo iscrizione riuscita per non bloccare il redirect
+    useEffect(() => {
+        if (!enrolled) return;
+        const t = setTimeout(() => onClose(), 1800);
+        return () => clearTimeout(t);
+    }, [enrolled, onClose]);
+
     const fetchIscritti = useCallback(async () => {
         if (!selectedCorsoId) return;
         setLoading(true);

@@ -247,6 +247,22 @@
     color: #999;
 }
 
+.np-cart-input {
+    width: 80px;
+    padding: 5px 8px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #333;
+    background-color: #fff;
+    outline: none;
+    text-align: right;
+}
+.np-cart-input:focus {
+    border-color: #37cc7b;
+    box-shadow: 0 0 0 2px rgba(55, 204, 123, 0.15);
+}
+
 .np-badge {
     padding: 3px 8px;
     border-radius: 4px;

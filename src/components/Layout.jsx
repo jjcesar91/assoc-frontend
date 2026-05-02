@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, LogOut, User, Edit, Star } from 'lucide-react';
+import { Menu, LogOut, User, Edit, Star, UserCheck, ArrowLeftCircle } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno } from '../data/AnnoContext';
@@ -66,18 +66,34 @@ const Layout = ({ children, onLogout, title }) => {
     const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel } = useAnno();
     const navigate = useNavigate();
 
+    // Impersonazione
+    const isImpersonating = !!localStorage.getItem('impersonate_admin_token');
+    const handleStopImpersonate = () => {
+        const adminToken = localStorage.getItem('impersonate_admin_token');
+        const adminRole = localStorage.getItem('impersonate_admin_role') || 'admin';
+        const adminFeatures = localStorage.getItem('impersonate_admin_features') || 'null';
+        localStorage.setItem('token', adminToken);
+        localStorage.setItem('user_role', adminRole);
+        localStorage.setItem('user_features', adminFeatures);
+        localStorage.removeItem('impersonate_admin_token');
+        localStorage.removeItem('impersonate_admin_role');
+        localStorage.removeItem('impersonate_admin_features');
+        window.location.href = '/amministrazione/utenti';
+    };
+
     // User menu state
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
     // Preferiti
-    const [favorites, setFavorites] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('header-favorites') || '{}'); } catch { return {}; }
-    });
+    const [favorites, setFavorites] = useState({});
     const [showFavoritesModal, setShowFavoritesModal] = useState(false);
 
+    const getFavKey = (userId) => `header-favorites-${userId}`;
+
     const toggleFavorite = (itemId, label, path, parentId) => {
+        if (!currentUser?.id) return;
         setFavorites(prev => {
             const next = { ...prev };
             if (next[itemId]) {
@@ -85,7 +101,7 @@ const Layout = ({ children, onLogout, title }) => {
             } else {
                 next[itemId] = { label, path, parentId };
             }
-            localStorage.setItem('header-favorites', JSON.stringify(next));
+            localStorage.setItem(getFavKey(currentUser.id), JSON.stringify(next));
             return next;
         });
     };
@@ -102,6 +118,11 @@ const Layout = ({ children, onLogout, title }) => {
                 if (response.ok) {
                     const data = await response.json();
                     setCurrentUser(data);
+                    // Carica i preferiti specifici dell'utente corrente (o impersonato)
+                    try {
+                        const saved = JSON.parse(localStorage.getItem(`header-favorites-${data.id}`) || '{}');
+                        setFavorites(saved);
+                    } catch { setFavorites({}); }
                 }
             } catch (e) {
                 console.error("Failed to fetch user", e);
@@ -112,8 +133,50 @@ const Layout = ({ children, onLogout, title }) => {
 
     return (
         <div className="layout-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} bannerHeight={isImpersonating ? 40 : 0} />
+
+            {/* Banner impersonazione */}
+            {isImpersonating && (
+                <div style={{
+                    backgroundColor: '#e65100',
+                    color: 'white',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    flexShrink: 0,
+                    zIndex: 1200,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <UserCheck size={16} />
+                        Stai operando come <strong style={{ marginLeft: '4px' }}>{currentUser?.username || '...'}</strong>
+                        {currentUser?.nome || currentUser?.cognome
+                            ? ` (${[currentUser.cognome, currentUser.nome].filter(Boolean).join(' ')})`
+                            : ''}
+                    </div>
+                    <button
+                        onClick={handleStopImpersonate}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            border: '1px solid rgba(255,255,255,0.5)',
+                            borderRadius: '4px',
+                            color: 'white',
+                            padding: '4px 12px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        <ArrowLeftCircle size={14} /> Torna al tuo account
+                    </button>
+                </div>
+            )}
+
             {/* AppBar */}
             <div className="app-bar" style={{
                 height: '64px', 
@@ -159,16 +222,33 @@ const Layout = ({ children, onLogout, title }) => {
                 </div>
                 <div className="app-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
-                        <select
-                            className="md-select"
-                            style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
-                            value={selectedSocietaId}
-                            onChange={(e) => setSelectedSocietaId(e.target.value)}
-                        >
-                            {societaList.map(s => (
-                                <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
-                            ))}
-                        </select>
+                        {currentUser?.role === 'superuser' ? (
+                            <select
+                                className="md-select"
+                                style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                value={selectedSocietaId}
+                                onChange={(e) => setSelectedSocietaId(e.target.value)}
+                            >
+                                {societaList.map(s => (
+                                    <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <span style={{
+                                padding: '8px 16px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                minWidth: '220px',
+                                display: 'inline-block',
+                                textAlign: 'center',
+                            }}>
+                                {societaList.find(s => s.id == selectedSocietaId)?.denominazione || ''}
+                            </span>
+                        )}
                         <select
                             className="md-select"
                             style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}

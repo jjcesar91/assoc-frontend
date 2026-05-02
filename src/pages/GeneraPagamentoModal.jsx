@@ -46,6 +46,7 @@ const GeneraPagamentoModal = ({
     const [partitaIva, setPartitaIva] = useState('');
     
     const [note, setNote] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     // Clamp dataRicevuta quando il massimo cambia (es. cambio anno ricevuta)
     useEffect(() => {
@@ -67,6 +68,7 @@ const GeneraPagamentoModal = ({
                 setCodiceFiscaleGenitore('');
                 setPartitaIva('');
             }
+            setSubmitting(false);
             
             const fetchConti = async () => {
                 if (!selectedSocietaId) return;
@@ -147,6 +149,8 @@ const GeneraPagamentoModal = ({
     };
 
     const handleConfirm = () => {
+        if (submitting) return;
+        setSubmitting(true);
         const periodoStr = (hasSubscription && subscriptionDates)
             ? ` [${formatDateIT(subscriptionDates.dataInizio)} - ${formatDateIT(subscriptionDates.dataFine)}]`
             : '';
@@ -186,10 +190,11 @@ const GeneraPagamentoModal = ({
                 const scad = getScadenzaTesseramentoStr(i.periodicity);
                 if (scad) suffix = ` (Scadenza ${scad})`;
             }
+            const effectivePrice = parseFloat((i.unitPriceStr || '0').replace(',', '.')) || parseFloat(i.basePrice || 0);
             return {
                 product_id: i.id,
-                importo: parseFloat(i.basePrice || 0) * i.qty,
-                quote: `${i.description || i.name} (x${i.qty}) €${(parseFloat(i.basePrice || 0) * i.qty).toFixed(2).replace('.', ',')}${suffix}`,
+                importo: effectivePrice * i.qty,
+                quote: `${i.description || i.name} (x${i.qty}) €${(effectivePrice * i.qty).toFixed(2).replace('.', ',')}${suffix}`,
                 quote_types: i.type || '',
                 periodicity_tesseramento: i.type === 'tesseramento' ? (i.periodicity || null) : null,
                 data_inizio_abbonamento: i.type === 'subscription' ? (subscriptionDates?.dataInizio || null) : null,
@@ -372,8 +377,8 @@ const GeneraPagamentoModal = ({
 
                 </div>
                 <div className="gpm-footer">
-                    <button className="gpm-submit-btn" onClick={handleConfirm}>
-                        <Check size={18} strokeWidth={2}/> Genera pagamento
+                    <button className="gpm-submit-btn" onClick={handleConfirm} disabled={submitting}>
+                        <Check size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Genera pagamento'}
                     </button>
                 </div>
             </div>

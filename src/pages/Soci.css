@@ -398,6 +398,40 @@
     color: var(--primary-color);
 }
 
+/* Pagination */
+.pagination-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    transition: background-color 0.15s;
+}
+.pagination-btn:hover:not(:disabled) {
+    background-color: #e3f2fd;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.pagination-current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 30px;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0 8px;
+}
+
 /* Modern Profile Button */
 .profile-btn {
     border-radius: 8px !important;

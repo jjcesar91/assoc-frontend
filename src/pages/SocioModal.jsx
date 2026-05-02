@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw } from 'lucide-react';
+import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import CodiceFiscale from 'codice-fiscale-js';
@@ -8,6 +8,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -63,6 +64,46 @@ function computeStatoPagamentoScadenza(scadenzaDate) {
     if (scadenzaDate <= limit) return 'IN SCADENZA';
     return 'VALIDO';
 }
+
+function computeStatoAbbonamento(scadenzaDate, giorniAvvisoScadenza) {
+    if (!scadenzaDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limit = new Date(today);
+    limit.setDate(limit.getDate() + (giorniAvvisoScadenza || 30));
+    if (scadenzaDate < today) return 'SCADUTO';
+    if (scadenzaDate <= limit) return 'IN SCADENZA';
+    return 'REGOLARE';
+}
+// ---------------------------------------------------------------------------
+
+const GIORNI_SETTIMANA = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+const formatDateIT = (dateStr) => {
+    if (!dateStr) return '-';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('it-IT');
+};
+
+const ScadenzaBadge = ({ stato }) => {
+    if (!stato) return null;
+    const styles = {
+        SCADUTO: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
+        'IN SCADENZA': { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+        VALIDO: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
+        REGOLARE: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
+    };
+    const s = styles[stato] || styles.VALIDO;
+    return (
+        <span style={{
+            padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
+            backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}`,
+            whiteSpace: 'nowrap',
+        }}>
+            {stato}
+        </span>
+    );
+};
 // ---------------------------------------------------------------------------
 
 const SocioModal = ({ onClose, onSave, socioData }) => {
@@ -166,6 +207,25 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [targetModuleName, setTargetModuleName] = useState(null);
     const [isCustomPrint, setIsCustomPrint] = useState(false);
     const [availableModules, setAvailableModules] = useState([]);
+
+    // Attività (Corsi) State
+    const [socioCorsi, setSocioCorsi] = useState([]);
+    const [corsiLoading, setCorsiLoading] = useState(false);
+    const [corsoDettaglio, setCorsoDettaglio] = useState(null);
+    const [showAggiungiCorsoModal, setShowAggiungiCorsoModal] = useState(false);
+    const [tuttiCorsi, setTuttiCorsi] = useState([]);
+    const [prodottiSocieta, setProdottiSocieta] = useState([]);
+    const [aggiungiCorsoLoading, setAggiungiCorsoLoading] = useState(false);
+
+    // Accesso Frontend State
+    const [frontendAccess, setFrontendAccess] = useState({
+        enabled: false,
+        email: '',
+        password_plain: '',
+        user_id: null,
+    });
+    const [frontendAccessLoading, setFrontendAccessLoading] = useState(false);
+    const [showFrontendPassword, setShowFrontendPassword] = useState(false);
 
     // Load html2pdf
     useEffect(() => {
@@ -612,6 +672,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             
             // Set Checkbox state based on date existence
             setHaCertificato(!!socioData.scadenza_certificato);
+
+            // Popola stato accesso frontend
+            setFrontendAccess({
+                enabled: !!socioData.frontend_enabled,
+                email: socioData.user?.email || socioData.email || '',
+                password_plain: socioData.frontend_password_plain || '',
+                user_id: socioData.frontend_user_id || null,
+            });
         }
     }, [socioData]);
 
@@ -672,6 +740,36 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             console.error('Error fetching pagamenti socio:', error);
         } finally {
             setPagamentiLoading(false);
+        }
+    };
+
+    const fetchSocioCorsi = async () => {
+        if (!formData.id || !selectedSocietaId) return;
+        setCorsiLoading(true);
+        try {
+            const res = await fetch(`/activities/api/corsi/socio/${formData.id}?societaId=${selectedSocietaId}`);
+            if (res.ok) setSocioCorsi(await res.json());
+        } catch (e) {
+            console.error('Error fetching corsi socio:', e);
+        } finally {
+            setCorsiLoading(false);
+        }
+    };
+
+    const fetchTuttiCorsiEProdotti = async () => {
+        if (!selectedSocietaId) return;
+        setAggiungiCorsoLoading(true);
+        try {
+            const [corsiRes, prodRes] = await Promise.all([
+                fetch(`/activities/api/corsi?societaId=${selectedSocietaId}`),
+                fetch(`/products/api?societaId=${selectedSocietaId}`),
+            ]);
+            if (corsiRes.ok) setTuttiCorsi(await corsiRes.json());
+            if (prodRes.ok) setProdottiSocieta(await prodRes.json());
+        } catch (e) {
+            console.error('Error fetching corsi/prodotti:', e);
+        } finally {
+            setAggiungiCorsoLoading(false);
         }
     };
 
@@ -751,6 +849,56 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         () => Object.values(scadenzaMap).filter(s => s.stato === 'SCADUTO' || s.stato === 'IN SCADENZA').length,
         [scadenzaMap]
     );
+
+    // Abbonamenti: prodotti di tipo subscription con almeno un pagamento, con stato aggiornato
+    const abbonamenti = useMemo(() => {
+        const subPagamenti = socioPagamenti.filter(p => {
+            if (p.stato_pagamento?.startsWith('3.')) return false;
+            if (parseFloat(p.importo) < 0) return false;
+            const types = (p.quote_types || '').split(',').map(t => t.trim());
+            return types.includes('subscription');
+        });
+
+        const byProduct = {};
+        for (const p of subPagamenti) {
+            let productId = null;
+            if (Array.isArray(p.payment_items)) {
+                const subItem = p.payment_items.find(i => i.quote_types === 'subscription');
+                productId = subItem?.product_id ?? p.product_id;
+            } else {
+                productId = p.product_id;
+            }
+            const key = productId ?? '__unknown__';
+            if (!byProduct[key]) byProduct[key] = [];
+            byProduct[key].push(p);
+        }
+
+        return Object.entries(byProduct).map(([productIdStr, payments]) => {
+            const productId = productIdStr === '__unknown__' ? null : parseInt(productIdStr, 10);
+            const product = productId != null ? prodottiSocieta.find(pr => pr.id === productId) : null;
+            const sorted = [...payments].sort((a, b) => {
+                const da = a.data_scadenza_abbonamento ? new Date(a.data_scadenza_abbonamento) : new Date(0);
+                const db = b.data_scadenza_abbonamento ? new Date(b.data_scadenza_abbonamento) : new Date(0);
+                return db - da;
+            });
+            const latest = sorted[0];
+            const scadenzaDate = latest.data_scadenza_abbonamento ? new Date(latest.data_scadenza_abbonamento) : null;
+            const stato = computeStatoAbbonamento(scadenzaDate, product?.giorniAvvisoScadenza);
+            return {
+                productId,
+                product,
+                productName: product?.description || product?.nome || (productId != null ? `Prodotto #${productId}` : 'Abbonamento'),
+                giorniAvviso: product?.giorniAvvisoScadenza,
+                latestPayment: latest,
+                scadenzaDate,
+                stato,
+                allPayments: sorted,
+            };
+        }).sort((a, b) => {
+            const order = { SCADUTO: 0, 'IN SCADENZA': 1, REGOLARE: 2 };
+            return (order[a.stato] ?? 3) - (order[b.stato] ?? 3);
+        });
+    }, [socioPagamenti, prodottiSocieta]);
 
     const handleRinnovaPagamento = (p) => {
         navigate('/nuovo-pagamento', {
@@ -949,6 +1097,21 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             fetchSocioPagamenti();
         }
     }, [formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (formData.id) {
+            fetchSocioCorsi();
+        }
+    }, [formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (selectedSocietaId && prodottiSocieta.length === 0) {
+            fetch(`/products/api?societaId=${selectedSocietaId}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(data => setProdottiSocieta(data))
+                .catch(() => {});
+        }
+    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calcola Data Ammissione come la più vecchia tra: data DB, pagamenti quota, date iscrizione da tabella
     useEffect(() => {
@@ -1360,14 +1523,58 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         onSave(formData);
     };
 
+    // ── Attività helpers ──────────────────────────────────────────────────────
+    const getScadenzaAbbonamentoPerCorso = (abbonamentoId) => {
+        if (!abbonamentoId) return null;
+        const payments = socioPagamenti.filter(p => {
+            const hasProduct = p.product_id === abbonamentoId ||
+                (Array.isArray(p.payment_items) && p.payment_items.some(i => i.product_id === abbonamentoId));
+            return hasProduct && p.data_scadenza_abbonamento;
+        });
+        if (payments.length === 0) return null;
+        payments.sort((a, b) => new Date(b.data_pagamento) - new Date(a.data_pagamento));
+        return payments[0].data_scadenza_abbonamento;
+    };
+
+    const passepartoutScadenza = useMemo(() => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const ppIds = new Set(prodottiSocieta.filter(p => p.passepartout && p.type === 'subscription').map(p => p.id));
+        if (ppIds.size === 0) return null;
+        let best = null;
+        socioPagamenti.forEach(p => {
+            const isPP = ppIds.has(p.product_id) ||
+                (Array.isArray(p.payment_items) && p.payment_items.some(i => ppIds.has(i.product_id)));
+            if (!isPP || !p.data_scadenza_abbonamento) return;
+            const scad = new Date(p.data_scadenza_abbonamento); scad.setHours(0, 0, 0, 0);
+            if (scad < today) return;
+            if (!best || scad > new Date(best)) best = p.data_scadenza_abbonamento;
+        });
+        return best;
+    }, [prodottiSocieta, socioPagamenti]);
+
+    const isCorsoAccessibile = (abbonamentoId) => {
+        if (passepartoutScadenza) return true;
+        if (!abbonamentoId) return false;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return socioPagamenti.some(p => {
+            const hasProduct = p.product_id === abbonamentoId ||
+                (Array.isArray(p.payment_items) && p.payment_items.some(i => i.product_id === abbonamentoId));
+            if (!hasProduct || !p.data_scadenza_abbonamento) return false;
+            return new Date(p.data_scadenza_abbonamento) >= today;
+        });
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
         // { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
         { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: socioPagamenti.length },
-        { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: 0 },
+        { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
+        { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
         // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
         // { id: 'Crediti', icon: <Coins size={18}/>, label: 'Crediti' }
+        ...(isEditMode ? [{ id: 'AccessoFrontend', icon: <Globe size={18}/>, label: 'Accesso Frontend' }] : []),
     ];
 
     return (
@@ -1545,7 +1752,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 <div className="form-group grid-span-4">
                                     <label className="field-label">Data nascita *</label>
-                                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                    <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
                                         <input 
                                             className="md-input" 
                                             type="date" 
@@ -1658,7 +1865,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 )}
 
                                 {/* Row 5 - Tessere */}
-                                <div className="form-group grid-span-3">
+                                <div className="form-group grid-span-3" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px'}}>
                                     <label className="field-label">Data Ammissione (Libro Soci)</label>
                                     <input 
                                         className="md-input" 
@@ -1668,7 +1875,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         onChange={handleChange} 
                                     />
                                 </div>
-                                <div className="form-group grid-span-3">
+                                <div className="form-group grid-span-3" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px'}}>
                                     <label className="field-label">Ultima Iscrizione</label>
                                     <input 
                                         className="md-input" 
@@ -1678,8 +1885,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         style={{ backgroundColor: '#f9fafb', color: '#374151' }}
                                     />
                                 </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label" style={{marginBottom: '6px', minHeight: '20px', display: 'flex', alignItems: 'center'}}>Data Tesseramento</label>
+                                <div className="form-group grid-span-2" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px'}}>
+                                    <label className="field-label">Data Tesseramento</label>
                                     <input
                                         className="md-input"
                                         type="date"
@@ -1688,8 +1895,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         style={{ backgroundColor: '#f9fafb', color: dataTesseramento ? '#374151' : '#9ca3af' }}
                                     />
                                 </div>
-                                <div className="form-group grid-span-2">
-                                    <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', minHeight: '20px'}}>
+                                <div className="form-group grid-span-4" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end'}}>
+                                    <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                                         <input 
                                             type="checkbox" 
                                             name="ha_certificato" 
@@ -1699,32 +1906,50 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         />
                                         Ha certificato
                                     </label>
-                                    <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                                        <input 
-                                            className="md-input" 
-                                            type="date" 
-                                            name="scadenza_certificato" 
-                                            value={formData.scadenza_certificato} 
-                                            onChange={handleChange} 
-                                            disabled={!haCertificato}
-                                            style={{
-                                                width: '100%', 
-                                                paddingRight: '35px',
-                                                backgroundColor: !haCertificato ? '#f3f4f6' : undefined,
-                                                color: !haCertificato ? '#9ca3af' : undefined
-                                            }}
-                                        />
-                                        <Calendar 
-                                            size={18} 
-                                            style={{
-                                                position: 'absolute', 
-                                                right: '10px', 
-                                                color: haCertificato ? '#6b7280' : '#d1d5db',
-                                                cursor: haCertificato ? 'pointer' : 'default',
-                                                zIndex: 5
-                                            }}
-                                            onClick={(e) => haCertificato && e.currentTarget.previousElementSibling.showPicker?.()} 
-                                        />
+                                    <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start'}}>
+                                        <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center', flex: 1}}>
+                                            <input 
+                                                className="md-input" 
+                                                type="date" 
+                                                name="scadenza_certificato" 
+                                                value={formData.scadenza_certificato} 
+                                                onChange={handleChange} 
+                                                disabled={!haCertificato}
+                                                title="Data presentazione certificato"
+                                                style={{
+                                                    width: '100%', 
+                                                    paddingRight: '35px',
+                                                    backgroundColor: !haCertificato ? '#f3f4f6' : undefined,
+                                                    color: !haCertificato ? '#9ca3af' : undefined
+                                                }}
+                                            />
+                                            <Calendar 
+                                                size={18} 
+                                                style={{
+                                                    position: 'absolute', 
+                                                    right: '10px', 
+                                                    color: haCertificato ? '#6b7280' : '#d1d5db',
+                                                    cursor: haCertificato ? 'pointer' : 'default',
+                                                    zIndex: 5
+                                                }}
+                                                onClick={(e) => haCertificato && e.currentTarget.previousElementSibling.showPicker?.()} 
+                                            />
+                                        </div>
+                                        <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
+                                            <input
+                                                className="md-input"
+                                                type="date"
+                                                value={computeScadenzaCertificatoStr(formData.scadenza_certificato)}
+                                                readOnly
+                                                title="Scadenza certificato (calcolata automaticamente)"
+                                                style={{
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: formData.scadenza_certificato ? '#374151' : '#9ca3af',
+                                                    cursor: 'default'
+                                                }}
+                                            />
+                                            <span style={{fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, marginTop: '4px'}}>Scadenza</span>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -1877,9 +2102,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         <div>
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                                 <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Pagamenti</h3>
-                                <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
-                                    {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} pagament{filteredPagamenti.length === 1 ? 'o' : 'i'}
-                                </span>
+                                <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                                    <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
+                                        {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} pagament{filteredPagamenti.length === 1 ? 'o' : 'i'}
+                                    </span>
+                                    {isEditMode && formData.id && (
+                                        <button
+                                            style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, #2563eb)', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
+                                            onClick={() => navigate('/nuovo-pagamento', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
+                                        >
+                                            <CreditCard size={15} /> Nuovo pagamento
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {/* Banner scadenze */}
                             {scadenzeAlertCount > 0 && (
@@ -2086,9 +2321,415 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </div>
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && (
+                    {activeTab === 'Abbonamenti' && (
+                        <div style={{padding: '24px'}}>
+                            <div style={{marginBottom: '16px'}}>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Abbonamenti</h3>
+                            </div>
+                            {abbonamenti.length === 0 ? (
+                                <div style={{textAlign: 'center', padding: '48px', color: '#6b7280', fontSize: '0.95rem'}}>
+                                    Nessun abbonamento trovato
+                                </div>
+                            ) : (
+                                <div className="table-responsive">
+                                    <table className="md-table" style={{borderCollapse: 'separate', borderSpacing: '0 6px', backgroundColor: 'transparent', width: '100%'}}>
+                                        <thead>
+                                            <tr style={{backgroundColor: '#f1c40f', color: '#000'}}>
+                                                <th style={{padding: '10px 14px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px'}}>Abbonamento</th>
+                                                <th style={{padding: '10px 14px'}}>Ult. pagamento</th>
+                                                <th style={{padding: '10px 14px'}}>Scadenza</th>
+                                                <th style={{padding: '10px 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px'}}>Stato</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {abbonamenti.map(abb => {
+                                                const borderColor = abb.stato === 'SCADUTO' ? '#e74c3c'
+                                                    : abb.stato === 'IN SCADENZA' ? '#f39c12'
+                                                    : '#2ecc71';
+                                                const rowBg = abb.stato === 'SCADUTO' ? '#fceceb'
+                                                    : abb.stato === 'IN SCADENZA' ? '#fef9e7'
+                                                    : '#fff';
+                                                const statoBg = abb.stato === 'SCADUTO' ? '#e74c3c'
+                                                    : abb.stato === 'IN SCADENZA' ? '#f39c12'
+                                                    : '#2ecc71';
+                                                return (
+                                                    <tr key={abb.productId ?? '__unknown__'} style={{
+                                                        backgroundColor: rowBg,
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                                        borderLeft: `5px solid ${borderColor}`,
+                                                    }}>
+                                                        <td style={{padding: '12px 14px', fontWeight: 600, color: '#111827', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
+                                                            {abb.productName}
+                                                        </td>
+                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: '#374151'}}>
+                                                            {formatDateIT(abb.latestPayment.data_pagamento)}
+                                                        </td>
+                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: '#374151'}}>
+                                                            {abb.scadenzaDate
+                                                                ? abb.scadenzaDate.toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit', year: 'numeric'})
+                                                                : '-'}
+                                                        </td>
+                                                        <td style={{padding: '12px 14px', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
+                                                            {abb.stato ? (
+                                                                <span style={{
+                                                                    display: 'inline-block',
+                                                                    padding: '3px 10px',
+                                                                    borderRadius: '10px',
+                                                                    fontSize: '0.78rem',
+                                                                    fontWeight: 700,
+                                                                    color: 'white',
+                                                                    backgroundColor: statoBg,
+                                                                }}>
+                                                                    {abb.stato}
+                                                                </span>
+                                                            ) : '-'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'Attività' && (
+                        <div style={{padding: '24px'}}>
+                            {/* Header */}
+                            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Corsi frequentati</h3>
+                                <button
+                                    className="btn-save-full"
+                                    style={{width:'auto', padding:'8px 16px', backgroundColor:'#10b981', display:'flex', alignItems:'center', gap:'8px'}}
+                                    onClick={() => { fetchTuttiCorsiEProdotti(); setShowAggiungiCorsoModal(true); }}
+                                >
+                                    <PlusCircle size={18}/>
+                                    Aggiungi Corso
+                                </button>
+                            </div>
+
+                            {corsiLoading ? (
+                                <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>Caricamento...</div>
+                            ) : socioCorsi.length === 0 ? (
+                                <div style={{textAlign:'center', padding:'60px 20px', color:'#9ca3af', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px'}}>
+                                    <div style={{backgroundColor:'#f3f4f6', padding:'16px', borderRadius:'50%'}}>
+                                        <BookOpen size={32}/>
+                                    </div>
+                                    <p style={{margin:0, fontWeight:500}}>Nessun corso associato</p>
+                                    <p style={{margin:0, fontSize:'0.9rem'}}>Usa "Aggiungi Corso" per iscrivere il socio a un corso.</p>
+                                </div>
+                            ) : (
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
+                                    {/* Table header */}
+                                    <div style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'10px 16px', background:'#f9fafb', borderBottom:'1px solid #e5e7eb', fontWeight:600, fontSize:'0.8rem', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.025em'}}>
+                                        <div>Attività / Corso</div>
+                                        <div>Orario</div>
+                                        <div>Struttura / Sala</div>
+                                        <div>Istruttore</div>
+                                        <div>Scad. Abbonamento</div>
+                                        <div style={{textAlign:'center'}}>Azioni</div>
+                                    </div>
+                                    {socioCorsi.map(iscrizione => {
+                                        const corso = iscrizione.corso;
+                                        if (!corso) return null;
+                                        const scadenzaStr = getScadenzaAbbonamentoPerCorso(corso.abbonamentoId);
+                                        const scadDate = scadenzaStr ? new Date(scadenzaStr + 'T00:00:00') : null;
+                                        const stato = computeStatoPagamentoScadenza(scadDate);
+                                        const colore = corso.attivita?.colore;
+                                        const coloriBg = {
+                                            'ROSSO':'#e53935','VERDE':'#43a047','BLU':'#1e88e5','VERDE CHIARO':'#66bb6a',
+                                            'CELESTE':'#26c6da','ARANCIONE':'#fb8c00','VIOLA':'#8e24aa','GIALLO':'#fdd835',
+                                            'GRIGIO':'#78909c','ROSA':'#e91e63',
+                                        };
+                                        const colBg = coloriBg[colore] || '#9e9e9e';
+                                        return (
+                                            <div key={iscrizione.id} style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'14px 16px', borderBottom:'1px solid #f3f4f6', alignItems:'center', fontSize:'0.9rem'}}>
+                                                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                                                    {colore && (
+                                                        <span style={{width:'10px', height:'10px', borderRadius:'50%', backgroundColor:colBg, flexShrink:0, display:'inline-block'}}/>
+                                                    )}
+                                                    <div>
+                                                        <div style={{fontWeight:600, color:'#111827'}}>{corso.attivita?.descrizione || '-'}</div>
+                                                        {corso.descrizione && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.descrizione}</div>}
+                                                    </div>
+                                                </div>
+                                                <div style={{color:'#374151'}}>
+                                                    <div>{GIORNI_SETTIMANA[corso.giorno] || '-'}</div>
+                                                    <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.oraInizio} · {corso.durataMinuti} min</div>
+                                                </div>
+                                                <div style={{color:'#374151'}}>
+                                                    <div>{corso.struttura?.descrizione || '-'}</div>
+                                                    {corso.area && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.area.descrizione}</div>}
+                                                </div>
+                                                <div style={{color:'#374151'}}>
+                                                    {corso.staff ? `${corso.staff.nome} ${corso.staff.cognome}` : '-'}
+                                                </div>
+                                                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                    <span style={{color:'#374151', fontSize:'0.85rem'}}>{scadenzaStr ? formatDateIT(scadenzaStr) : '-'}</span>
+                                                    <ScadenzaBadge stato={stato}/>
+                                                </div>
+                                                <div style={{display:'flex', gap:'6px', justifyContent:'center'}}>
+                                                    <button
+                                                        title="Dettaglio corso"
+                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'#3b82f6', color:'white'}}
+                                                        onClick={() => setCorsoDettaglio(corso)}
+                                                    >
+                                                        <Eye size={14}/>
+                                                    </button>
+                                                    <button
+                                                        title="Disiscrivi"
+                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'#ef4444', color:'white'}}
+                                                        onClick={async () => {
+                                                            const ok = await confirm({ title:'Disiscrivi dal corso', message:`Vuoi rimuovere il socio dal corso "${corso.attivita?.descrizione || ''}"?`, confirmText:'Disiscrivi', cancelText:'Annulla' });
+                                                            if (!ok) return;
+                                                            try {
+                                                                const res = await fetch(`/activities/api/corsi/${corso.id}/iscritti/${formData.id}`, { method:'DELETE' });
+                                                                if (res.ok) {
+                                                                    setSocioCorsi(prev => prev.filter(i => i.id !== iscrizione.id));
+                                                                    showSnackbar('Socio disiscritto dal corso');
+                                                                } else {
+                                                                    showSnackbar('Errore durante la disiscrizione', 'error');
+                                                                }
+                                                            } catch {
+                                                                showSnackbar('Errore di rete', 'error');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 size={14}/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
+                        </div>
+                    )}
+
+                    {/* ── Tab Accesso Frontend ─────────────────────────── */}
+                    {activeTab === 'AccessoFrontend' && (
+                        <div style={{ padding: '28px 32px', maxWidth: '560px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                                <Globe size={20} color="#10b981" />
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                                    Accesso Area Soci
+                                </h3>
+                            </div>
+                            <p style={{ margin: '0 0 24px 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                                Abilita l'accesso al portale online per questo socio. Una volta abilitato, potrà accedere con email e password per visualizzare abbonamenti, corsi e comunicazioni.
+                            </p>
+
+                            {/* Status card */}
+                            <div style={{
+                                border: `1px solid ${frontendAccess.enabled ? '#6ee7b7' : '#d1d5db'}`,
+                                borderRadius: '10px',
+                                background: frontendAccess.enabled ? '#f0fdf4' : '#f9fafb',
+                                padding: '20px 24px',
+                                marginBottom: '20px',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        {frontendAccess.enabled
+                                            ? <ShieldCheck size={22} color="#10b981" />
+                                            : <ShieldOff size={22} color="#9ca3af" />
+                                        }
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: frontendAccess.enabled ? '#065f46' : '#374151' }}>
+                                                {frontendAccess.enabled ? 'Accesso abilitato' : 'Accesso non abilitato'}
+                                            </div>
+                                            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>
+                                                {frontendAccess.enabled ? 'Il socio può accedere al portale online.' : 'Il socio non ha ancora un accesso al portale.'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {frontendAccess.enabled ? (
+                                        <button
+                                            style={{
+                                                background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5',
+                                                borderRadius: '6px', padding: '7px 14px', cursor: 'pointer',
+                                                fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
+                                                opacity: frontendAccessLoading ? 0.7 : 1,
+                                            }}
+                                            disabled={frontendAccessLoading}
+                                            onClick={async () => {
+                                                if (!window.confirm('Sei sicuro di voler revocare l\'accesso frontend a questo socio?')) return;
+                                                setFrontendAccessLoading(true);
+                                                try {
+                                                    const token = localStorage.getItem('token');
+                                                    const res = await fetch(`/auth/api/socio-access/${formData.id}`, {
+                                                        method: 'DELETE',
+                                                        headers: { 'Authorization': `Bearer ${token}` },
+                                                    });
+                                                    if (res.ok) {
+                                                        // Remove frontend fields from socio record
+                                                        await fetch(`/users/api/soci/${formData.id}`, {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ frontend_enabled: false, frontend_password_plain: null, frontend_user_id: null }),
+                                                        });
+                                                        setFrontendAccess({ enabled: false, email: formData.email, password_plain: '', user_id: null });
+                                                        showSnackbar('Accesso frontend revocato', 'success');
+                                                    } else {
+                                                        const err = await res.json();
+                                                        showSnackbar(err.error || 'Errore durante la revoca', 'error');
+                                                    }
+                                                } catch {
+                                                    showSnackbar('Errore di rete', 'error');
+                                                } finally {
+                                                    setFrontendAccessLoading(false);
+                                                }
+                                            }}
+                                        >
+                                            <ShieldOff size={14} /> Revoca accesso
+                                        </button>
+                                    ) : (
+                                        <button
+                                            style={{
+                                                background: '#10b981', color: '#fff', border: 'none',
+                                                borderRadius: '6px', padding: '7px 16px', cursor: 'pointer',
+                                                fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
+                                                opacity: frontendAccessLoading ? 0.7 : 1,
+                                            }}
+                                            disabled={frontendAccessLoading}
+                                            onClick={async () => {
+                                                if (!formData.email) {
+                                                    showSnackbar('Il socio deve avere un\'email valida per abilitare l\'accesso frontend.', 'error');
+                                                    return;
+                                                }
+                                                setFrontendAccessLoading(true);
+                                                try {
+                                                    const token = localStorage.getItem('token');
+                                                    const res = await fetch('/auth/api/socio-access', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                        body: JSON.stringify({
+                                                            socio_ref_id: formData.id,
+                                                            email: formData.email,
+                                                            nome: formData.nome,
+                                                            cognome: formData.cognome,
+                                                        }),
+                                                    });
+                                                    const data = await res.json();
+                                                    if (res.ok) {
+                                                        // Save to socio record (sync anche se already_existed)
+                                                        await fetch(`/users/api/soci/${formData.id}`, {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                frontend_enabled: true,
+                                                                ...(data.password_plain !== null && { frontend_password_plain: data.password_plain }),
+                                                                frontend_user_id: data.user_id,
+                                                            }),
+                                                        });
+                                                        setFrontendAccess({ enabled: true, email: formData.email, password_plain: data.password_plain, user_id: data.user_id });
+                                                        showSnackbar(data.already_existed ? 'Accesso già presente — stato sincronizzato' : 'Accesso frontend abilitato con successo', 'success');
+                                                    } else {
+                                                        showSnackbar(data.error || 'Errore durante l\'abilitazione', 'error');
+                                                    }
+                                                } catch {
+                                                    showSnackbar('Errore di rete', 'error');
+                                                } finally {
+                                                    setFrontendAccessLoading(false);
+                                                }
+                                            }}
+                                        >
+                                            <ShieldCheck size={14} /> Abilita accesso
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Credentials display */}
+                            {frontendAccess.enabled && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 18px' }}>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Email di accesso</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{frontendAccess.email}</span>
+                                            <button
+                                                title="Copia"
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                onClick={() => { navigator.clipboard.writeText(frontendAccess.email); showSnackbar('Email copiata'); }}
+                                            >
+                                                <Copy size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 18px' }}>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Password generata</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500, letterSpacing: showFrontendPassword ? 'normal' : '0.15em', fontFamily: 'monospace' }}>
+                                                {showFrontendPassword ? (frontendAccess.password_plain || '—') : '••••••••••'}
+                                            </span>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                <button
+                                                    title={showFrontendPassword ? 'Nascondi' : 'Mostra'}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                    onClick={() => setShowFrontendPassword(v => !v)}
+                                                >
+                                                    {showFrontendPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                </button>
+                                                <button
+                                                    title="Copia password"
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                    onClick={() => { navigator.clipboard.writeText(frontendAccess.password_plain); showSnackbar('Password copiata'); }}
+                                                >
+                                                    <Copy size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Reset password */}
+                                    <button
+                                        style={{
+                                            background: 'none', border: '1px solid #d1d5db', borderRadius: '7px',
+                                            padding: '9px 16px', cursor: 'pointer', fontSize: '0.83rem', fontWeight: 600,
+                                            color: '#374151', display: 'flex', alignItems: 'center', gap: '7px',
+                                            opacity: frontendAccessLoading ? 0.7 : 1, alignSelf: 'flex-start',
+                                        }}
+                                        disabled={frontendAccessLoading}
+                                        onClick={async () => {
+                                            if (!window.confirm('Generare una nuova password per questo socio?')) return;
+                                            setFrontendAccessLoading(true);
+                                            try {
+                                                const token = localStorage.getItem('token');
+                                                const res = await fetch(`/auth/api/socio-access/${formData.id}/reset-password`, {
+                                                    method: 'POST',
+                                                    headers: { 'Authorization': `Bearer ${token}` },
+                                                });
+                                                const data = await res.json();
+                                                if (res.ok) {
+                                                    await fetch(`/users/api/soci/${formData.id}`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ frontend_password_plain: data.password_plain }),
+                                                    });
+                                                    setFrontendAccess(prev => ({ ...prev, password_plain: data.password_plain }));
+                                                    setShowFrontendPassword(true);
+                                                    showSnackbar('Nuova password generata', 'success');
+                                                } else {
+                                                    showSnackbar(data.error || 'Errore durante il reset', 'error');
+                                                }
+                                            } catch {
+                                                showSnackbar('Errore di rete', 'error');
+                                            } finally {
+                                                setFrontendAccessLoading(false);
+                                            }
+                                        }}
+                                    >
+                                        <KeyRound size={14} /> Rigenera password
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -2276,6 +2917,228 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         ? <Check size={18} strokeWidth={2.5} />
                         : <X size={18} strokeWidth={2.5} />}
                     {snackbar.message}
+                </div>
+            )}
+
+            {/* ── Modal Dettaglio Corso ─────────────────────────────── */}
+            {corsoDettaglio && (
+                <div className="modal-overlay" style={{zIndex: 2100}} onClick={() => setCorsoDettaglio(null)}>
+                    <div className="modal-card" style={{maxWidth:'600px', width:'95%', padding:0, overflow:'hidden'}} onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff'}}>
+                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                <BookOpen size={20} style={{color:'#10b981'}}/>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Dettaglio Corso</h3>
+                            </div>
+                            <button style={{background:'none', border:'none', cursor:'pointer', color:'#6b7280'}} onClick={() => setCorsoDettaglio(null)}>
+                                <X size={20}/>
+                            </button>
+                        </div>
+                        {/* Body */}
+                        <div style={{padding:'20px', display:'flex', flexDirection:'column', gap:'16px', backgroundColor:'#f9fafb'}}>
+                            {/* Attività + descrizione */}
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Attività</div>
+                                    <div style={{fontWeight:600, color:'#111827'}}>{corsoDettaglio.attivita?.descrizione || '-'}</div>
+                                </div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Descrizione</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.descrizione || '-'}</div>
+                                </div>
+                            </div>
+                            {/* Giorno + ora + durata */}
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Giorno</div>
+                                    <div style={{color:'#374151'}}>{GIORNI_SETTIMANA[corsoDettaglio.giorno] || '-'}</div>
+                                </div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Ora inizio</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.oraInizio || '-'}</div>
+                                </div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Durata</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.durataMinuti ? `${corsoDettaglio.durataMinuti} min` : '-'}</div>
+                                </div>
+                            </div>
+                            {/* Struttura + Sala */}
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Struttura</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.struttura?.descrizione || '-'}</div>
+                                </div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Sala / Area</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.area?.descrizione || '-'}</div>
+                                </div>
+                            </div>
+                            {/* Istruttore + Max soci */}
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Istruttore</div>
+                                    <div style={{color:'#374151'}}>
+                                        {corsoDettaglio.staff ? `${corsoDettaglio.staff.nome} ${corsoDettaglio.staff.cognome}` : '-'}
+                                    </div>
+                                </div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Max partecipanti</div>
+                                    <div style={{color:'#374151'}}>{corsoDettaglio.maxSoci ?? '-'}</div>
+                                </div>
+                            </div>
+                            {/* Note */}
+                            {corsoDettaglio.note && (
+                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Note</div>
+                                    <div style={{color:'#374151', whiteSpace:'pre-wrap'}}>{corsoDettaglio.note}</div>
+                                </div>
+                            )}
+                            {/* Scadenza abbonamento del socio per questo corso */}
+                            <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
+                                <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Scadenza abbonamento (socio)</div>
+                                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                                    <span style={{color:'#374151'}}>
+                                        {getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId)
+                                            ? formatDateIT(getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId))
+                                            : 'Nessun pagamento trovato'}
+                                    </span>
+                                    <ScadenzaBadge stato={computeStatoPagamentoScadenza(
+                                        getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId)
+                                            ? new Date(getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId) + 'T00:00:00')
+                                            : null
+                                    )}/>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Footer */}
+                        <div style={{padding:'12px 20px', borderTop:'1px solid #e5e7eb', backgroundColor:'#fff', display:'flex', justifyContent:'flex-end'}}>
+                            <button
+                                style={{padding:'8px 20px', backgroundColor:'#6b7280', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
+                                onClick={() => setCorsoDettaglio(null)}
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal Aggiungi Corso ──────────────────────────────── */}
+            {showAggiungiCorsoModal && (
+                <div className="modal-overlay" style={{zIndex: 2100}} onClick={() => setShowAggiungiCorsoModal(false)}>
+                    <div className="modal-card" style={{maxWidth:'700px', width:'95%', padding:0, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'80vh'}} onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff', flexShrink:0}}>
+                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                <PlusCircle size={20} style={{color:'#10b981'}}/>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Aggiungi Corso</h3>
+                            </div>
+                            <button style={{background:'none', border:'none', cursor:'pointer', color:'#6b7280'}} onClick={() => setShowAggiungiCorsoModal(false)}>
+                                <X size={20}/>
+                            </button>
+                        </div>
+
+                        {/* Info passepartout */}
+                        {passepartoutScadenza && (
+                            <div style={{margin:'12px 20px 0', padding:'10px 14px', backgroundColor:'#dcfce7', border:'1px solid #86efac', borderRadius:'6px', fontSize:'0.85rem', color:'#166534', display:'flex', alignItems:'center', gap:'8px', flexShrink:0}}>
+                                <Check size={16}/>
+                                <span>Abbonamento jolly valido fino al <strong>{formatDateIT(passepartoutScadenza)}</strong> — accesso a tutti i corsi.</span>
+                            </div>
+                        )}
+
+                        {/* Body */}
+                        <div style={{overflowY:'auto', flex:1, padding:'16px 20px'}}>
+                            {aggiungiCorsoLoading ? (
+                                <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>Caricamento corsi...</div>
+                            ) : (() => {
+                                const iscrittiIds = new Set(socioCorsi.map(i => i.corsoId ?? i.corso?.id));
+                                const disponibili = tuttiCorsi.filter(c => !iscrittiIds.has(c.id));
+                                if (disponibili.length === 0) {
+                                    return (
+                                        <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>
+                                            Nessun corso disponibile da aggiungere.
+                                        </div>
+                                    );
+                                }
+                                return disponibili.map(corso => {
+                                    const accessibile = isCorsoAccessibile(corso.abbonamentoId);
+                                    const colore = corso.attivita?.colore;
+                                    const coloriBg = {
+                                        'ROSSO':'#e53935','VERDE':'#43a047','BLU':'#1e88e5','VERDE CHIARO':'#66bb6a',
+                                        'CELESTE':'#26c6da','ARANCIONE':'#fb8c00','VIOLA':'#8e24aa','GIALLO':'#fdd835',
+                                        'GRIGIO':'#78909c','ROSA':'#e91e63',
+                                    };
+                                    const colBg = coloriBg[colore] || '#9e9e9e';
+                                    return (
+                                        <div key={corso.id} style={{
+                                            display:'flex', alignItems:'center', gap:'12px',
+                                            padding:'12px 14px', borderRadius:'6px', border:'1px solid #e5e7eb',
+                                            marginBottom:'8px', backgroundColor: accessibile ? '#fff' : '#f9fafb',
+                                            opacity: accessibile ? 1 : 0.55,
+                                        }}>
+                                            {colore && (
+                                                <span style={{width:'12px', height:'12px', borderRadius:'50%', backgroundColor:colBg, flexShrink:0}}/>
+                                            )}
+                                            <div style={{flex:1, minWidth:0}}>
+                                                <div style={{fontWeight:600, color:'#111827', fontSize:'0.9rem'}}>{corso.attivita?.descrizione || 'Corso'}</div>
+                                                <div style={{fontSize:'0.8rem', color:'#6b7280'}}>
+                                                    {GIORNI_SETTIMANA[corso.giorno]} · {corso.oraInizio} · {corso.durataMinuti} min
+                                                    {corso.struttura ? ` · ${corso.struttura.descrizione}` : ''}
+                                                    {corso.area ? ` / ${corso.area.descrizione}` : ''}
+                                                </div>
+                                                {!accessibile && (
+                                                    <div style={{fontSize:'0.75rem', color:'#ef4444', marginTop:'2px', display:'flex', alignItems:'center', gap:'4px'}}>
+                                                        <AlertTriangle size={12}/>
+                                                        Abbonamento richiesto non valido o assente
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                disabled={!accessibile}
+                                                style={{
+                                                    padding:'6px 14px', borderRadius:'6px', border:'none', fontWeight:600, fontSize:'0.85rem', cursor: accessibile ? 'pointer' : 'not-allowed',
+                                                    backgroundColor: accessibile ? '#10b981' : '#d1d5db',
+                                                    color: accessibile ? 'white' : '#9ca3af',
+                                                    flexShrink:0,
+                                                }}
+                                                onClick={async () => {
+                                                    try {
+                                                        const res = await fetch(`/activities/api/corsi/${corso.id}/iscritti`, {
+                                                            method:'POST',
+                                                            headers:{'Content-Type':'application/json'},
+                                                            body: JSON.stringify({ socioId: formData.id }),
+                                                        });
+                                                        if (res.ok) {
+                                                            await fetchSocioCorsi();
+                                                            setShowAggiungiCorsoModal(false);
+                                                            showSnackbar('Socio iscritto al corso con successo');
+                                                        } else {
+                                                            const err = await res.json();
+                                                            showSnackbar(err.error || 'Errore durante l\'iscrizione', 'error');
+                                                        }
+                                                    } catch {
+                                                        showSnackbar('Errore di rete', 'error');
+                                                    }
+                                                }}
+                                            >
+                                                Iscrivi
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{padding:'12px 20px', borderTop:'1px solid #e5e7eb', backgroundColor:'#fff', flexShrink:0, display:'flex', justifyContent:'flex-end'}}>
+                            <button
+                                style={{padding:'8px 20px', backgroundColor:'#6b7280', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
+                                onClick={() => setShowAggiungiCorsoModal(false)}
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

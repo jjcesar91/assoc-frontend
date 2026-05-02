@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Star } from 'lucide-react';
-import { MENU_STRUCTURE } from './menuConfig';
+import { MENU_STRUCTURE, getVisibleMenu } from './menuConfig';
 
 export { MENU_STRUCTURE };
 
@@ -36,7 +36,7 @@ const FavoritesModal = ({ isOpen, onClose, favorites, onToggleFavorite }) => {
                     </button>
                 </div>
                 <div>
-                    {MENU_STRUCTURE.map(item => (
+                    {getVisibleMenu().map(item => (
                         <div key={item.id}>
                             {/* Riga voce principale */}
                             <div style={{
