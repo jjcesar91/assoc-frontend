@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
@@ -111,12 +112,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
     const confirm = useConfirm();
+    const showAlert = useAlert();
     // Determine if we are editing an existing scio or creating a new one
     const isEditMode = !!socioData;
     
     // Initial State - populate if editing
     const initialState = {
-        // Anagrafica Base
+        // Tipo socio
+        tipo_socio: 'persona_fisica',
+
+        // Anagrafica Base (persona fisica)
         id: '',
         cognome: '',
         nome: '',
@@ -158,7 +163,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         id_badge: '',
         
         // Backend Default
-        is_active: true
+        is_active: true,
+
+        // Campi associazione
+        ragione_sociale: '',
+        partita_iva: '',
+        codice_sdi: '',
+        pec: '',
+        tipo_associazione: '',
+        cognome_rappresentante: '',
+        nome_rappresentante: '',
     };
 
     const [formData, setFormData] = useState(initialState);
@@ -257,7 +271,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 }
             } catch (e) {
                 console.error(e);
-                alert("Errore nel caricamento dei moduli");
+                showAlert("Errore nel caricamento dei moduli", 'Errore');
                 return;
             }
         } else {
@@ -269,7 +283,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const executePrint = async () => {
         if (!targetModuleName) {
-            alert("Seleziona un modulo");
+            showAlert("Seleziona un modulo", 'Campo mancante', 'warning');
             return;
         }
 
@@ -291,7 +305,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             }
             
             if (!modulo) {
-                alert(`Modulo "${targetModuleName.replace(/_/g, ' ')}" non trovato nella sezione Modulistica.`);
+                showAlert(`Modulo "${targetModuleName.replace(/_/g, ' ')}" non trovato nella sezione Modulistica.`, 'Modulo non trovato', 'warning');
                 return;
             }
 
@@ -451,7 +465,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         setShowPrintModal(false);
                     }, 500);
                 } else {
-                    alert("La libreria PDF sta caricando, riprova tra un secondo.");
+                    showAlert("La libreria PDF sta caricando, riprova tra un secondo.", 'Attenzione', 'warning');
                 }
             };
 
@@ -468,7 +482,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
         } catch (e) {
             console.error("Print Error:", e);
-            alert("Errore durante la generazione del modulo");
+            showAlert("Errore durante la generazione del modulo", 'Errore');
         }
     };
 
@@ -591,7 +605,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             
             if (!updateRes.ok) {
                  const err = await updateRes.json();
-                 alert('Errore aggiornamento livello socio: ' + (err.error || err.message));
+                 showAlert(err.error || err.message, 'Errore aggiornamento livello socio');
                  return;
             }
 
@@ -607,7 +621,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             // Note: We do NOT create an Iscrizione (as per request), just update the socio status.
         } catch (e) {
             console.error("Error accepting socio", e);
-            alert("Errore di rete");
+            showAlert("Errore di rete", 'Errore');
         }
     };
 
@@ -641,6 +655,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             setFormData(prev => ({
                 ...prev,
                 ...socioData,
+                // Tipo socio
+                tipo_socio: socioData.tipo_socio || 'persona_fisica',
                 // Ensure nulls are strings for inputs
                 cognome: socioData.cognome || '',
                 nome: socioData.nome || '',
@@ -667,7 +683,15 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 tessera_eps: socioData.tessera_eps || '',
                 note: socioData.note || '',
                 data_scadenza_tesseramento: socioData.data_scadenza_tesseramento || '',
-                id_badge: socioData.id_badge || ''
+                id_badge: socioData.id_badge || '',
+                // Campi associazione
+                ragione_sociale: socioData.ragione_sociale || '',
+                partita_iva: socioData.partita_iva || '',
+                codice_sdi: socioData.codice_sdi || '',
+                pec: socioData.pec || '',
+                tipo_associazione: socioData.tipo_associazione || '',
+                cognome_rappresentante: socioData.cognome_rappresentante || '',
+                nome_rappresentante: socioData.nome_rappresentante || '',
             }));
             
             // Set Checkbox state based on date existence
@@ -924,11 +948,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 setSocioPagamenti(prev => prev.filter(p => p.id !== id));
                 if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
             } else {
-                alert('Errore durante l\'eliminazione del pagamento');
+                showAlert('Errore durante l\'eliminazione del pagamento', 'Errore');
             }
         } catch (e) {
             console.error(e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
@@ -940,11 +964,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                 setSelectedPaymentDetail(updated);
             } else {
-                alert('Errore durante l\'annullamento della ricevuta');
+                showAlert('Errore durante l\'annullamento della ricevuta', 'Errore');
             }
         } catch (e) {
             console.error(e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
@@ -978,6 +1002,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             'Fuori campo iva art.4 dpr 633/72 - Esente imposte art.148 TUIR -<br/>Esente bollo L 30/12/2018 n. 145 art.1 c.646';
         const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
 
+        const indirizzoSocio = [formData.indirizzo, formData.cap, formData.comune].filter(Boolean).join(' - ');
+        const codiceFiscaleSocio = formData.codice_fiscale || '';
         let datiPagatore = p.codice_fiscale_genitore || '';
         if (formData.data_nascita && (formData.nome_genitore || formData.cognome_genitore || formData.cf_genitore)) {
             const dataRif = new Date(p.data_pagamento || p.data_ricevuta || new Date());
@@ -1042,7 +1068,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             <td>RICEVUTA</td>
             <td>${p.numero_ricevuta || ''}</td>
             <td>${p.progressivo_stagione || ''}</td>
-            <td>${p.data_ricevuta || p.data_pagamento || ''}</td>
+            <td>${(p.data_ricevuta || p.data_pagamento) ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
@@ -1052,7 +1078,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         </tr>
         <tr>
             <td colspan="2">${(p.intestatario || '').toUpperCase()}</td>
-            <td colspan="2">${p.codice_fiscale || p.partita_iva || ''}</td>
+            <td colspan="2">${p.codice_fiscale || codiceFiscaleSocio || p.partita_iva || ''}</td>
             <td>${modalitaLabel}</td>
         </tr>
         <tr>
@@ -1060,7 +1086,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             <th colspan="2">DATI DI CHI HA EFFETTUATO IL PAGAMENTO</th>
         </tr>
         <tr>
-            <td colspan="3"></td>
+            <td colspan="3">${indirizzoSocio}</td>
             <td colspan="2">${datiPagatore}</td>
         </tr>
         <tr><th colspan="5">NOTE</th></tr>
@@ -1473,7 +1499,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             if (response.ok) {
                 const result = await response.json();
                 if (result.exists) {
-                    alert(`L'email ${formData.email} è già usata da ${result.nome} ${result.cognome}`);
+                    showAlert(`L'email ${formData.email} è già usata da ${result.nome} ${result.cognome}`, 'Email già in uso', 'warning');
                 }
             }
         } catch (e) {
@@ -1496,7 +1522,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 setIscrizioneStatus('NON ISCRITTO');
                 setCurrentIscrizioneDate('');
             } else {
-                alert('Errore revoca iscrizione');
+                showAlert('Errore revoca iscrizione', 'Errore');
             }
         } catch (e) {
              console.error("Error revoking iscrizione", e);
@@ -1505,7 +1531,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (isMinorenne) {
+        if (formData.tipo_socio !== 'associazione' && isMinorenne) {
             const errors = {
                 cf_genitore: !formData.cf_genitore?.trim(),
                 nome_genitore: !formData.nome_genitore?.trim(),
@@ -1594,7 +1620,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         <div>
                              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
                                 {isEditMode ? (
-                                    `${formData.nome || ''} ${formData.cognome || ''}`
+                                    formData.tipo_socio === 'associazione'
+                                        ? (formData.ragione_sociale || 'Associazione')
+                                        : `${formData.nome || ''} ${formData.cognome || ''}`
                                 ) : (
                                     'Nuovo Socio'
                                 )}
@@ -1731,6 +1759,146 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     
                     {activeTab === 'Anagrafica' && (
                         <form id="socioForm" onSubmit={handleSubmit}>
+
+                            {/* Toggle Persona Fisica / Associazione */}
+                            {isEditMode ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '7px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>
+                                        {formData.tipo_socio === 'associazione' ? 'Associazione' : 'Persona Fisica'}
+                                    </span>
+                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>(non modificabile)</span>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '24px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', width: 'fit-content' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, tipo_socio: 'persona_fisica' }))}
+                                        style={{
+                                            padding: '8px 20px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '0.875rem',
+                                            backgroundColor: formData.tipo_socio !== 'associazione' ? '#2563eb' : '#f9fafb',
+                                            color: formData.tipo_socio !== 'associazione' ? '#fff' : '#6b7280',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        Persona Fisica
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, tipo_socio: 'associazione' }))}
+                                        style={{
+                                            padding: '8px 20px',
+                                            border: 'none',
+                                            borderLeft: '1px solid #e5e7eb',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '0.875rem',
+                                            backgroundColor: formData.tipo_socio === 'associazione' ? '#2563eb' : '#f9fafb',
+                                            color: formData.tipo_socio === 'associazione' ? '#fff' : '#6b7280',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        Associazione
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* FORM ASSOCIAZIONE */}
+                            {formData.tipo_socio === 'associazione' ? (
+                                <div className="md-form-grid-custom">
+
+                                    {/* Denominazione */}
+                                    <div className="form-group grid-span-12">
+                                        <label className="field-label">Denominazione *</label>
+                                        <input className="md-input" name="ragione_sociale" value={formData.ragione_sociale} onChange={handleChange} required />
+                                    </div>
+
+                                    {/* CF | P.IVA | SDI | PEC */}
+                                    <div className="form-group grid-span-3">
+                                        <label className="field-label">Codice fiscale *</label>
+                                        <input className="md-input" name="codice_fiscale" value={formData.codice_fiscale} onChange={handleChange} required />
+                                    </div>
+                                    <div className="form-group grid-span-3">
+                                        <label className="field-label">Partita IVA</label>
+                                        <input className="md-input" name="partita_iva" value={formData.partita_iva} onChange={handleChange} />
+                                    </div>
+                                    <div className="form-group grid-span-3">
+                                        <label className="field-label">Codice SDI (es. 000000)</label>
+                                        <input className="md-input" name="codice_sdi" value={formData.codice_sdi} onChange={handleChange} placeholder="000000" />
+                                    </div>
+                                    <div className="form-group grid-span-3">
+                                        <label className="field-label">PEC</label>
+                                        <input className="md-input" type="email" name="pec" value={formData.pec} onChange={handleChange} />
+                                    </div>
+
+                                    {/* Email | Telefono */}
+                                    <div className="form-group grid-span-6">
+                                        <label className="field-label">Email</label>
+                                        <input
+                                            className="md-input"
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            onBlur={handleEmailBlur}
+                                            style={emailError ? { borderColor: '#ef4444' } : {}}
+                                        />
+                                        {emailError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '2px' }}>{emailError}</span>}
+                                    </div>
+                                    <div className="form-group grid-span-6">
+                                        <label className="field-label">Telefono</label>
+                                        <input className="md-input" name="telefono" value={formData.telefono} onChange={handleChange} />
+                                    </div>
+
+                                    {/* Indirizzo | Comune | Cap */}
+                                    <div className="form-group grid-span-7">
+                                        <label className="field-label">Indirizzo</label>
+                                        <input className="md-input" name="indirizzo" placeholder="VIA..." value={formData.indirizzo} onChange={handleChange} />
+                                    </div>
+                                    <div className="form-group grid-span-3">
+                                        <label className="field-label">Comune</label>
+                                        <CityAutocomplete name="comune" value={formData.comune} onChange={handleChange} style={{ width: '100%' }} />
+                                    </div>
+                                    <div className="form-group grid-span-2">
+                                        <label className="field-label">Cap</label>
+                                        <input className="md-input" name="cap" value={formData.cap} onChange={handleChange} />
+                                    </div>
+
+                                    {/* Tipo Associazione */}
+                                    <div className="form-group grid-span-12">
+                                        <label className="field-label">Tipo Associazione</label>
+                                        <select className="md-select" name="tipo_associazione" value={formData.tipo_associazione} onChange={handleChange}>
+                                            <option value="">Seleziona...</option>
+                                            <option value="ASD">Associazione Sportiva Dilettantistica (ASD)</option>
+                                            <option value="APS">Associazione di Promozione Sociale (APS)</option>
+                                            <option value="ODV">Organizzazione di Volontariato (ODV)</option>
+                                            <option value="ETS">Ente del Terzo Settore (ETS)</option>
+                                            <option value="Fondazione">Fondazione</option>
+                                            <option value="Circoli">Circoli</option>
+                                            <option value="Associazione">Associazione</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Rappresentante legale */}
+                                    <div className="form-group grid-span-6">
+                                        <label className="field-label">Cognome Rappr. legale</label>
+                                        <input className="md-input" name="cognome_rappresentante" value={formData.cognome_rappresentante} onChange={handleChange} />
+                                    </div>
+                                    <div className="form-group grid-span-6">
+                                        <label className="field-label">Nome Rappr. legale</label>
+                                        <input className="md-input" name="nome_rappresentante" value={formData.nome_rappresentante} onChange={handleChange} />
+                                    </div>
+
+                                    {/* Note */}
+                                    <div className="form-group grid-span-12">
+                                        <label className="field-label" style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>Note</label>
+                                        <textarea className="md-input" name="note" placeholder="Note" style={{ height: '120px', resize: 'none' }} value={formData.note} onChange={handleChange}></textarea>
+                                    </div>
+                                </div>
+                            ) : (
                             <div className="md-form-grid-custom">
                                 
                                 {/* Row 1 */}
@@ -1959,6 +2127,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     <textarea className="md-input" name="note" placeholder="Note" style={{height:'120px', resize:'none'}} value={formData.note} onChange={handleChange}></textarea>
                                 </div>
                             </div>
+                            )}
                         </form>
                     )}
                     
@@ -2614,6 +2783,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             email: formData.email,
                                                             nome: formData.nome,
                                                             cognome: formData.cognome,
+                                                            societaId: selectedSocietaId,
                                                         }),
                                                     });
                                                     const data = await res.json();
@@ -2760,6 +2930,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 pagamento={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
+                products={prodottiSocieta}
             />
 
             {showIscrizioneModal && (

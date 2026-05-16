@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { X, Mail, MessageSquare, Check } from 'lucide-react';
 import SimpleEditor from './SimpleEditor';
+import { useAlert } from './AlertModal';
 import './ComunicazioneModal.css';
 
 const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
+    const showAlert = useAlert();
     const [tipo, setTipo] = useState('EMAIL'); // 'SMS' or 'EMAIL'
     const [oggetto, setOggetto] = useState('');
     const [testo, setTesto] = useState('');
@@ -14,11 +16,11 @@ const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
         
         // Validation
         if (tipo === 'EMAIL' && !oggetto) {
-            alert("L'oggetto è obbligatorio per le email");
+            showAlert("L'oggetto è obbligatorio per le email", 'Campo mancante', 'warning');
             return;
         }
         if (!testo || testo.trim() === '<p><br></p>') {
-            alert("Il testo del messaggio è obbligatorio");
+            showAlert("Il testo del messaggio è obbligatorio", 'Campo mancante', 'warning');
             return;
         }
 
@@ -44,20 +46,22 @@ const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
             }
 
             const data = await response.json();
-            if (onSave) onSave(data);
+            if (onSave) onSave(data.comunicazione || data);
             onClose();
-            // alert('Comunicazione inviata con successo!'); // Optional confirmation
+            if (data.warning) {
+                showAlert(data.warning, 'Attenzione', 'warning');
+            }
         } catch (error) {
             console.error(error);
-            alert(`Errore: ${error.message}`);
+            showAlert(error.message, 'Errore invio');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="modal-overlay" style={{zIndex: 2000}}>
-            <div className="comunicazione-modal">
+        <div className="modal-overlay" style={{zIndex: 2000}} onClick={e => e.stopPropagation()}>
+            <div className="comunicazione-modal" onClick={e => e.stopPropagation()}>
                 <div className="comunicazione-header">
                     <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                         <Mail size={20} />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, CalendarDays, Users, UserPlus, Trash2, AlertTriangle, ClipboardList, CheckCircle, Clock, Printer } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
 import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
@@ -86,6 +87,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
     // ── Tab ──────────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState(initialTab);
     const confirm = useConfirm();
+    const showAlert = useAlert();
     const { societaList } = useSocieta();
 
     useEffect(() => {
@@ -433,7 +435,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
 </div></body></html>`;
 
             const win = window.open('', '_blank');
-            if (!win) { alert('Popup bloccato dal browser. Consenti i popup per questa pagina.'); return; }
+            if (!win) { showAlert('Popup bloccato dal browser. Consenti i popup per questa pagina.', 'Popup bloccato', 'warning'); return; }
             win.document.write(html);
             win.document.close();
             setTimeout(() => win.print(), 600);

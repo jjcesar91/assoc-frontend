@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap, FileInput } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
+import ImportVociRicevutaModal from './ImportVociRicevutaModal';
 import './Soci.css';
 
 const Pagamenti = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const confirm = useConfirm();
+    const showAlert = useAlert();
     const [payments, setPayments] = useState([]);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showPaymentMenu, setShowPaymentMenu] = useState(false);
     const [isFastModalOpen, setIsFastModalOpen] = useState(false);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
+    const [showImportVoci, setShowImportVoci] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -54,11 +60,22 @@ const Pagamenti = () => {
         setIsFastModalOpen(false);
         if (selectedSocietaId) {
             fetchPayments();
+            fetchProducts();
         } else {
             setPayments([]);
+            setProducts([]);
             setLoading(false);
         }
     }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch(`/products/api?societaId=${selectedSocietaId}`);
+            if (res.ok) setProducts(await res.json());
+        } catch (e) {
+            console.error('Errore caricamento prodotti', e);
+        }
+    };
 
     const fetchPayments = async () => {
         setLoading(true);
@@ -67,6 +84,11 @@ const Pagamenti = () => {
             if (response.ok) {
                 const data = await response.json();
                 setPayments(data);
+                const pid = searchParams.get('paymentId');
+                if (pid) {
+                    const found = data.find(p => String(p.id) === String(pid));
+                    if (found) setSelectedPaymentDetail(found);
+                }
             }
         } catch (error) {
             console.error("Error fetching payments", error);
@@ -83,12 +105,34 @@ const Pagamenti = () => {
                 setPayments(prev => prev.filter(p => p.id !== id));
                 if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
             } else {
-                alert('Errore durante l\'eliminazione del pagamento');
+                showAlert('Errore durante l\'eliminazione del pagamento', 'Errore');
             }
         } catch (e) {
             console.error(e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
+    };
+
+    // Restituisce un array di nomi prodotto per un pagamento (lookup da payment_items → products)
+    const getItemNames = (pmt) => {
+        let items = pmt.payment_items;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch { items = null; }
+        }
+        if (Array.isArray(items) && items.length > 0) {
+            return items.map(item => {
+                if (item.product_id && products.length) {
+                    return products.find(pr => Number(pr.id) === Number(item.product_id))?.description
+                        || item.quote || pmt.quote || '';
+                }
+                return item.quote || pmt.quote || '';
+            }).filter(Boolean);
+        }
+        if (pmt.product_id && products.length) {
+            const name = products.find(pr => Number(pr.id) === Number(pmt.product_id))?.description;
+            if (name) return [name];
+        }
+        return (pmt.quote || '').split(', ').map(s => s.trim()).filter(Boolean);
     };
 
     const handlePrintPayment = async (p) => {
@@ -124,12 +168,50 @@ const Pagamenti = () => {
             }
         }
 
-        const totalAmount = allItems.reduce((acc, item) => acc + Math.abs(parseFloat(item.importo || 0)), 0);
+        // Costruisce le righe della ricevuta:
+        // Priorità: payment_items (con importo per voce) → fallback: split del campo quote
+        let lineItems; // array di { descrizione, importo: number|null }
+        const piSource = allItems.find(i => {
+            const pi = i.payment_items;
+            if (!pi) return false;
+            const arr = Array.isArray(pi) ? pi : (() => { try { return JSON.parse(pi); } catch { return null; } })();
+            return Array.isArray(arr) && arr.length > 0;
+        });
+        if (piSource) {
+            const arr = Array.isArray(piSource.payment_items)
+                ? piSource.payment_items
+                : JSON.parse(piSource.payment_items);
+            lineItems = arr.map(pi => ({
+                descrizione: (pi.product_id && products.length)
+                    ? (products.find(pr => Number(pr.id) === Number(pi.product_id))?.description || pi.quote || piSource.quote || '')
+                    : (pi.quote || piSource.quote || ''),
+                importo: Math.abs(parseFloat(pi.importo || 0)),
+            }));
+        } else {
+            // Fallback: splittare il campo quote per righe visibili distinte
+            // Non abbiamo importi individuali → importo = null (si mostra solo il TOTALE)
+            const primaryItem = allItems[0] || p;
+            const rawQuote = primaryItem.quote || '';
+            const sep = rawQuote.includes(' + ') ? ' + ' : ', ';
+            const parts = rawQuote.split(sep).map(s => s.trim()).filter(Boolean);
+            const totalSplit = Math.abs(parseFloat(primaryItem.importo || 0));
+            if (parts.length <= 1) {
+                lineItems = [{ descrizione: rawQuote, importo: totalSplit }];
+            } else {
+                // Righe senza importo individuale, solo totale
+                lineItems = parts.map(d => ({ descrizione: d, importo: null }));
+            }
+        }
+
+        const totalAmount = lineItems.reduce((acc, li) => acc + (li.importo ?? 0), 0) ||
+            Math.abs(parseFloat((allItems[0] || p).importo || 0));
         const importoFormatted = totalAmount.toFixed(2).replace('.', ',');
 
-        const quoteRows = allItems.map(item => {
-            const itemImporto = Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',');
-            return `<tr><td>${item.quote || ''}</td><td style="text-align:right">${itemImporto}</td></tr>`;
+        const quoteRows = lineItems.map(li => {
+            const cell = li.importo !== null
+                ? `<td style="text-align:right">${li.importo.toFixed(2).replace('.', ',')}</td>`
+                : `<td style="text-align:right; color:#aaa;">—</td>`;
+            return `<tr><td>${li.descrizione}</td>${cell}</tr>`;
         }).join('');
 
         const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
@@ -138,6 +220,8 @@ const Pagamenti = () => {
         const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
 
         let datiPagatore = p.codice_fiscale_genitore || '';
+        let indirizzoSocio = '';
+        let codiceFiscaleSocio = '';
         if (p.socio_id) {
             try {
                 const token = localStorage.getItem('token');
@@ -146,6 +230,8 @@ const Pagamenti = () => {
                 });
                 if (socioRes.ok) {
                     const socio = await socioRes.json();
+                    indirizzoSocio = [socio.indirizzo, socio.cap, socio.comune].filter(Boolean).join(' - ');
+                    codiceFiscaleSocio = socio.codice_fiscale || '';
                     if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
                         const dataRif = new Date(p.data_pagamento || p.data_ricevuta || new Date());
                         const nascita = new Date(socio.data_nascita);
@@ -206,37 +292,35 @@ const Pagamenti = () => {
         <tr>
             <th>TIPO DOCUMENTO</th>
             <th>NUMERO DOCUMENTO</th>
-            <th>PROGRESSIVO STAGIONE</th>
             <th>DATA DOCUMENTO</th>
             <th>STATO DOCUMENTO</th>
         </tr>
         <tr>
             <td>RICEVUTA</td>
             <td>${p.numero_ricevuta || ''}</td>
-            <td>${p.progressivo_stagione || ''}</td>
-            <td>${p.data_ricevuta || p.data_pagamento || ''}</td>
+            <td>${(p.data_ricevuta || p.data_pagamento || '') ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
             <th colspan="2">INTESTATARIO</th>
-            <th colspan="2">CODICE FISCALE / PARTITA IVA INTESTATARIO</th>
+            <th>CODICE FISCALE / PARTITA IVA INTESTATARIO</th>
             <th>MODALITA' PAGAMENTO</th>
         </tr>
         <tr>
             <td colspan="2">${(p.intestatario || '').toUpperCase()}</td>
-            <td colspan="2">${p.codice_fiscale || p.partita_iva || ''}</td>
+            <td>${p.codice_fiscale || codiceFiscaleSocio || p.partita_iva || ''}</td>
             <td>${modalitaLabel}</td>
         </tr>
         <tr>
-            <th colspan="3">INDIRIZZO</th>
+            <th colspan="2">INDIRIZZO</th>
             <th colspan="2">DATI DI CHI HA EFFETTUATO IL PAGAMENTO</th>
         </tr>
         <tr>
-            <td colspan="3"></td>
+            <td colspan="2">${indirizzoSocio}</td>
             <td colspan="2">${datiPagatore}</td>
         </tr>
-        <tr><th colspan="5">NOTE</th></tr>
-        <tr><td colspan="5">${p.note || ''}</td></tr>
+        <tr><th colspan="4">NOTE</th></tr>
+        <tr><td colspan="4">${p.note || ''}</td></tr>
     </table>
 
     <table class="items-table">
@@ -272,16 +356,17 @@ const Pagamenti = () => {
                 setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
                 setSelectedPaymentDetail(updated);
             } else {
-                alert('Errore durante l\'annullamento della ricevuta');
+                showAlert('Errore durante l\'annullamento della ricevuta', 'Errore');
             }
         } catch (e) {
             console.error(e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
     };
 
     const renderPaymentIcon = (modalita) => {
@@ -295,9 +380,12 @@ const Pagamenti = () => {
     };
 
     const [sort, setSort] = useState({ key: 'data', dir: 'desc' });
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 50;
 
     const handleSort = (key) => {
         setSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
+        setCurrentPage(1);
     };
 
     const SortIcon = ({ col }) => {
@@ -306,6 +394,9 @@ const Pagamenti = () => {
     };
 
     const filteredPayments = payments.filter(p => {
+        // Lista Pagamenti: solo entrate (importo >= 0) legate a un socio
+        if (parseFloat(p.importo) < 0) return false;
+        if (!p.socio_id) return false;
         if (filters.intestatario && !p.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
         if (filters.modalitaPagamento !== 'TUTTI' && p.modalita_pagamento !== filters.modalitaPagamento) return false;
         if (filters.statoPagamento !== 'TUTTI' && p.stato_pagamento !== filters.statoPagamento) return false;
@@ -338,6 +429,10 @@ const Pagamenti = () => {
 
     const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0 && !p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + parseFloat(p.importo), 0);
     const totalUscite = filteredPayments.filter(p => parseFloat(p.importo) < 0 || p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + Math.abs(parseFloat(p.importo)), 0);
+
+    const totalPages = Math.max(1, Math.ceil(filteredPayments.length / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginatedPayments = filteredPayments.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
     return (
         <div className="soci-full-container">
@@ -437,6 +532,13 @@ const Pagamenti = () => {
                             >
                                 <Printer size={14}/> Esporta elenco
                             </button>
+                            <button
+                                className="btn-contained"
+                                style={{backgroundColor: '#8e44ad', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                onClick={() => setShowImportVoci(true)}
+                            >
+                                <FileInput size={14}/> Importa ricevute
+                            </button>
                             <div style={{ position: 'relative' }} ref={menuRef}>
                                 <button 
                                     className="btn-contained" 
@@ -498,14 +600,14 @@ const Pagamenti = () => {
                                             Caricamento...
                                         </td>
                                     </tr>
-                                ) : filteredPayments.length === 0 ? (
+                                ) : paginatedPayments.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
                                             Nessun pagamento trovato
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredPayments.map(p => {
+                                    paginatedPayments.map(p => {
                                         const amount = parseFloat(p.importo);
                                         const isAnnullato = p.stato_pagamento?.startsWith('3.');
                                         const isEntrata = amount >= 0 && !isAnnullato;
@@ -547,7 +649,7 @@ const Pagamenti = () => {
                                                 </td>
                                                 <td style={{padding: '12px'}}>
                                                     <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                                                        {(p.quote || '').split(', ').map((q, i) => (
+                                                        {getItemNames(p).map((q, i) => (
                                                             <span key={i} style={{
                                                                 border: '1px solid #ccc', borderRadius: '12px', padding: '3px 10px', fontSize: '0.8rem', background: '#fff', display: 'inline-block'
                                                             }}>
@@ -590,11 +692,11 @@ const Pagamenti = () => {
                     {/* Pagination Footer */}
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'15px', borderTop:'1px solid #eee', marginTop:'auto'}}>
                         <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
-                            <button style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor:'pointer', color:'#333'}}>&lt;&lt;</button>
-                            <button style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor:'pointer', color:'#333'}}>&lt;</button>
-                            <button style={{background:'var(--primary-color)', color:'white', border:'1px solid var(--primary-color)', padding:'6px 12px', borderRadius:'4px', cursor:'pointer', fontWeight:'bold'}}>1</button>
-                            <button style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor:'pointer', color:'#333'}}>&gt;</button>
-                            <button style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor:'pointer', color:'#333'}}>&gt;&gt;</button>
+                            <button disabled={safePage === 1} onClick={() => setCurrentPage(1)} style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', color:'#333', opacity: safePage === 1 ? 0.4 : 1}}>&lt;&lt;</button>
+                            <button disabled={safePage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', color:'#333', opacity: safePage === 1 ? 0.4 : 1}}>&lt;</button>
+                            <span style={{background:'var(--primary-color)', color:'white', border:'1px solid var(--primary-color)', padding:'6px 12px', borderRadius:'4px', fontWeight:'bold', minWidth:'36px', textAlign:'center'}}>{safePage} / {totalPages}</span>
+                            <button disabled={safePage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', color:'#333', opacity: safePage === totalPages ? 0.4 : 1}}>&gt;</button>
+                            <button disabled={safePage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{border:'1px solid #ddd', background:'white', padding:'6px 12px', borderRadius:'4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', color:'#333', opacity: safePage === totalPages ? 0.4 : 1}}>&gt;&gt;</button>
                             <span style={{marginLeft:'10px', color:'var(--primary-color)', fontWeight:'bold'}}>Tot righe: {filteredPayments.length}</span>
                         </div>
                         <div style={{display:'flex', gap:'10px'}}>
@@ -618,6 +720,14 @@ const Pagamenti = () => {
                 pagamento={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
+                products={products}
+            />
+
+            <ImportVociRicevutaModal
+                isOpen={showImportVoci}
+                onClose={() => setShowImportVoci(false)}
+                societaId={selectedSocietaId}
+                onImported={fetchPayments}
             />
         </div>
     );

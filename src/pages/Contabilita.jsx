@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag } from 'lucide-react';
+import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
+import ImportPrimaNotaModal from './ImportPrimaNotaModal';
 import './Soci.css';
 
 // ---------------------------------------------------------------------------
@@ -231,7 +232,15 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {payment.socio_id ? (
+                        <button
+                            onClick={() => window.open(`/pagamenti?paymentId=${payment.id}`, '_blank')}
+                            style={{ padding: '8px 16px', background: '#1565c0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#fff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <ExternalLink size={15} /> Vedi pagamento
+                        </button>
+                    ) : <span />}
                     <button
                         onClick={onClose}
                         style={{ padding: '8px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}
@@ -247,7 +256,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
 // ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
-const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onDettaglio, onElimina }) => {
+const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onDettaglio, onElimina, onImportCsv }) => {
     const dateRange = useMemo(() => {
         if (!selectedAnno || !societa) {
             const y = new Date().getFullYear();
@@ -275,6 +284,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
     };
 
     const handleResetFilters = () => {
@@ -286,6 +296,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             conto: 'TUTTI',
             segno: 'TUTTI',
         });
+        setCurrentPage(1);
     };
 
     const contiUnici = useMemo(() => {
@@ -324,6 +335,12 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             .reduce((acc, p) => acc + parseFloat(p.importo || 0), 0),
         [filtered]
     );
+
+    const PAGE_SIZE = 50;
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginatedFiltered = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
     const formatDate = (s) => {
         if (!s) return '\u2014';
@@ -431,12 +448,32 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                     </div>
                     </div>{/* fine inner flex */}
 
-                    {/* Bottone Nuova Operazione + Preferiti */}
+                    {/* Bottone Nuova Operazione + Preferiti + Importa CSV */}
                     <div style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0, gap: '8px' }}>
                         <OperazioniPreferiteDropdown
                             societaId={societa?.id}
                             onSelect={onNuovaOperazioneDaPreferita}
                         />
+                        <button
+                            onClick={onImportCsv}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '7px',
+                                padding: '8px 16px',
+                                backgroundColor: '#1565c0',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <Upload size={16} />
+                            Importa Prima Nota
+                        </button>
                         <button
                             onClick={onNuovaOperazione}
                             style={{
@@ -503,7 +540,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                         Nessuna registrazione trovata
                                     </td>
                                 </tr>
-                            ) : filtered.map(p => {
+                            ) : paginatedFiltered.map(p => {
                                 const importo = parseFloat(p.importo || 0);
                                 const isAnnullato = p.stato_pagamento?.startsWith('3.');
                                 const isEntrata = importo >= 0 && !isAnnullato;
@@ -617,9 +654,14 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                 {/* Footer */}
                 {!loading && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 8px 0', borderTop: '1px solid #eee', marginTop: 'auto' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                            Tot righe: <strong>{filtered.length}</strong>
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <button disabled={safePage === 1} onClick={() => setCurrentPage(1)} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', opacity: safePage === 1 ? 0.4 : 1 }}>&lt;&lt;</button>
+                            <button disabled={safePage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', opacity: safePage === 1 ? 0.4 : 1 }}>&lt;</button>
+                            <span style={{ background: '#4caf50', color: 'white', padding: '5px 10px', borderRadius: '4px', fontWeight: 'bold', minWidth: '36px', textAlign: 'center' }}>{safePage} / {totalPages}</span>
+                            <button disabled={safePage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1 }}>&gt;</button>
+                            <button disabled={safePage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1 }}>&gt;&gt;</button>
+                            <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Tot righe: <strong>{filtered.length}</strong></span>
+                        </div>
                         <span style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '1rem' }}>
                             € {totaleAvere.toFixed(2).replace('.', ',')}
                         </span>
@@ -1088,6 +1130,7 @@ const Contabilita = () => {
     const [nuovaOpModalOpen, setNuovaOpModalOpen] = useState(false);
     const [nuovaOpInitialData, setNuovaOpInitialData] = useState(null);
     const [dettaglioPayment, setDettaglioPayment] = useState(null);
+    const [importCsvOpen, setImportCsvOpen] = useState(false);
     const confirm = useConfirm();
 
     const societa = useMemo(
@@ -1210,6 +1253,7 @@ const Contabilita = () => {
                         onNuovaOperazioneDaPreferita={(snapshot) => { setNuovaOpInitialData(snapshot); setNuovaOpModalOpen(true); }}
                         onDettaglio={(p) => setDettaglioPayment(p)}
                         onElimina={handleElimina}
+                        onImportCsv={() => setImportCsvOpen(true)}
                     />
                 )}
 
@@ -1233,6 +1277,13 @@ const Contabilita = () => {
                 <DettaglioOperazioneModal
                     payment={dettaglioPayment}
                     onClose={() => setDettaglioPayment(null)}
+                />
+
+                <ImportPrimaNotaModal
+                    isOpen={importCsvOpen}
+                    onClose={() => setImportCsvOpen(false)}
+                    societaId={selectedSocietaId}
+                    onImported={refreshPayments}
                 />
             </div>
         </div>

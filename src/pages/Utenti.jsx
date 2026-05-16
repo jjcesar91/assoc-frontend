@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Key, Trash2, X, UserCheck, LayoutGrid } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
 import UtenteModal from './UtenteModal';
 import FunzionalitaModal from './FunzionalitaModal';
 import './SocioModal.css';
@@ -45,6 +46,7 @@ const ToggleSwitch = ({ checked, onChange }) => (
 const Utenti = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const confirm = useConfirm();
+    const showAlert = useAlert();
 
     const [utenti, setUtenti] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -110,7 +112,7 @@ const Utenti = () => {
         // Associa la società selezionata (obbligatorio per tutti tranne superuser)
         if (payload.role !== 'superuser') {
             if (!selectedSocietaId) {
-                alert('Seleziona una società prima di creare l\'utente.');
+                showAlert('Seleziona una società prima di creare l\'utente.', 'Società mancante', 'warning');
                 return;
             }
             payload.societaId = selectedSocietaId;
@@ -128,11 +130,11 @@ const Utenti = () => {
                 fetchUtenti();
             } else {
                 const err = await res.json();
-                alert('Errore: ' + (err.error || err.message));
+                showAlert(err.error || err.message, 'Errore');
             }
         } catch (e) {
             console.error(e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
@@ -195,11 +197,11 @@ const Utenti = () => {
                 window.location.href = '/soci';
             } else {
                 const err = await res.json();
-                alert('Errore: ' + (err.error || err.message));
+                showAlert(err.error || err.message, 'Errore impersonazione');
             }
         } catch (e) {
             console.error('Errore impersonazione', e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 

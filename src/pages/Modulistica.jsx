@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, Calendar } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
 
 const Modulistica = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const confirm = useConfirm();
+    const showAlert = useAlert();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ descrizione: '', testo: '' });
@@ -242,7 +244,7 @@ const Modulistica = () => {
                     window.html2pdf().set(opt).from(element).save();
                 }, 500);
             } else {
-                alert("La libreria PDF sta caricando, riprova tra un secondo.");
+                showAlert("La libreria PDF sta caricando, riprova tra un secondo.", 'Attenzione', 'warning');
             }
         };
 
@@ -267,11 +269,11 @@ const Modulistica = () => {
                 if (response.ok) {
                     setModuli(moduli.filter(m => m.id !== id));
                 } else {
-                    alert('Errore durante l\'eliminazione del modulo');
+                    showAlert('Errore durante l\'eliminazione del modulo', 'Errore');
                 }
             } catch (error) {
                 console.error("Error deleting modulo:", error);
-                alert('Errore di rete durante l\'eliminazione');
+                showAlert('Errore di rete durante l\'eliminazione', 'Errore');
             }
         }
     };
@@ -299,7 +301,7 @@ const Modulistica = () => {
                     setModuli(moduli.map(m => m.id === editingId ? updatedModulo : m));
                     setIsModalOpen(false);
                 } else {
-                    alert('Errore durante l\'aggiornamento del modulo');
+                    showAlert('Errore durante l\'aggiornamento del modulo', 'Errore');
                 }
             } else {
                 const response = await fetch('/documents/api/moduli', {
@@ -313,12 +315,12 @@ const Modulistica = () => {
                     setModuli([...moduli, newModulo]);
                     setIsModalOpen(false);
                 } else {
-                    alert('Errore durante la creazione del modulo');
+                    showAlert('Errore durante la creazione del modulo', 'Errore');
                 }
             }
         } catch (error) {
             console.error("Error saving modulo:", error);
-            alert('Errore di rete durante il salvataggio');
+            showAlert('Errore di rete durante il salvataggio', 'Errore');
         }
     };
 

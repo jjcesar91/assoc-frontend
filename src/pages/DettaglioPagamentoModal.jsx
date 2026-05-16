@@ -3,7 +3,7 @@ import { AlertTriangle, Ban, Calendar, User, X } from 'lucide-react';
 import { getAnnoDateRange } from '../data/AnnoContext';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societa }) => {
+const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societa, products }) => {
     const [showConferma, setShowConferma] = useState(false);
 
     if (!isOpen || !pagamento) return null;
@@ -113,10 +113,6 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societ
                                 </div>
                             </div>
                             <div className="dpm-field">
-                                <label>Progressivo stagione</label>
-                                <div className="dpm-value">{pagamento.progressivo_stagione || '—'}</div>
-                            </div>
-                            <div className="dpm-field">
                                 <label>Data ricevuta</label>
                                 <div className="dpm-value">{formatDate(pagamento.data_ricevuta)}</div>
                             </div>
@@ -126,32 +122,68 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, societ
                     {/* Quote Section */}
                     <div className="dpm-section dpm-section-quote">
                         <div className="dpm-section-title">Quote</div>
-                        {Array.isArray(pagamento.payment_items) && pagamento.payment_items.length > 1 ? (
-                            <>
-                                {pagamento.payment_items.map((item, idx) => (
-                                    <div key={idx} className="dpm-quote-row">
-                                        <span>{item.quote || ''}</span>
-                                        <span>€ {formatCurrency(item.importo)}</span>
-                                    </div>
-                                ))}
-                                <div className="dpm-quote-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
-                                    <span>Totale</span>
-                                    <span>€ {formatCurrency(pagamento.importo)}</span>
+                        {(() => {
+                            // Parse payment_items difensivo: può arrivare come array o stringa JSON
+                            let items = pagamento.payment_items;
+                            if (typeof items === 'string') {
+                                try { items = JSON.parse(items); } catch { items = null; }
+                            }
+                            const getProductName = (productId) => {
+                                if (!productId || !products?.length) return null;
+                                return products.find(p => Number(p.id) === Number(productId))?.description || null;
+                            };
+                            if (Array.isArray(items) && items.length > 0) {
+                                if (items.length === 1) {
+                                    const item = items[0];
+                                    const prodName = getProductName(item.product_id) || item.quote || '';
+                                    return (
+                                        <div className="dpm-quote-row">
+                                            <span>{prodName}</span>
+                                            <span>
+                                                € {formatCurrency(pagamento.importo)}
+                                                {scadenzaTess && !prodName.includes('(Scadenza') && (
+                                                    <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
+                                                        (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <>
+                                        {items.map((item, idx) => {
+                                            const prodName = getProductName(item.product_id) || item.quote || '';
+                                            return (
+                                                <div key={idx} className="dpm-quote-row">
+                                                    <span>{prodName}</span>
+                                                    <span>€ {formatCurrency(item.importo)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="dpm-quote-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
+                                            <span>Totale</span>
+                                            <span>€ {formatCurrency(pagamento.importo)}</span>
+                                        </div>
+                                    </>
+                                );
+                            }
+                            // Fallback: nessun payment_items, usa campi top-level
+                            const prodName = getProductName(pagamento.product_id) || pagamento.quote || '';
+                            return (
+                                <div className="dpm-quote-row">
+                                    <span>{prodName}</span>
+                                    <span>
+                                        € {formatCurrency(pagamento.importo)}
+                                        {scadenzaTess && !prodName.includes('(Scadenza') && (
+                                            <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
+                                                (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                                            </span>
+                                        )}
+                                    </span>
                                 </div>
-                            </>
-                        ) : (
-                            <div className="dpm-quote-row">
-                                <span>{pagamento.quote || ''}</span>
-                                <span>
-                                    € {formatCurrency(pagamento.importo)}
-                                    {scadenzaTess && !(pagamento.quote || '').includes('(Scadenza') && (
-                                        <span style={{ marginLeft: '8px', color: '#6b7280', fontSize: '0.9em' }}>
-                                            (Scadenza {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })})
-                                        </span>
-                                    )}
-                                </span>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 </div>
 

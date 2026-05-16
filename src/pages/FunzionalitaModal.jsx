@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, LayoutGrid } from 'lucide-react';
 import { MENU_STRUCTURE } from '../components/menuConfig';
+import { useAlert } from '../components/AlertModal';
 import './SocioModal.css';
 import './Soci.css';
 
@@ -14,6 +15,7 @@ const FEATURES = MENU_STRUCTURE.map(item => ({
 }));
 
 const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
+    const showAlert = useAlert();
     const [features, setFeatures] = useState(null); // null = tutte abilitate
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -64,7 +66,7 @@ const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
             onClose();
         } catch (err) {
             console.error('Errore salvataggio funzionalità', err);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         } finally {
             setSaving(false);
         }

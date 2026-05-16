@@ -10,11 +10,15 @@ const SocietaComunicazioni = () => {
         smtp_host: '',
         smtp_port: '',
         smtp_user: '',
-        smtp_password: '', // Should be masked or handled carefully
+        smtp_password: '',
         smtp_secure: false
     });
+    const [smtpAbilitato, setSmtpAbilitato] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+
+    const hasCustomSmtp = (societa) =>
+        !!(societa && societa.smtp_host && societa.smtp_user && societa.smtp_password);
 
     useEffect(() => {
         if (selectedSocietaId && societaList.length > 0) {
@@ -29,6 +33,7 @@ const SocietaComunicazioni = () => {
                     smtp_password: societa.smtp_password || '',
                     smtp_secure: societa.smtp_secure || false
                 });
+                setSmtpAbilitato(hasCustomSmtp(societa));
             }
         }
     }, [selectedSocietaId, societaList]);
@@ -41,16 +46,42 @@ const SocietaComunicazioni = () => {
         }));
     };
 
+    const handleToggleSmtp = (e) => {
+        const abilitato = e.target.checked;
+        setSmtpAbilitato(abilitato);
+        if (!abilitato) {
+            // Pulisce i campi SMTP visivamente quando si disabilita
+            setFormData(prev => ({
+                ...prev,
+                smtp_host: '',
+                smtp_port: '',
+                smtp_user: '',
+                smtp_password: '',
+                smtp_secure: false
+            }));
+        }
+    };
+
     const handleSave = async () => {
         if (!selectedSocietaId) return;
         setLoading(true);
         setMessage(null);
         try {
-            // Convert empty string to null for integer fields
-            const payload = {
-                ...formData,
-                smtp_port: formData.smtp_port === '' ? null : parseInt(formData.smtp_port, 10)
-            };
+            let payload = { ...formData };
+
+            if (!smtpAbilitato) {
+                // Cancella SMTP personalizzato → il sistema userà quello di default
+                payload = {
+                    ...payload,
+                    smtp_host: null,
+                    smtp_port: null,
+                    smtp_user: null,
+                    smtp_password: null,
+                    smtp_secure: false
+                };
+            } else {
+                payload.smtp_port = formData.smtp_port === '' ? null : parseInt(formData.smtp_port, 10);
+            }
 
             const response = await fetch(`/users/api/societa/${selectedSocietaId}`, {
                 method: 'PUT',
@@ -86,6 +117,7 @@ const SocietaComunicazioni = () => {
                     smtp_password: societa.smtp_password || '',
                     smtp_secure: societa.smtp_secure || false
                 });
+                setSmtpAbilitato(hasCustomSmtp(societa));
             }
         }
     };
@@ -148,68 +180,103 @@ const SocietaComunicazioni = () => {
                 {/* Section SMTP */}
                 <div>
                     <h3 style={sectionHeaderStyle}>
-                        Parametri SMTP <span style={{ fontSize: '0.8rem', color: '#777', fontWeight: 400 }}>(Opzionale)</span>
+                        Parametri SMTP
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '16px' }}>
-                        <div style={{ gridColumn: 'span 2' }}>
-                            <label style={labelStyle}>Host SMTP</label>
-                            <input 
-                                style={inputStyle}
-                                className="md-input"
-                                name="smtp_host"
-                                value={formData.smtp_host}
-                                onChange={handleChange}
-                                placeholder="es. smtp.gmail.com"
-                            />
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Porta SMTP</label>
-                            <input 
-                                type="number"
-                                style={inputStyle}
-                                className="md-input"
-                                name="smtp_port"
-                                value={formData.smtp_port}
-                                onChange={handleChange}
-                                placeholder="es. 587"
-                            />
-                        </div>
+
+                    {/* Toggle abilitazione SMTP personalizzato */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        marginBottom: '20px',
+                        padding: '12px 16px',
+                        backgroundColor: smtpAbilitato ? '#e8f5e9' : '#f5f5f5',
+                        borderRadius: '6px',
+                        border: `1px solid ${smtpAbilitato ? '#a5d6a7' : '#e0e0e0'}`,
+                        transition: 'all 0.2s'
+                    }}>
+                        <input
+                            type="checkbox"
+                            id="smtp_abilitato"
+                            checked={smtpAbilitato}
+                            onChange={handleToggleSmtp}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#2e7d32' }}
+                        />
+                        <label htmlFor="smtp_abilitato" style={{ cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500, color: smtpAbilitato ? '#2e7d32' : '#555', userSelect: 'none' }}>
+                            Usa SMTP personalizzato (sovrascrive il server di default)
+                        </label>
+                        {!smtpAbilitato && (
+                            <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#888' }}>
+                                Verrà utilizzato il server SMTP di default
+                            </span>
+                        )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '16px' }}>
-                        <div>
-                            <label style={labelStyle}>Utente SMTP</label>
-                            <input 
-                                style={inputStyle}
-                                className="md-input"
-                                name="smtp_user"
-                                value={formData.smtp_user}
-                                onChange={handleChange}
-                                autoComplete="off"
-                            />
+                    <div style={{ opacity: smtpAbilitato ? 1 : 0.45, pointerEvents: smtpAbilitato ? 'auto' : 'none', transition: 'opacity 0.2s' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '16px' }}>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={labelStyle}>Host SMTP</label>
+                                <input 
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    className="md-input"
+                                    name="smtp_host"
+                                    value={formData.smtp_host}
+                                    onChange={handleChange}
+                                    placeholder="es. smtp.miodominio.com"
+                                    disabled={!smtpAbilitato}
+                                />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Porta SMTP</label>
+                                <input 
+                                    type="number"
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    className="md-input"
+                                    name="smtp_port"
+                                    value={formData.smtp_port}
+                                    onChange={handleChange}
+                                    placeholder="es. 587"
+                                    disabled={!smtpAbilitato}
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label style={labelStyle}>Password SMTP</label>
-                            <input 
-                                type="password"
-                                style={inputStyle}
-                                className="md-input"
-                                name="smtp_password"
-                                value={formData.smtp_password}
-                                onChange={handleChange}
-                                autoComplete="off"
-                            />
-                        </div>
-                    </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', alignItems: 'end' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '16px' }}>
+                            <div>
+                                <label style={labelStyle}>Utente SMTP</label>
+                                <input 
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    className="md-input"
+                                    name="smtp_user"
+                                    value={formData.smtp_user}
+                                    onChange={handleChange}
+                                    autoComplete="off"
+                                    disabled={!smtpAbilitato}
+                                />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Password SMTP</label>
+                                <input 
+                                    type="password"
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    className="md-input"
+                                    name="smtp_password"
+                                    value={formData.smtp_password}
+                                    onChange={handleChange}
+                                    autoComplete="off"
+                                    disabled={!smtpAbilitato}
+                                />
+                            </div>
+                        </div>
+
                         <div style={{ paddingBottom: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem', color: '#333' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: smtpAbilitato ? 'pointer' : 'default', fontSize: '0.9rem', color: '#333' }}>
                                 <input
                                     type="checkbox"
                                     name="smtp_secure"
                                     checked={formData.smtp_secure}
                                     onChange={handleChange}
+                                    disabled={!smtpAbilitato}
                                     style={{ marginRight: '8px', width: '16px', height: '16px' }}
                                 />
                                 Usa connessione sicura (SSL/TLS)

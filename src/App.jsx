@@ -28,6 +28,7 @@ import SocioDashboard from './pages/SocioDashboard';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
+import { AlertProvider } from './components/AlertModal'
 
 // Decodifica ruolo dal JWT senza librerie esterne
 function getRoleFromToken(token) {
@@ -93,6 +94,7 @@ function App() {
   const isSocio = userRole === 'socio';
 
   return (
+    <AlertProvider>
     <ConfirmProvider>
     <SocietaProvider>
       <AnnoProvider>
@@ -232,6 +234,7 @@ function App() {
       </AnnoProvider>
     </SocietaProvider>
     </ConfirmProvider>
+    </AlertProvider>
   )
 }
 

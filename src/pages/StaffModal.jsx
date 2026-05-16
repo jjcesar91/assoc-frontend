@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shirt } from 'lucide-react';
+import { X, Shirt, AlertTriangle } from 'lucide-react';
+import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import './SocioModal.css';
 import './Soci.css';
@@ -23,6 +24,16 @@ const EMPTY = {
 
 const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
     const [form, setForm] = useState(EMPTY);
+    const [warningMessage, setWarningMessage] = useState(null);
+    const [highlightCF, setHighlightCF] = useState(false);
+
+    // Reset warning/highlight when modal opens or closes
+    useEffect(() => {
+        if (!isOpen) {
+            setWarningMessage(null);
+            setHighlightCF(false);
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -48,6 +59,160 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
             setForm(EMPTY);
         }
     }, [isOpen, staff]);
+
+    // Case 1: Calcola Codice Fiscale dai campi anagrafici
+    useEffect(() => {
+        const { nome, cognome, sesso, dataNascita, luogoNascita } = form;
+        if (nome && cognome && sesso && dataNascita && luogoNascita) {
+            try {
+                let day, month, year;
+                if (typeof dataNascita === 'string' && dataNascita.includes('-')) {
+                    const parts = dataNascita.split('-');
+                    year = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10);
+                    day = parseInt(parts[2], 10);
+                } else {
+                    const dateVal = new Date(dataNascita);
+                    if (isNaN(dateVal.getTime())) return;
+                    day = dateVal.getDate();
+                    month = dateVal.getMonth() + 1;
+                    year = dateVal.getFullYear();
+                }
+                const cf = new CodiceFiscale({
+                    name: nome.trim(),
+                    surname: cognome.trim(),
+                    gender: sesso,
+                    day,
+                    month,
+                    year,
+                    birthplace: luogoNascita.trim()
+                });
+                if (cf.code && cf.code !== form.codiceFiscale) {
+                    setForm(prev => ({ ...prev, codiceFiscale: cf.code }));
+                    setWarningMessage(null);
+                    setHighlightCF(true);
+                }
+            } catch (e) {
+                console.warn('Skipping CF auto-calc:', e.message);
+            }
+        }
+    }, [form.nome, form.cognome, form.sesso, form.dataNascita, form.luogoNascita]);
+
+    // Case 2: Valida/riempi campi dal Codice Fiscale
+    useEffect(() => {
+        const { codiceFiscale, nome, cognome, sesso, dataNascita, luogoNascita } = form;
+        if (!nome || !cognome) return;
+        if (!codiceFiscale) {
+            setWarningMessage(null);
+            return;
+        }
+        try {
+            const cf = new CodiceFiscale(codiceFiscale);
+            const cfDate = cf.birthday || cf.birthDate;
+            const cfGender = cf.gender;
+            let cfPlaceName = null;
+            if (cf.birthplace) {
+                if (typeof cf.birthplace === 'object' && cf.birthplace.nome) cfPlaceName = cf.birthplace.nome;
+                else if (typeof cf.birthplace === 'string') cfPlaceName = cf.birthplace;
+            } else if (cf.birthPlace) {
+                if (typeof cf.birthPlace === 'object' && cf.birthPlace.name) cfPlaceName = cf.birthPlace.name;
+                else if (typeof cf.birthPlace === 'string') cfPlaceName = cf.birthPlace;
+            }
+            const updates = {};
+            const conflicts = [];
+            if (cfGender) {
+                if (!sesso) updates.sesso = cfGender;
+                else if (sesso !== cfGender) conflicts.push(`Il campo Sesso (${sesso}) non corrisponde a quello nel CF (${cfGender})`);
+            }
+            if (cfDate) {
+                const y = cfDate.getFullYear();
+                const m = String(cfDate.getMonth() + 1).padStart(2, '0');
+                const d = String(cfDate.getDate()).padStart(2, '0');
+                const cfDateStr = `${y}-${m}-${d}`;
+                if (!dataNascita) updates.dataNascita = cfDateStr;
+                else if (dataNascita !== cfDateStr) conflicts.push(`La Data di Nascita (${dataNascita}) non corrisponde a quella nel CF (${cfDateStr})`);
+            }
+            if (cfPlaceName) {
+                const currentPlace = (luogoNascita || '').trim().toUpperCase();
+                const derivedPlace = cfPlaceName.toUpperCase();
+                if (!luogoNascita) {
+                    updates.luogoNascita = cfPlaceName;
+                } else if (currentPlace !== derivedPlace) {
+                    if (!currentPlace.includes(derivedPlace) && !derivedPlace.includes(currentPlace)) {
+                        conflicts.push(`Il Luogo di Nascita (${luogoNascita}) non corrisponde a quello nel CF (${cfPlaceName})`);
+                    }
+                }
+            }
+            if (nome && cognome && (sesso || updates.sesso) && (dataNascita || updates.dataNascita) && (luogoNascita || updates.luogoNascita)) {
+                try {
+                    const checkDate = new Date(dataNascita || updates.dataNascita);
+                    const checkCF = new CodiceFiscale({
+                        name: nome,
+                        surname: cognome,
+                        gender: sesso || updates.sesso,
+                        day: checkDate.getDate(),
+                        month: checkDate.getMonth() + 1,
+                        year: checkDate.getFullYear(),
+                        birthplace: luogoNascita || updates.luogoNascita
+                    });
+                    if (checkCF.code !== codiceFiscale) {
+                        conflicts.push('Il CF inserito non è coerente con Nome e Cognome specificati');
+                    }
+                } catch (e) { /* ignora */ }
+            }
+            if (conflicts.length > 0) {
+                setWarningMessage(conflicts.join('; '));
+            } else {
+                setWarningMessage(null);
+                if (Object.keys(updates).length > 0) {
+                    setForm(prev => ({ ...prev, ...updates }));
+                }
+            }
+        } catch (e) {
+            let msg = e.message || 'Errore generico';
+            if (msg.includes('check digit')) msg = 'Carattere di controllo errato';
+            else if (msg.includes('length')) msg = 'Lunghezza non valida (deve essere 16 caratteri)';
+            else if (msg.includes('Invalid characters')) msg = 'Caratteri non validi';
+            else if (msg.includes('Provided input is not a valid Codice Fiscale') || msg.includes('Formato non valido')) {
+                if (codiceFiscale.length !== 16) msg = `Lunghezza errata (${codiceFiscale.length}/16)`;
+                else if (!/^[A-Z0-9]+$/i.test(codiceFiscale)) msg = 'Contiene caratteri non validi (ammessi solo lettere e numeri)';
+                else if (nome && cognome && sesso && dataNascita && luogoNascita) {
+                    try {
+                        let d, m, y;
+                        if (typeof dataNascita === 'string' && dataNascita.includes('-')) {
+                            const parts = dataNascita.split('-');
+                            y = parseInt(parts[0], 10); m = parseInt(parts[1], 10); d = parseInt(parts[2], 10);
+                        } else {
+                            const dt = new Date(dataNascita);
+                            d = dt.getDate(); m = dt.getMonth() + 1; y = dt.getFullYear();
+                        }
+                        const expectedCF = new CodiceFiscale({ name: nome.trim(), surname: cognome.trim(), gender: sesso, day: d, month: m, year: y, birthplace: luogoNascita.trim() });
+                        if (expectedCF.code !== codiceFiscale) {
+                            const inputCF = codiceFiscale.toUpperCase();
+                            const exp = expectedCF.code;
+                            if (inputCF.substring(0, 3) !== exp.substring(0, 3)) msg = 'Il CF non corrisponde al Cognome';
+                            else if (inputCF.substring(3, 6) !== exp.substring(3, 6)) msg = 'Il CF non corrisponde al Nome';
+                            else if (inputCF.substring(6, 11) !== exp.substring(6, 11)) msg = 'Il CF non corrisponde ai dati di nascita/sesso';
+                            else if (inputCF.substring(11, 15) !== exp.substring(11, 15)) msg = 'Il CF non corrisponde al Luogo di nascita';
+                            else if (inputCF.substring(15) !== exp.substring(15)) msg = 'Carattere di controllo errato';
+                            else msg = 'Formato e Consistenza non validi';
+                        }
+                    } catch (calcErr) {
+                        msg = 'Formato non valido (e dati anagrafici insufficienti per ricalcolo)';
+                    }
+                } else msg = 'Formato struttura errato';
+            } else if (msg.includes('constructor')) msg = 'Errore interno (libreria non caricata)';
+            setWarningMessage(`Codice Fiscale non valido: ${msg}`);
+        }
+    }, [form.codiceFiscale, form.nome, form.cognome, form.sesso, form.dataNascita, form.luogoNascita]);
+
+    // Timer per resettare l'evidenziazione del CF
+    useEffect(() => {
+        if (highlightCF) {
+            const timer = setTimeout(() => setHighlightCF(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [highlightCF]);
 
     if (!isOpen) return null;
 
@@ -102,6 +267,25 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                     </button>
                 </div>
 
+                {/* Warning CF */}
+                {warningMessage && (
+                    <div style={{
+                        backgroundColor: '#fee2e2',
+                        border: '1px solid #ef4444',
+                        color: '#b91c1c',
+                        padding: '12px',
+                        margin: '16px 24px 0',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontSize: '14px'
+                    }}>
+                        <AlertTriangle size={20} />
+                        <span>{warningMessage}</span>
+                    </div>
+                )}
+
                 {/* Body */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#fff' }}>
                     <form id="staffForm" onSubmit={handleSubmit}>
@@ -140,7 +324,21 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                                 </div>
                                 <div className="form-group grid-span-3">
                                     <label className="field-label">Codice Fiscale</label>
-                                    <input className="md-input" name="codiceFiscale" placeholder="Codice fiscale" value={form.codiceFiscale} onChange={handleChange} maxLength={16} style={{ textTransform: 'uppercase' }} />
+                                    <input
+                                        className="md-input"
+                                        name="codiceFiscale"
+                                        placeholder="Codice fiscale"
+                                        value={form.codiceFiscale}
+                                        onChange={handleChange}
+                                        maxLength={16}
+                                        style={{
+                                            textTransform: 'uppercase',
+                                            transition: 'all 0.5s ease',
+                                            borderColor: highlightCF ? '#22c55e' : undefined,
+                                            backgroundColor: highlightCF ? '#dcfce7' : undefined,
+                                            boxShadow: highlightCF ? '0 0 0 2px rgba(34, 197, 94, 0.2)' : undefined
+                                        }}
+                                    />
                                 </div>
                                 <div className="form-group grid-span-3">
                                     <label className="field-label">Email</label>

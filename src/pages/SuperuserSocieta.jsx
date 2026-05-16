@@ -1,13 +1,47 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Building2 } from 'lucide-react';
+import { Plus, Edit2, Building2, Shuffle } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import NuovaSocietaModal from './NuovaSocietaModal';
+import { useAlert } from '../components/AlertModal';
 import './Prodotti.css';
 
 const TIPO_OPTIONS = ['ASD', 'APS'];
 
+const NOMI_DUMMY = [
+    'Aquile', 'Leoni', 'Tigri', 'Falchi', 'Lupi', 'Aquilotti', 'Pantere', 'Draghi', 'Condor', 'Smeraldi',
+    'Stelle', 'Fulmini', 'Tornado', 'Tuoni', 'Venti', 'Fuochi', 'Onde', 'Monti', 'Pini', 'Querce',
+];
+
+const CITTA_DUMMY = [
+    'Roma', 'Milano', 'Napoli', 'Torino', 'Bologna', 'Firenze', 'Venezia', 'Genova', 'Palermo', 'Bari',
+    'Catania', 'Verona', 'Brescia', 'Padova', 'Trieste', 'Taranto', 'Messina', 'Prato', 'Parma', 'Modena',
+];
+
+const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const rndInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const generaDatiCasuali = () => {
+    const tipo = rnd(TIPO_OPTIONS);
+    const nome = rnd(NOMI_DUMMY);
+    const citta = rnd(CITTA_DUMMY);
+    const num = rndInt(1, 9999);
+    const denominazione = `${tipo} ${nome} ${citta} ${String(num).padStart(4, '0')}`;
+
+    // Codice fiscale fittizio a 11 cifre (formato CF associazione)
+    const cf = Array.from({ length: 11 }, () => rndInt(0, 9)).join('');
+    // Partita IVA fittizea a 11 cifre
+    const piva = Array.from({ length: 11 }, () => rndInt(0, 9)).join('');
+
+    const prefissi = ['02', '06', '010', '011', '051', '055', '081', '090', '091', '099'];
+    const telefono = `${rnd(prefissi)}${rndInt(1000000, 9999999)}`;
+    const email = `info@${nome.toLowerCase()}${citta.toLowerCase()}${num}.it`;
+
+    return { denominazione, codice_fiscale: cf, partita_iva: piva, email, telefono, tipo_associazione: tipo };
+};
+
 const SuperuserSocieta = () => {
     const { fetchSocieta } = useSocieta();
+    const showAlert = useAlert();
     const [societa, setSocieta] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,6 +65,11 @@ const SuperuserSocieta = () => {
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
+    const handleGeneraCasuale = async () => {
+        const dati = generaDatiCasuali();
+        await handleCreate(dati);
+    };
+
     const handleCreate = async (data) => {
         try {
             const res = await fetch('/users/api/societa', {
@@ -44,11 +83,11 @@ const SuperuserSocieta = () => {
                 fetchSocieta(); // aggiorna il selettore società nel layout
             } else {
                 const err = await res.json();
-                alert('Errore: ' + (err.error || err.message));
+                showAlert(err.error || err.message, 'Errore');
             }
         } catch (e) {
             console.error('Errore creazione società', e);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
@@ -84,7 +123,15 @@ const SuperuserSocieta = () => {
                                 {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
-                        <div className="actions-group">
+                        <div className="actions-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                                className="btn-contained"
+                                style={{ backgroundColor: '#6366f1' }}
+                                onClick={handleGeneraCasuale}
+                                title="Crea una società con dati casuali per test"
+                            >
+                                <Shuffle size={18} /> Genera casuale
+                            </button>
                             <button
                                 className="btn-contained"
                                 style={{ backgroundColor: 'var(--success-color)' }}

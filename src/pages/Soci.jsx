@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Soci.css';
 import SocioModal from './SocioModal';
@@ -8,11 +8,13 @@ import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
-import { Search, Plus, Filter, User, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
+import { useAlert } from '../components/AlertModal';
+import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const Soci = ({ onLogout }) => {
     const { selectedSocietaId, societaList } = useSocieta();
     const { selectedAnno } = useAnno();
+    const showAlert = useAlert();
     const [soci, setSoci] = useState([]);
     const [quotaPaymentCFs, setQuotaPaymentCFs] = useState(new Set());
     const [pastQuotaPaymentCFs, setPastQuotaPaymentCFs] = useState(new Set());
@@ -32,6 +34,10 @@ const Soci = ({ onLogout }) => {
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [importReport, setImportReport] = useState(null); // { total, current, creati, saltati, errori[], logs[], done, headers, dataRecords }
+    const [importLogFilters, setImportLogFilters] = useState({ creati: true, saltati: true, errori: true });
+    const importFileRef = useRef(null);
+    const importLogRef = useRef(null);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -204,8 +210,78 @@ const Soci = ({ onLogout }) => {
         return 'NO';
     };
 
+    const formatDate = (d) => {
+        if (!d) return '';
+        const dt = new Date(d);
+        if (isNaN(dt)) return d;
+        return dt.toLocaleDateString('it-IT');
+    };
+
+    const exportToExcel = () => {
+        const certLabel = (status) => {
+            if (status === '2') return 'VALIDO';
+            if (status === '1') return 'IN SCADENZA';
+            if (status === '0') return 'SCADUTO';
+            return 'ASSENTE';
+        };
+
+        const columns = [
+            'COGNOME', 'NOME', 'DATA_NASCITA', 'SESSO', 'CODICE_FISCALE',
+            'COMUNE_NASCITA', 'INDIRIZZO_RESIDENZA', 'COMUNE_RESIDENZA', 'CAP',
+            'TELEFONO', 'EMAIL', 'ANNO_NASCITA', 'ISCRITTO', 'DATA_ISCRIZIONE',
+            'DATA_ACCETTAZIONE', 'PAGAMENTI NON REGOLARI', 'CERTIFICATO VALIDO',
+            'DATA SCADENZA CERTIFICATO', 'NOTE',
+        ];
+
+        const escapeCell = (v) => {
+            const s = String(v ?? '');
+            if (s.includes(';') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+            return s;
+        };
+
+        const rows = filteredSoci.map(s => [
+            s.cognome || '',
+            s.nome || '',
+            formatDate(s.data_nascita),
+            s.sesso || '',
+            s.codice_fiscale || '',
+            s.luogo_nascita || '',
+            s.indirizzo || '',
+            s.comune || '',
+            s.cap || '',
+            s.telefono || '',
+            s.email || '',
+            s.data_nascita ? new Date(s.data_nascita).getFullYear() : '',
+            getIscrizioneLabel(s),
+            formatDate((s.iscrizioni || []).sort((a, b) => (a.anno || 0) - (b.anno || 0))[0]?.createdAt || s.data_ammissione),
+            formatDate(s.data_ammissione),
+            getTesseratoLabel(s) !== 'REGOLARE' ? 'SI' : 'NO',
+            certLabel(getCertStatus(s.scadenza_certificato)),
+            formatDate(s.scadenza_certificato),
+            s.note || '',
+        ]);
+
+        const csvLines = [columns, ...rows].map(row => row.map(escapeCell).join(';')).join('\r\n');
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + csvLines], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const societaNome = (societaList?.find(s => s.id == selectedSocietaId)?.ragione_sociale ||
+            societaList?.find(s => s.id == selectedSocietaId)?.nome || 'soci').replace(/[/\\?*:|"<>]/g, '_');
+        link.href = url;
+        link.download = `ELENCO_SOCI_${societaNome}_${selectedAnno || ''}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        setShowActionsMenu(false);
+    };
+
     const filteredSoci = soci.filter(socio => {
-        if (filters.cognome && (!socio.cognome || !socio.cognome.toLowerCase().includes(filters.cognome.toLowerCase()))) return false;
+        if (filters.cognome) {
+            const searchVal = filters.cognome.toLowerCase();
+            const matchCognome = (socio.cognome || '').toLowerCase().includes(searchVal);
+            const matchRagioneSociale = (socio.ragione_sociale || '').toLowerCase().includes(searchVal);
+            if (!matchCognome && !matchRagioneSociale) return false;
+        }
         if (filters.nome && (!socio.nome || !socio.nome.toLowerCase().includes(filters.nome.toLowerCase()))) return false;
         
         if (filters.iscritto !== '') {
@@ -279,12 +355,236 @@ const Soci = ({ onLogout }) => {
                 fetchSoci();
             } else {
                 const err = await response.json();
-                alert('Errore salvataggio: ' + (err.error || err.message));
+                showAlert(err.error || err.message, 'Errore salvataggio');
             }
         } catch (error) {
             console.error(error);
-            alert('Errore di rete');
+            showAlert('Errore di rete', 'Errore');
         }
+    };
+
+    const parseDate = (str) => {
+        if (!str) return null;
+        // Supporta dd/MM/yyyy e yyyy-MM-dd
+        const itMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+        if (itMatch) return `${itMatch[3]}-${itMatch[2].padStart(2,'0')}-${itMatch[1].padStart(2,'0')}`;
+        const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+        return null;
+    };
+
+    const loadXLSXFromCDN = () => new Promise((resolve, reject) => {
+        if (window.XLSX) { resolve(window.XLSX); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+        script.onload = () => resolve(window.XLSX);
+        script.onerror = () => reject(new Error('CDN non raggiungibile'));
+        document.head.appendChild(script);
+    });
+
+    const handleExportTemplate = () => {
+        const headers = [
+            'COGNOME', 'NOME', 'SESSO', 'DATA_NASCITA', 'COMUNE_NASCITA',
+            'CODICE_FISCALE', 'EMAIL', 'TELEFONO', 'INDIRIZZO_RESIDENZA',
+            'COMUNE_RESIDENZA', 'CAP', 'DATA SCADENZA CERTIFICATO',
+            'DATA_ISCRIZIONE', 'NOTE',
+        ];
+        const csv = headers.join(';') + '\n';
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'template_importazione_soci.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setShowActionsMenu(false);
+    };
+
+    const handleExportImport = async () => {
+        if (!importReport) return;
+        let XLSX;
+        try {
+            XLSX = await loadXLSXFromCDN();
+        } catch (e) {
+            showAlert('Impossibile caricare il supporto XLSX.', 'Errore esportazione');
+            return;
+        }
+        const { headers, dataRecords, logs } = importReport;
+        const visibleLogs = (logs || []).filter(l =>
+            (l.type === 'OK'   && importLogFilters.creati)  ||
+            (l.type === 'SKIP' && importLogFilters.saltati) ||
+            (l.type === 'ERR'  && importLogFilters.errori)
+        );
+        const rowIdxSet = new Set(visibleLogs.map(l => l.rowIdx));
+        const filteredRows = (dataRecords || []).filter((_, idx) => rowIdxSet.has(idx));
+        const wsData = [headers || [], ...filteredRows];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Export');
+        XLSX.writeFile(wb, 'export_importazione.xlsx');
+    };
+
+    const importFromFile = async (file) => {
+        if (!selectedSocietaId) { showAlert('Seleziona prima una società.', 'Società mancante', 'warning'); return; }
+
+        const isXLSX = /\.(xlsx|xls)$/i.test(file.name);
+        let content;
+
+        if (isXLSX) {
+            let XLSX;
+            try {
+                XLSX = await loadXLSXFromCDN();
+            } catch(e) {
+                showAlert('Impossibile caricare il supporto XLSX. Usa il formato CSV oppure verifica la connessione internet.', 'Errore caricamento');
+                return;
+            }
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array', raw: false, dateNF: 'dd/mm/yyyy' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            // Converti il foglio in CSV con ; come separatore
+            content = XLSX.utils.sheet_to_csv(ws, { FS: ';', blankrows: false });
+        } else {
+            content = await file.text();
+            content = content.replace(/^\uFEFF/, '');
+        }
+
+        const firstLine = content.split(/\r?\n/)[0];
+        const sep = firstLine.includes(';') ? ';' : ',';
+
+        // Parser CSV che gestisce celle multilinea (a capo dentro virgolette)
+        const parseCSVContent = (text, separator) => {
+            const records = [];
+            let cur = ''; let inQ = false;
+            let fields = [];
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (inQ) {
+                    if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
+                    else if (ch === '"') { inQ = false; }
+                    else { cur += ch; }
+                } else if (ch === '"') {
+                    inQ = true;
+                } else if (ch === separator) {
+                    fields.push(cur.trim()); cur = '';
+                } else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+                    if (ch === '\r') i++;
+                    fields.push(cur.trim()); cur = '';
+                    if (fields.some(f => f !== '')) records.push(fields);
+                    fields = [];
+                } else {
+                    cur += ch;
+                }
+            }
+            if (cur.trim() || fields.length) { fields.push(cur.trim()); if (fields.some(f => f !== '')) records.push(fields); }
+            return records;
+        };
+
+        const allRecords = parseCSVContent(content, sep);
+        if (allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
+
+        // Trova la riga header: la prima che contiene CODICE_FISCALE o COGNOME
+        const headerIdx = allRecords.findIndex(r => {
+            const joined = r.join(';').toUpperCase();
+            return joined.includes('CODICE_FISCALE') || joined.includes('COGNOME');
+        });
+        if (headerIdx === -1) { showAlert('Intestazioni colonne non trovate nel file.', 'File non valido', 'warning'); return; }
+
+        const headers = allRecords[headerIdx].map(h => h.toUpperCase().trim());
+        const col = (name) => headers.indexOf(name);
+        const dataRecords = allRecords.slice(headerIdx + 1);
+        const total = dataRecords.length;
+
+        // Fetch CF già presenti per questa specifica società (dati freschi dal server)
+        const token = localStorage.getItem('token');
+        let existingCFs = new Set();
+        try {
+            const res = await fetch(`/users/api/soci?societa_id=${selectedSocietaId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    data.forEach(s => { if (s.codice_fiscale) existingCFs.add(s.codice_fiscale.toUpperCase()); });
+                }
+            }
+        } catch(e) { /* usa set vuoto se fallisce */ }
+
+        setShowActionsMenu(false);
+        setImportLogFilters({ creati: true, saltati: true, errori: true });
+        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords });
+
+        let creati = 0; let saltati = 0; const errori = []; const logs = [];
+
+        for (let i = 0; i < dataRecords.length; i++) {
+            const cells = dataRecords[i];
+            const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
+
+            const cf = get('CODICE_FISCALE').toUpperCase();
+            if (!cf) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2}: codice fiscale assente` });
+            } else if (existingCFs.has(cf)) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): già presente nella società` });
+            } else {
+                const cognome = get('COGNOME') || '-';
+                const nome = get('NOME') || '-';
+                const payload = {
+                    societa_id: selectedSocietaId,
+                    cognome: get('COGNOME') || '-',
+                    nome: get('NOME') || '-',
+                    sesso: get('SESSO') || 'M',
+                    data_nascita: parseDate(get('DATA_NASCITA')) || '1900-01-01',
+                    luogo_nascita: get('COMUNE_NASCITA') || '',
+                    codice_fiscale: cf,
+                    email: get('EMAIL') || `${cf.toLowerCase()}@import.local`,
+                    telefono: get('TELEFONO') || '',
+                    indirizzo: get('INDIRIZZO_RESIDENZA') || null,
+                    comune: get('COMUNE_RESIDENZA') || null,
+                    cap: get('CAP') || null,
+                    scadenza_certificato: parseDate(get('DATA SCADENZA CERTIFICATO')) || null,
+                    data_ammissione: parseDate(get('DATA_ISCRIZIONE')) || null,
+                    note: get('NOTE') || null,
+                };
+                try {
+                    const res = await fetch('/users/api/soci', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(payload),
+                    });
+                    if (res.ok) {
+                        creati++;
+                        existingCFs.add(cf);
+                        logs.push({ type: 'OK', rowIdx: i, message: `Riga ${i+2} - ${cognome} ${nome} (${cf}): creato` });
+                    } else {
+                        const err = await res.json();
+                        const msg = err.error || err.message || 'errore sconosciuto';
+                        if (msg.toLowerCase().includes('duplicat') || msg.toLowerCase().includes('codice fiscale')) {
+                            saltati++;
+                            logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): duplicato rilevato dal server` });
+                        } else {
+                            errori.push(`Riga ${i+2} (${cf}): ${msg}`);
+                            logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): ${msg}` });
+                        }
+                    }
+                } catch (e) {
+                    errori.push(`Riga ${i+2} (${cf}): errore di rete`);
+                    logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): errore di rete` });
+                }
+            }
+
+            // Aggiorna progress ogni riga
+            const snap = { total, current: i + 1, creati, saltati, errori: [...errori], logs: [...logs], done: false, headers, dataRecords };
+            setImportReport(snap);
+            // Auto-scroll log
+            if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        }
+
+        // Completato
+        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true, headers, dataRecords });
+        if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        if (creati > 0) fetchSoci();
+        if (importFileRef.current) importFileRef.current.value = '';
     };
 
     const handleEditSocio = (socio) => {
@@ -430,23 +730,24 @@ const Soci = ({ onLogout }) => {
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '240px',
                                     padding: '8px 0', display:'flex', flexDirection:'column'
                                 }}>
-                                    <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Azioni sui soci filtrati</div>
-                                    <button className="dropdown-item-custom"><Mail size={16}/> Invia comunicazione</button>
-                                    <button className="dropdown-item-custom"><QrCode size={16}/> Stampa tessere</button>
-                                    <button className="dropdown-item-custom"><FileSpreadsheet size={16}/> Esporta Excel</button>
-                                    <button className="dropdown-item-custom"><Check size={16}/> Iscrizione diretta</button>
-                                    <button className="dropdown-item-custom"><X size={16}/> Revoca iscrizione</button>
-                                    <button className="dropdown-item-custom"><Calendar size={16}/> Accetta come soci</button>
-                                    <button className="dropdown-item-custom"><ListOrdered size={16}/> Imposta livello</button>
-                                    <button className="dropdown-item-custom"><Star size={16}/> Imposta valutazione</button>
-                                    <button className="dropdown-item-custom"><Tag size={16}/> Aggiungi a lista</button>
-                                    <button className="dropdown-item-custom"><X size={16}/> Rimuovi da lista</button>
-                                    <button className="dropdown-item-custom"><ClipboardList size={16}/> Associa scadenzario</button>
-                                    <div style={{height:'1px', backgroundColor:'#e9ecef', margin:'4px 0'}}></div>
-                                    <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Altre azioni</div>
-                                    <button className="dropdown-item-custom"><Tag size={16}/> Gestione liste</button>
-                                    <button className="dropdown-item-custom" style={{display:'none'}}><FileSpreadsheet size={16}/> Carica anagrafiche da Excel</button>
-                                    <button className="dropdown-item-custom" style={{display:'none'}}><RefreshCw size={16}/> Rielabora whitelist</button>
+                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Azioni sui soci filtrati</div> */}
+                                    {/* <button className="dropdown-item-custom"><Mail size={16}/> Invia comunicazione</button> */}
+                                    {/* <button className="dropdown-item-custom"><QrCode size={16}/> Stampa tessere</button> */}
+                                    <button className="dropdown-item-custom" onClick={exportToExcel}><FileDown size={16}/> Esporta Excel</button>
+                                    {/* <button className="dropdown-item-custom"><Check size={16}/> Iscrizione diretta</button> */}
+                                    {/* <button className="dropdown-item-custom"><X size={16}/> Revoca iscrizione</button> */}
+                                    {/* <button className="dropdown-item-custom"><Calendar size={16}/> Accetta come soci</button> */}
+                                    {/* <button className="dropdown-item-custom"><ListOrdered size={16}/> Imposta livello</button> */}
+                                    {/* <button className="dropdown-item-custom"><Star size={16}/> Imposta valutazione</button> */}
+                                    {/* <button className="dropdown-item-custom"><Tag size={16}/> Aggiungi a lista</button> */}
+                                    {/* <button className="dropdown-item-custom"><X size={16}/> Rimuovi da lista</button> */}
+                                    {/* <button className="dropdown-item-custom"><ClipboardList size={16}/> Associa scadenzario</button> */}
+                                    {/* <div style={{height:'1px', backgroundColor:'#e9ecef', margin:'4px 0'}}></div> */}
+                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Altre azioni</div> */}
+                                    {/* <button className="dropdown-item-custom"><Tag size={16}/> Gestione liste</button> */}
+                                    <button className="dropdown-item-custom" onClick={() => importFileRef.current?.click()}><FileUp size={16}/> Importa Excel</button>
+                                    <button className="dropdown-item-custom" onClick={handleExportTemplate}><FileDown size={16}/> Esporta template</button>
+                                    {/* <button className="dropdown-item-custom"><RefreshCw size={16}/> Rielabora whitelist</button> */}
                                     {/* Accessi hidden */}
                                 </div>
                                 </>
@@ -487,17 +788,26 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{
                                                 width:'40px', height:'40px', borderRadius:'50%', 
-                                                backgroundColor: socio.sesso === 'F' ? '#fce4ec' : '#e3f2fd',
-                                                color: socio.sesso === 'F' ? '#e91e63' : '#1976d2',
+                                                backgroundColor: socio.tipo_socio === 'associazione' ? '#f3e8ff' : (socio.sesso === 'F' ? '#fce4ec' : '#e3f2fd'),
+                                                color: socio.tipo_socio === 'associazione' ? '#7c3aed' : (socio.sesso === 'F' ? '#e91e63' : '#1976d2'),
                                                 display:'flex', alignItems:'center', justifyContent:'center'
                                             }}>
-                                                <User size={20}/>
+                                                {socio.tipo_socio === 'associazione' ? <Building2 size={20}/> : <User size={20}/>}
                                             </div>
                                         </td>
                                         <td>
-                                            <div style={{fontWeight: 500}}>{socio.cognome} {socio.nome}</div>
+                                            <div
+                                                style={{fontWeight: 500, cursor: 'pointer', color: 'var(--primary)', textDecoration: 'underline'}}
+                                                onClick={() => handleEditSocio(socio)}
+                                            >
+                                                {socio.tipo_socio === 'associazione'
+                                                    ? (socio.ragione_sociale || '-')
+                                                    : `${socio.cognome} ${socio.nome}`}
+                                            </div>
                                             <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
-                                                Socio/Tesserato: {socio.livello}
+                                                {socio.tipo_socio === 'associazione'
+                                                    ? (socio.tipo_associazione || 'Associazione')
+                                                    : `Socio/Tesserato: ${socio.livello}`}
                                             </div>
                                         </td>
                                         <td>
@@ -601,6 +911,142 @@ const Soci = ({ onLogout }) => {
                 isOpen={showEditProfileModal} 
                 onClose={() => setShowEditProfileModal(false)} 
             />
+
+            {/* Input file nascosto per importazione */}
+            <input
+                ref={importFileRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) importFromFile(e.target.files[0]); }}
+            />
+
+            {/* Modal avanzamento/riepilogo importazione */}
+            {importReport && (
+                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '60px' }} onClick={importReport.done ? () => setImportReport(null) : undefined}>
+                    <div className="modal-card" style={{ maxWidth: '560px', width: '95%', padding: '28px' }} onClick={e => e.stopPropagation()}>
+                        {!importReport.done ? (
+                            <>
+                                <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione in corso…</h3>
+                                <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                    Riga {importReport.current} di {importReport.total}
+                                </p>
+                                {/* Progress bar */}
+                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '16px' }}>
+                                    <div style={{
+                                        height: '100%', borderRadius: '4px',
+                                        backgroundColor: 'var(--primary-color)',
+                                        width: `${importReport.total > 0 ? Math.round((importReport.current / importReport.total) * 100) : 0}%`,
+                                        transition: 'width 0.15s ease',
+                                    }} />
+                                </div>
+                                <div style={{ display: 'flex', gap: '24px', fontSize: '0.88rem', marginBottom: '16px' }}>
+                                    <span style={{ color: '#2e7d32' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
+                                    <span style={{ color: '#888' }}>↷ Saltati: <strong>{importReport.saltati}</strong></span>
+                                    <span style={{ color: '#c62828' }}>✗ Errori: <strong>{importReport.errori.length}</strong></span>
+                                </div>
+                                {/* Log */}
+                                <div ref={importLogRef} style={{
+                                    fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
+                                    backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                    padding: '10px 12px', height: '180px', overflowY: 'auto',
+                                    whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                                }}>
+                                    {(importReport.logs || []).map((l, i) => (
+                                        <div key={i} style={{
+                                            color: l.type === 'OK' ? '#6fcf97' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                        }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione completata</h3>
+                                {/* Progress bar al 100% */}
+                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '14px' }}>
+                                    <div style={{ height: '100%', borderRadius: '4px', backgroundColor: '#4caf50', width: '100%' }} />
+                                </div>
+                                {/* Badge cliccabili per filtrare i log */}
+                                <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Clicca per filtrare i log e l'esportazione:</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                                    <div
+                                        onClick={() => setImportLogFilters(f => ({ ...f, creati: !f.creati }))}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
+                                            backgroundColor: importLogFilters.creati ? '#f1f8e9' : '#f5f5f5',
+                                            borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
+                                            border: `2px solid ${importLogFilters.creati ? '#66bb6a' : '#e0e0e0'}`,
+                                            opacity: importLogFilters.creati ? 1 : 0.5,
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <span style={{ color: '#2e7d32' }}>✓ Soci creati</span>
+                                        <strong style={{ color: '#2e7d32' }}>{importReport.creati}</strong>
+                                    </div>
+                                    <div
+                                        onClick={() => setImportLogFilters(f => ({ ...f, saltati: !f.saltati }))}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
+                                            backgroundColor: importLogFilters.saltati ? '#f5f5f5' : '#f9f9f9',
+                                            borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
+                                            border: `2px solid ${importLogFilters.saltati ? '#bdbdbd' : '#e0e0e0'}`,
+                                            opacity: importLogFilters.saltati ? 1 : 0.5,
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <span style={{ color: '#666' }}>↷ Saltati (già esistenti o CF assente)</span>
+                                        <strong style={{ color: '#666' }}>{importReport.saltati}</strong>
+                                    </div>
+                                    <div
+                                        onClick={() => setImportLogFilters(f => ({ ...f, errori: !f.errori }))}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
+                                            backgroundColor: importLogFilters.errori ? '#fff3f3' : '#f9f9f9',
+                                            borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
+                                            border: `2px solid ${importLogFilters.errori ? '#ef9a9a' : '#e0e0e0'}`,
+                                            opacity: importLogFilters.errori ? 1 : 0.5,
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <span style={{ color: '#c62828' }}>✗ Errori</span>
+                                        <strong style={{ color: '#c62828' }}>{importReport.errori.length}</strong>
+                                    </div>
+                                </div>
+                                {/* Log filtrato */}
+                                <div ref={importLogRef} style={{
+                                    fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
+                                    backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                    padding: '10px 12px', height: '180px', overflowY: 'auto',
+                                    whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginBottom: '14px',
+                                }}>
+                                    {(importReport.logs || [])
+                                        .filter(l =>
+                                            (l.type === 'OK'   && importLogFilters.creati)  ||
+                                            (l.type === 'SKIP' && importLogFilters.saltati) ||
+                                            (l.type === 'ERR'  && importLogFilters.errori)
+                                        )
+                                        .map((l, i) => (
+                                            <div key={i} style={{
+                                                color: l.type === 'OK' ? '#6fcf97' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                            }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
+                                        ))
+                                    }
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className="btn-outlined"
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                        onClick={handleExportImport}
+                                    >
+                                        <FileDown size={15} /> Esporta XLSX
+                                    </button>
+                                    <button className="btn-contained" style={{ flex: 1 }} onClick={() => setImportReport(null)}>Chiudi</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

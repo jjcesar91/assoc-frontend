@@ -434,6 +434,7 @@ const NuovoPagamento = () => {
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
+                products={products}
             />
 
             <IscrizioneCorsoDopoModal

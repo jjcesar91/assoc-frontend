@@ -55,7 +55,7 @@ function computeStato(scadenzaDate) {
 // ---------------------------------------------------------------------------
 // Inline detail modal
 // ---------------------------------------------------------------------------
-const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
+const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
     if (!row) return null;
     const p = row.pagamento;
     const stato = computeStato(row.scadenzaDate);
@@ -100,9 +100,37 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
 
         const totalAmount = allItems.reduce((acc, item) => acc + Math.abs(parseFloat(item.importo || 0)), 0);
         const importoFormatted = totalAmount.toFixed(2).replace('.', ',');
-        const quoteRows = allItems.map(item => {
-            const itemImporto = Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',');
-            return `<tr><td>${item.quote || ''}</td><td style="text-align:right">${itemImporto}</td></tr>`;
+
+        // Costruisce le righe: priorità payment_items (con product_id lookup) → fallback top-level quote
+        const piSource = allItems.find(i => {
+            const pi = i.payment_items;
+            if (!pi) return false;
+            const arr = Array.isArray(pi) ? pi : (() => { try { return JSON.parse(pi); } catch { return null; } })();
+            return Array.isArray(arr) && arr.length > 0;
+        });
+        const getProductName = (productId) => {
+            if (!productId || !products?.length) return null;
+            return products.find(pr => Number(pr.id) === Number(productId))?.description || null;
+        };
+        let lineItems;
+        if (piSource) {
+            const arr = Array.isArray(piSource.payment_items)
+                ? piSource.payment_items
+                : JSON.parse(piSource.payment_items);
+            lineItems = arr.map(pi => ({
+                descrizione: getProductName(pi.product_id) || pi.quote || '',
+                importo: Math.abs(parseFloat(pi.importo || 0)),
+            }));
+        } else {
+            lineItems = allItems.map(item => ({
+                descrizione: getProductName(item.product_id) || item.quote || '',
+                importo: Math.abs(parseFloat(item.importo || 0)),
+            }));
+        }
+
+        const quoteRows = lineItems.map(li => {
+            const itemImporto = li.importo.toFixed(2).replace('.', ',');
+            return `<tr><td>${li.descrizione}</td><td style="text-align:right">${itemImporto}</td></tr>`;
         }).join('');
 
         const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
@@ -111,6 +139,8 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
         const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
 
         let datiPagatore = p.codice_fiscale_genitore || '';
+        let indirizzoSocio = '';
+        let codiceFiscaleSocio = '';
         if (p.socio_id) {
             try {
                 const token = localStorage.getItem('token');
@@ -119,6 +149,8 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
                 });
                 if (socioRes.ok) {
                     const socio = await socioRes.json();
+                    indirizzoSocio = [socio.indirizzo, socio.cap, socio.comune].filter(Boolean).join(' - ');
+                    codiceFiscaleSocio = socio.codice_fiscale || '';
                     if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
                         const dataRif = new Date(p.data_pagamento || p.data_ricevuta || new Date());
                         const nascita = new Date(socio.data_nascita);
@@ -179,7 +211,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
         <tr>
             <td>RICEVUTA</td><td>${p.numero_ricevuta || ''}</td>
             <td>${p.progressivo_stagione || ''}</td>
-            <td>${p.data_ricevuta || p.data_pagamento || ''}</td>
+            <td>${(p.data_ricevuta || p.data_pagamento) ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
@@ -189,14 +221,14 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
         </tr>
         <tr>
             <td colspan="2">${(p.intestatario || '').toUpperCase()}</td>
-            <td colspan="2">${p.codice_fiscale || p.partita_iva || ''}</td>
+            <td colspan="2">${p.codice_fiscale || codiceFiscaleSocio || p.partita_iva || ''}</td>
             <td>${modalitaLabel}</td>
         </tr>
         <tr>
             <th colspan="3">INDIRIZZO</th>
             <th colspan="2">DATI DI CHI HA EFFETTUATO IL PAGAMENTO</th>
         </tr>
-        <tr><td colspan="3"></td><td colspan="2">${datiPagatore}</td></tr>
+        <tr><td colspan="3">${indirizzoSocio}</td><td colspan="2">${datiPagatore}</td></tr>
         <tr><th colspan="5">NOTE</th></tr>
         <tr><td colspan="5">${p.note || ''}</td></tr>
     </table>
@@ -312,10 +344,53 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose }) => {
                     {/* Quote */}
                     <div className="dpm-section dpm-section-quote">
                         <div className="dpm-section-title">Quote</div>
-                        <div className="dpm-quote-row">
-                            <span>{p.quote || ''}</span>
-                            <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
-                        </div>
+                        {(() => {
+                            let items = p.payment_items;
+                            if (typeof items === 'string') {
+                                try { items = JSON.parse(items); } catch { items = null; }
+                            }
+                            const getProductName = (productId) => {
+                                if (!productId || !products?.length) return null;
+                                return products.find(pr => Number(pr.id) === Number(productId))?.description || null;
+                            };
+                            if (Array.isArray(items) && items.length > 0) {
+                                if (items.length === 1) {
+                                    const item = items[0];
+                                    const prodName = getProductName(item.product_id) || item.quote || '';
+                                    return (
+                                        <div className="dpm-quote-row">
+                                            <span>{prodName}</span>
+                                            <span>€ {Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <>
+                                        {items.map((item, idx) => {
+                                            const prodName = getProductName(item.product_id) || item.quote || '';
+                                            return (
+                                                <div key={idx} className="dpm-quote-row">
+                                                    <span>{prodName}</span>
+                                                    <span>€ {Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="dpm-quote-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
+                                            <span>Totale</span>
+                                            <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    </>
+                                );
+                            }
+                            // Fallback top-level
+                            const prodName = getProductName(p.product_id) || p.quote || '';
+                            return (
+                                <div className="dpm-quote-row">
+                                    <span>{prodName}</span>
+                                    <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -348,6 +423,7 @@ const Scadenziario = () => {
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDettaglio, setSelectedDettaglio] = useState(null);
 
@@ -380,12 +456,23 @@ const Scadenziario = () => {
         }
     };
 
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch(`/products/api?societaId=${selectedSocietaId}`);
+            if (res.ok) setProducts(await res.json());
+        } catch (e) {
+            console.error('Errore caricamento prodotti', e);
+        }
+    };
+
     useEffect(() => {
         setFilters({ intestatario: '', dataDa: '', dataA: '', stato: 'TUTTI' });
         if (selectedSocietaId) {
             fetchPayments();
+            fetchProducts();
         } else {
             setPayments([]);
+            setProducts([]);
             setLoading(false);
         }
     }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -700,6 +787,7 @@ const Scadenziario = () => {
                 row={selectedDettaglio}
                 societa={societa}
                 onClose={() => setSelectedDettaglio(null)}
+                products={products}
             />
         </div>
     );

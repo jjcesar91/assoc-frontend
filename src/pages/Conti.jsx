@@ -14,7 +14,7 @@ const Conti = () => {
     
     // Form state
     const [descrizione, setDescrizione] = useState('');
-    const [modalita, setModalita] = useState('Contanti');
+    const [modalita, setModalita] = useState('');
     const [editingId, setEditingId] = useState(null);
 
     const [error, setError] = useState(null);
@@ -50,7 +50,7 @@ const Conti = () => {
 
     const resetForm = () => {
         setDescrizione('');
-        setModalita('Contanti');
+        setModalita('');
         setEditingId(null);
     };
 
@@ -94,7 +94,7 @@ const Conti = () => {
     const handleEdit = (conto) => {
         setEditingId(conto.id);
         setDescrizione(conto.descrizione);
-        setModalita(conto.modalita_pagamento);
+        setModalita(conto.modalita_pagamento || '');
     };
 
     const handleDelete = async (id) => {
@@ -149,13 +149,14 @@ const Conti = () => {
                         </div>
                         
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '150px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità di Pagamento *</label>
+                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità di Pagamento</label>
                             <select 
                                 className="md-select" 
                                 style={{width: '100%', padding: '10px 12px'}} 
                                 value={modalita}
                                 onChange={(e) => setModalita(e.target.value)}
                             >
+                                <option value="">— nessuna —</option>
                                 <option value="Contanti">Contanti</option>
                                 <option value="POS">POS</option>
                                 <option value="Assegno">Assegno</option>
@@ -199,9 +200,9 @@ const Conti = () => {
                                             <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{c.descrizione}</div>
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: '#e3f2fd', color: '#1976d2', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: c.modalita_pagamento ? '#e3f2fd' : '#f3f4f6', color: c.modalita_pagamento ? '#1976d2' : '#9ca3af', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
                                                 {renderPaymentIcon(c.modalita_pagamento)}
-                                                {c.modalita_pagamento}
+                                                {c.modalita_pagamento || '—'}
                                             </div>
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'right' }}>
