@@ -21,17 +21,54 @@ export const SocietaProvider = ({ children }) => {
 
     const fetchSocieta = async () => {
         try {
-            const response = await fetch('/users/api/societa');
+            let me = null;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setSocietaList([]);
+                setSelectedSocietaId('');
+                return;
+            }
+
+            if (token) {
+                const meResponse = await fetch('/auth/api/me', {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
+                if (meResponse.ok) {
+                    me = await meResponse.json();
+                }
+            }
+
+            const response = await fetch('/users/api/societa', {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
             const data = await response.json();
             if (Array.isArray(data)) {
-                setSocietaList(data);
-                
+                const resolvedRole = String(me?.role || localStorage.getItem('user_role') || '').toLowerCase();
+                const isSuperuser = resolvedRole === 'superuser';
+                const meSocietaId = me?.societaId ?? me?.societa_id ?? me?.societa?.id;
+                const forcedSocietaId = !isSuperuser && meSocietaId ? String(meSocietaId) : '';
+
+                const filteredSocieta = forcedSocietaId
+                    ? data.filter(s => String(s.id) === forcedSocietaId)
+                    : data;
+
+                // If the forced id is stale/missing, keep full list to avoid an empty selector.
+                const visibleSocieta = filteredSocieta.length > 0 ? filteredSocieta : data;
+
+                setSocietaList(visibleSocieta);
+
+                // Non-superuser users must always stay on their assigned society.
+                if (forcedSocietaId && visibleSocieta.some(s => String(s.id) === forcedSocietaId)) {
+                    setSelectedSocietaId(forcedSocietaId);
+                    return;
+                }
+
                 // capture the initial value (from localStorage) or current closure value
                 const currentId = selectedSocietaId;
 
                 // If there's no selected ID, or the selected ID is not in the new list, select the first one
-                if (data.length > 0 && (!currentId || !data.find(s => s.id == currentId))) {
-                    setSelectedSocietaId(data[0].id);
+                if (visibleSocieta.length > 0 && (!currentId || !visibleSocieta.find(s => s.id == currentId))) {
+                    setSelectedSocietaId(visibleSocieta[0].id);
                 }
             }
         } catch (error) {
@@ -42,8 +79,31 @@ export const SocietaProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        fetchSocieta();
+        if (localStorage.getItem('token')) {
+            fetchSocieta();
+        } else {
+            setLoading(false);
+        }
          // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const onSessionUpdated = () => {
+            if (localStorage.getItem('token')) {
+                setLoading(true);
+                fetchSocieta();
+            } else {
+                setSocietaList([]);
+                setSelectedSocietaId('');
+                setLoading(false);
+            }
+        };
+
+        window.addEventListener('session-updated', onSessionUpdated);
+        return () => {
+            window.removeEventListener('session-updated', onSessionUpdated);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

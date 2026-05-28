@@ -86,7 +86,6 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
             {/* Backdrop */}
             <div
                 style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 500 }}
-                onClick={onClose}
             />
 
             {/* Modal */}

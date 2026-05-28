@@ -185,7 +185,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
     return (
         <div
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-            onClick={onClose}
+
         >
             <div
                 style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}

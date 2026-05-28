@@ -111,7 +111,11 @@ const Layout = ({ children, onLogout, title }) => {
         const fetchMe = async () => {
             try {
                 const token = localStorage.getItem('token');
-                if (!token) return;
+                if (!token) {
+                    onLogout?.();
+                    navigate('/login', { replace: true });
+                    return;
+                }
                 const response = await fetch('/auth/api/me', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -123,13 +127,19 @@ const Layout = ({ children, onLogout, title }) => {
                         const saved = JSON.parse(localStorage.getItem(`header-favorites-${data.id}`) || '{}');
                         setFavorites(saved);
                     } catch { setFavorites({}); }
+                    return;
+                }
+
+                if (response.status === 401 || response.status === 403) {
+                    onLogout?.();
+                    navigate('/login', { replace: true });
                 }
             } catch (e) {
                 console.error("Failed to fetch user", e);
             }
         };
         fetchMe();
-    }, []);
+    }, [onLogout, navigate]);
 
     return (
         <div className="layout-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>

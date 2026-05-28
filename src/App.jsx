@@ -30,12 +30,14 @@ import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
 import { AlertProvider } from './components/AlertModal'
 
-// Decodifica ruolo dal JWT senza librerie esterne
-function getRoleFromToken(token) {
+function isTokenExpired(token) {
   try {
-    return JSON.parse(atob(token.split('.')[1])).role || 'user';
+    const payload = JSON.parse(atob(token.split('.')[1] || ''));
+    const exp = payload?.exp;
+    if (!exp) return true;
+    return Date.now() >= exp * 1000;
   } catch {
-    return 'user';
+    return true;
   }
 }
 
@@ -44,7 +46,22 @@ function App() {
   const [userRole, setUserRole] = useState('user');
   const [loading, setLoading] = useState(true);
 
+  const clearSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_features');
+    localStorage.removeItem('selectedSocietaId');
+    localStorage.removeItem('impersonate_admin_token');
+    localStorage.removeItem('impersonate_admin_role');
+    localStorage.removeItem('impersonate_admin_features');
+    window.dispatchEvent(new Event('session-updated'));
+  };
+
   const fetchAndStoreUserInfo = async (token) => {
+    if (!token || isTokenExpired(token)) {
+      return null;
+    }
+
     try {
       const res = await fetch('/auth/api/me', {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -55,18 +72,27 @@ function App() {
         localStorage.setItem('user_features', JSON.stringify(user.features ?? null));
         return user.role || 'user';
       }
+      if (res.status === 401 || res.status === 403) {
+        return null;
+      }
     } catch (e) {
       console.error('Errore caricamento profilo utente', e);
     }
-    return getRoleFromToken(token);
+    return null;
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetchAndStoreUserInfo(token).then(role => {
-        setUserRole(role);
-        setIsAuthenticated(true);
+        if (role) {
+          setUserRole(role);
+          setIsAuthenticated(true);
+        } else {
+          clearSession();
+          setUserRole('user');
+          setIsAuthenticated(false);
+        }
         setLoading(false);
       });
     } else {
@@ -75,16 +101,22 @@ function App() {
   }, []);
 
   const handleLogin = async (token) => {
+    localStorage.removeItem('selectedSocietaId');
     localStorage.setItem('token', token);
     const role = await fetchAndStoreUserInfo(token);
-    setUserRole(role);
-    setIsAuthenticated(true);
+    if (role) {
+      setUserRole(role);
+      setIsAuthenticated(true);
+      window.dispatchEvent(new Event('session-updated'));
+      return;
+    }
+    clearSession();
+    setUserRole('user');
+    setIsAuthenticated(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_features');
+    clearSession();
     setIsAuthenticated(false);
     setUserRole('user');
   };

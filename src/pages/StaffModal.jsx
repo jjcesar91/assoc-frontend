@@ -236,7 +236,7 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '72px' }}>
+        <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '72px' }}>
             <div
                 className="modal-card socio-modal"
                 style={{ maxWidth: '860px', width: '95%', maxHeight: 'calc(100vh - 88px)', display: 'flex', flexDirection: 'column' }}

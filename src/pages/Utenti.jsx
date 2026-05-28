@@ -393,7 +393,7 @@ const Utenti = () => {
 
             {/* Reset password modal */}
             {showResetPwdModal && (
-                <div className="modal-overlay" onClick={() => setShowResetPwdModal(false)} style={{ alignItems: 'flex-start', paddingTop: '72px' }}>
+                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '72px' }}>
                     <div
                         className="modal-card socio-modal"
                         style={{ maxWidth: '480px', width: '95%', display: 'flex', flexDirection: 'column' }}

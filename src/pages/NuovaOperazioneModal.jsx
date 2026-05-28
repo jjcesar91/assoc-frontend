@@ -435,7 +435,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
 
     return (
         <>
-            <div className="nom-overlay" onClick={onClose}>
+            <div className="nom-overlay">
                 <div className="nom-modal" onClick={e => e.stopPropagation()}>
 
                     {/* Header */}
@@ -724,7 +724,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
 
             {/* Mini-modal: nome operazione preferita */}
             {salvaPreferiteOpen && (
-                <div className="nom-overlay" style={{ zIndex: 1500 }} onClick={() => setSalvaPreferiteOpen(false)}>
+                <div className="nom-overlay" style={{ zIndex: 1500 }}>
                     <div className="nom-modal" style={{ width: '400px', maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
                         <div className="nom-header" style={{ background: '#f59e0b' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

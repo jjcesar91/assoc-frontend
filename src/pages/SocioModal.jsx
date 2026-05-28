@@ -1604,7 +1604,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     ];
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{alignItems: 'flex-start', paddingTop: '72px'}}>
+        <div className="modal-overlay" style={{alignItems: 'flex-start', paddingTop: '72px'}}>
             <div className="modal-card socio-modal" style={{maxWidth: '1200px', width: '95%', maxHeight: 'calc(100vh - 88px)', display: 'flex', flexDirection: 'column'}} onClick={e => e.stopPropagation()}>
                 
                 {/* Top Header with Name and Actions */}
@@ -3093,7 +3093,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
             {/* ── Modal Dettaglio Corso ─────────────────────────────── */}
             {corsoDettaglio && (
-                <div className="modal-overlay" style={{zIndex: 2100}} onClick={() => setCorsoDettaglio(null)}>
+                <div className="modal-overlay" style={{zIndex: 2100}}>
                     <div className="modal-card" style={{maxWidth:'600px', width:'95%', padding:0, overflow:'hidden'}} onClick={e => e.stopPropagation()}>
                         {/* Header */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff'}}>
@@ -3196,7 +3196,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
             {/* ── Modal Aggiungi Corso ──────────────────────────────── */}
             {showAggiungiCorsoModal && (
-                <div className="modal-overlay" style={{zIndex: 2100}} onClick={() => setShowAggiungiCorsoModal(false)}>
+                <div className="modal-overlay" style={{zIndex: 2100}}>
                     <div className="modal-card" style={{maxWidth:'700px', width:'95%', padding:0, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'80vh'}} onClick={e => e.stopPropagation()}>
                         {/* Header */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff', flexShrink:0}}>

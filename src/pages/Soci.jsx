@@ -923,7 +923,7 @@ const Soci = ({ onLogout }) => {
 
             {/* Modal avanzamento/riepilogo importazione */}
             {importReport && (
-                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '60px' }} onClick={importReport.done ? () => setImportReport(null) : undefined}>
+                <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '60px' }}>
                     <div className="modal-card" style={{ maxWidth: '560px', width: '95%', padding: '28px' }} onClick={e => e.stopPropagation()}>
                         {!importReport.done ? (
                             <>

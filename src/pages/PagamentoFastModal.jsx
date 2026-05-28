@@ -58,7 +58,7 @@ const PagamentoFastModal = ({ isOpen, onClose, societaId }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fast-modal-overlay" onClick={onClose}>
+        <div className="fast-modal-overlay">
             <div className="fast-modal-content" onClick={e => e.stopPropagation()}>
                 <div className="fast-modal-header">
                     <h2>

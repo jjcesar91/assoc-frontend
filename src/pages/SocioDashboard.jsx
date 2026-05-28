@@ -156,7 +156,7 @@ const ComunicazioneDetailModal = ({ comunicazione, onClose }) => {
     const isEmail = comunicazione.tipo === 'EMAIL';
     const data = new Date(comunicazione.data_invio || comunicazione.createdAt);
     return (
-        <div className="sd-modal-overlay" onClick={onClose}>
+        <div className="sd-modal-overlay">
             <div className="sd-modal" onClick={e => e.stopPropagation()}>
                 <div className="sd-modal-header">
                     <div className="sd-modal-title">

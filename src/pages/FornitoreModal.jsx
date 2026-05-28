@@ -103,7 +103,7 @@ const FornitoreModal = ({ isOpen, onClose, onSave, fornitore }) => {
     };
 
     return (
-        <div className="fornitore-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="fornitore-modal-overlay">
             <div className="fornitore-modal">
                 <div className="fornitore-modal-header">
                     <h2><Truck size={20} /> Fornitore</h2>
