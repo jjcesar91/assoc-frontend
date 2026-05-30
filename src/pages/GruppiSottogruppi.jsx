@@ -195,7 +195,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                         <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>{g.tipo}</span>
                                     </td>
                                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                        <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>
+                                        {!g.is_default && <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>}
                                         {!g.is_default && (
                                             <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: '#f44336' }}><Trash2 size={18} /></button>
                                         )}
@@ -396,7 +396,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                     </td>
                                     <td style={{ padding: '12px 16px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{getGruppoLabel(g.gruppo_id)}</td>
                                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                        <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>
+                                        {!g.is_default && <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>}
                                         {!g.is_default && (
                                             <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: '#f44336' }}><Trash2 size={18} /></button>
                                         )}
