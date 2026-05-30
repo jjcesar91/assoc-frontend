@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User } from 'lucide-react';
 import './SocioModal.css';
+import { getPasswordValidationErrors } from '../utils/passwordValidation';
 
 const ROLE_OPTIONS_SUPERUSER = [
     { value: 'user',      label: 'Utente' },
@@ -56,7 +57,12 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
-        setErrors(prev => ({ ...prev, [name]: undefined }));
+        setErrors((prev) => {
+            const next = { ...prev, [name]: undefined };
+            if (name === 'password') next.confirmPassword = undefined;
+            if (name === 'confirmPassword') next.password = undefined;
+            return next;
+        });
     };
 
     const validate = () => {
@@ -66,6 +72,10 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
             if (!form.password) e.password = 'Campo obbligatorio';
             if (!form.email.trim()) e.email = 'Campo obbligatorio';
             if (form.email && form.email !== form.confirmEmail) e.confirmEmail = 'Le email non coincidono';
+        }
+        if (form.password) {
+            const passwordErrors = getPasswordValidationErrors(form.password);
+            if (passwordErrors.length > 0) e.password = passwordErrors.join('. ');
         }
         if (form.password && form.password !== form.confirmPassword) e.confirmPassword = 'Le password non coincidono';
         return e;
@@ -151,7 +161,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                 <input
                                     name="password"
                                     type="password"
-                                    className="md-input"
+                                    className={`md-input ${errors.password ? 'input-error' : ''}`}
                                     placeholder="Password"
                                     value={form.password}
                                     onChange={handleChange}
@@ -165,7 +175,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                 <input
                                     name="confirmPassword"
                                     type="password"
-                                    className="md-input"
+                                    className={`md-input ${errors.confirmPassword ? 'input-error' : ''}`}
                                     placeholder="Password"
                                     value={form.confirmPassword}
                                     onChange={handleChange}
@@ -180,7 +190,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                 <input
                                     name="email"
                                     type="email"
-                                    className="md-input"
+                                    className={`md-input ${errors.email ? 'input-error' : ''}`}
                                     placeholder="Email"
                                     value={form.email}
                                     onChange={handleChange}
@@ -193,7 +203,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                 <input
                                     name="confirmEmail"
                                     type="email"
-                                    className="md-input"
+                                    className={`md-input ${errors.confirmEmail ? 'input-error' : ''}`}
                                     placeholder="Conferma Email"
                                     value={form.confirmEmail}
                                     onChange={handleChange}

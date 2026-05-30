@@ -91,6 +91,17 @@
     border-color: #1976d2;
 }
 
+.modal-input.input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
+}
+
+.field-error {
+    margin-top: 6px;
+    color: #dc2626;
+    font-size: 0.78rem;
+}
+
 .modal-input.readonly {
     background-color: #e9ecef;
     color: #495057;

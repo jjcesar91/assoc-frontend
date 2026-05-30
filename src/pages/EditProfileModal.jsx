@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './EditProfileModal.css';
+import { getPasswordValidationErrors } from '../utils/passwordValidation';
 
 const EditProfileModal = ({ isOpen, onClose }) => {
     const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
         newPassword: '',
         confirmPassword: ''
     });
+    const [passwordErrors, setPasswordErrors] = useState({});
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -91,9 +93,23 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         setMessage({ type: '', text: '' });
+        const nextErrors = {};
+
+        if (!passwordData.oldPassword) {
+            nextErrors.oldPassword = 'Inserisci la password attuale';
+        }
+
+        const newPasswordErrors = getPasswordValidationErrors(passwordData.newPassword);
+        if (newPasswordErrors.length > 0) {
+            nextErrors.newPassword = newPasswordErrors.join('. ');
+        }
         
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setMessage({ type: 'error', text: 'Le password non coincidono' });
+            nextErrors.confirmPassword = 'Le password non coincidono';
+        }
+
+        setPasswordErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) {
             return;
         }
 
@@ -114,9 +130,11 @@ const EditProfileModal = ({ isOpen, onClose }) => {
             if (response.ok) {
                  setMessage({ type: 'success', text: 'Password aggiornata con successo' });
                  setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                 setPasswordErrors({});
                  setTimeout(() => setMessage({ type: '', text: '' }), 3000);
             } else {
                 const err = await response.json();
+                setPasswordErrors((prev) => ({ ...prev, newPassword: err.error || 'Errore aggiornamento password' }));
                 setMessage({ type: 'error', text: err.error || 'Errore aggiornamento password' });
             }
         } catch (error) {
@@ -210,30 +228,42 @@ const EditProfileModal = ({ isOpen, onClose }) => {
                                 <input 
                                     type="password" 
                                     value={passwordData.oldPassword}
-                                    onChange={(e) => setPasswordData({...passwordData, oldPassword: e.target.value})}
-                                    className="modal-input"
+                                    onChange={(e) => {
+                                        setPasswordData({...passwordData, oldPassword: e.target.value});
+                                        setPasswordErrors((prev) => ({ ...prev, oldPassword: undefined }));
+                                    }}
+                                    className={`modal-input ${passwordErrors.oldPassword ? 'input-error' : ''}`}
                                     placeholder="Vecchia password"
                                 />
+                                {passwordErrors.oldPassword && <div className="field-error">{passwordErrors.oldPassword}</div>}
                             </div>
                             <div className="form-group">
                                 <label>Nuova Password</label>
                                 <input 
                                     type="password" 
                                     value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                                    className="modal-input"
+                                    onChange={(e) => {
+                                        setPasswordData({...passwordData, newPassword: e.target.value});
+                                        setPasswordErrors((prev) => ({ ...prev, newPassword: undefined }));
+                                    }}
+                                    className={`modal-input ${passwordErrors.newPassword ? 'input-error' : ''}`}
                                     placeholder="Nuova password"
                                 />
+                                {passwordErrors.newPassword && <div className="field-error">{passwordErrors.newPassword}</div>}
                             </div>
                             <div className="form-group">
                                 <label>Conferma Nuova Password</label>
                                 <input 
                                     type="password" 
                                     value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                                    className="modal-input"
+                                    onChange={(e) => {
+                                        setPasswordData({...passwordData, confirmPassword: e.target.value});
+                                        setPasswordErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                                    }}
+                                    className={`modal-input ${passwordErrors.confirmPassword ? 'input-error' : ''}`}
                                     placeholder="Conferma nuova password"
                                 />
+                                {passwordErrors.confirmPassword && <div className="field-error">{passwordErrors.confirmPassword}</div>}
                             </div>
                             <button type="submit" className="modal-submit-btn password-btn">
                                 ✓ Aggiorna password

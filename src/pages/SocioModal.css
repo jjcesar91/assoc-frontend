@@ -133,6 +133,11 @@
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
+.md-input.input-error, .md-select.input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
+}
+
 .extra-fields-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

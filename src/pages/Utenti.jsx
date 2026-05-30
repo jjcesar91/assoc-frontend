@@ -7,6 +7,7 @@ import UtenteModal from './UtenteModal';
 import FunzionalitaModal from './FunzionalitaModal';
 import './SocioModal.css';
 import './Soci.css';
+import { getPasswordValidationErrors } from '../utils/passwordValidation';
 
 const PAGE_SIZE = 15;
 
@@ -56,7 +57,7 @@ const Utenti = () => {
     const [resetTarget, setResetTarget] = useState(null);
     const [newPwd, setNewPwd] = useState('');
     const [confirmPwd, setConfirmPwd] = useState('');
-    const [pwdError, setPwdError] = useState('');
+    const [pwdError, setPwdError] = useState({});
 
     const [showFunzionalitaModal, setShowFunzionalitaModal] = useState(false);
     const [funzionalitaTarget, setFunzionalitaTarget] = useState(null);
@@ -209,15 +210,51 @@ const Utenti = () => {
         setResetTarget(utente);
         setNewPwd('');
         setConfirmPwd('');
-        setPwdError('');
+        setPwdError({});
         setShowResetPwdModal(true);
     };
 
     const handleResetPassword = async () => {
-        if (!newPwd) { setPwdError('Inserisci la nuova password'); return; }
-        if (newPwd !== confirmPwd) { setPwdError('Le password non coincidono'); return; }
-        await handleSave({ id: resetTarget.id, username: resetTarget.username, email: resetTarget.email, password: newPwd });
-        setShowResetPwdModal(false);
+        const nextErrors = {};
+        if (!newPwd) {
+            nextErrors.newPwd = 'Inserisci la nuova password';
+        } else {
+            const passwordErrors = getPasswordValidationErrors(newPwd);
+            if (passwordErrors.length > 0) {
+                nextErrors.newPwd = passwordErrors.join('. ');
+            }
+        }
+        if (newPwd !== confirmPwd) {
+            nextErrors.confirmPwd = 'Le password non coincidono';
+        }
+        setPwdError(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
+
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/auth/api/admin/users/${resetTarget.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    username: resetTarget.username,
+                    email: resetTarget.email,
+                    password: newPwd,
+                }),
+            });
+
+            if (res.ok) {
+                setShowResetPwdModal(false);
+                setPwdError({});
+                fetchUtenti();
+                return;
+            }
+
+            const err = await res.json();
+            setPwdError({ newPwd: err.error || err.message || 'Errore aggiornamento password' });
+        } catch (e) {
+            console.error(e);
+            setPwdError({ newPwd: 'Errore di rete' });
+        }
     };
 
     return (
@@ -426,25 +463,34 @@ const Utenti = () => {
                                     <label className="field-label">Nuova password *</label>
                                     <input
                                         type="password"
-                                        className="md-input"
+                                        className={`md-input ${pwdError.newPwd ? 'input-error' : ''}`}
                                         value={newPwd}
-                                        onChange={e => { setNewPwd(e.target.value); setPwdError(''); }}
+                                        onChange={e => {
+                                            setNewPwd(e.target.value);
+                                            setPwdError(prev => ({ ...prev, newPwd: undefined }));
+                                        }}
                                         autoComplete="new-password"
                                     />
+                                    {pwdError.newPwd && (
+                                        <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.newPwd}</div>
+                                    )}
                                 </div>
                                 <div className="form-group grid-span-12">
                                     <label className="field-label">Conferma password *</label>
                                     <input
                                         type="password"
-                                        className="md-input"
+                                        className={`md-input ${pwdError.confirmPwd ? 'input-error' : ''}`}
                                         value={confirmPwd}
-                                        onChange={e => { setConfirmPwd(e.target.value); setPwdError(''); }}
+                                        onChange={e => {
+                                            setConfirmPwd(e.target.value);
+                                            setPwdError(prev => ({ ...prev, confirmPwd: undefined }));
+                                        }}
                                         autoComplete="new-password"
                                     />
+                                    {pwdError.confirmPwd && (
+                                        <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.confirmPwd}</div>
+                                    )}
                                 </div>
-                                {pwdError && (
-                                    <div className="grid-span-12" style={{ color: '#ef4444', fontSize: '0.85rem' }}>{pwdError}</div>
-                                )}
                             </div>
                         </div>
                         {/* Footer */}
