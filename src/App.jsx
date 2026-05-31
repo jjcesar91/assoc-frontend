@@ -30,17 +30,6 @@ import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
 import { AlertProvider } from './components/AlertModal'
 
-function isTokenExpired(token) {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1] || ''));
-    const exp = payload?.exp;
-    if (!exp) return true;
-    return Date.now() >= exp * 1000;
-  } catch {
-    return true;
-  }
-}
-
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState('user');
@@ -48,17 +37,19 @@ function App() {
 
   const clearSession = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_features');
     localStorage.removeItem('selectedSocietaId');
     localStorage.removeItem('impersonate_admin_token');
+    localStorage.removeItem('impersonate_admin_refresh_token');
     localStorage.removeItem('impersonate_admin_role');
     localStorage.removeItem('impersonate_admin_features');
     window.dispatchEvent(new Event('session-updated'));
   };
 
   const fetchAndStoreUserInfo = async (token) => {
-    if (!token || isTokenExpired(token)) {
+    if (!token) {
       return null;
     }
 
@@ -100,10 +91,15 @@ function App() {
     }
   }, []);
 
-  const handleLogin = async (token) => {
+  const handleLogin = async (accessToken, refreshToken) => {
     localStorage.removeItem('selectedSocietaId');
-    localStorage.setItem('token', token);
-    const role = await fetchAndStoreUserInfo(token);
+    localStorage.setItem('token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    } else {
+      localStorage.removeItem('refresh_token');
+    }
+    const role = await fetchAndStoreUserInfo(accessToken);
     if (role) {
       setUserRole(role);
       setIsAuthenticated(true);

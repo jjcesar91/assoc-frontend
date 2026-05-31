@@ -21,7 +21,7 @@ function Login({ onLoginSuccess }) {
       const data = await response.json();
 
       if (response.ok) {
-        onLoginSuccess(data.accessToken);
+        onLoginSuccess(data.accessToken, data.refreshToken);
       } else {
         setMessage(data.message || 'Login failed');
       }

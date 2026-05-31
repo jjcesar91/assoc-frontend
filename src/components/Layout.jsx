@@ -70,12 +70,19 @@ const Layout = ({ children, onLogout, title }) => {
     const isImpersonating = !!localStorage.getItem('impersonate_admin_token');
     const handleStopImpersonate = () => {
         const adminToken = localStorage.getItem('impersonate_admin_token');
+        const adminRefreshToken = localStorage.getItem('impersonate_admin_refresh_token') || '';
         const adminRole = localStorage.getItem('impersonate_admin_role') || 'admin';
         const adminFeatures = localStorage.getItem('impersonate_admin_features') || 'null';
         localStorage.setItem('token', adminToken);
+        if (adminRefreshToken) {
+            localStorage.setItem('refresh_token', adminRefreshToken);
+        } else {
+            localStorage.removeItem('refresh_token');
+        }
         localStorage.setItem('user_role', adminRole);
         localStorage.setItem('user_features', adminFeatures);
         localStorage.removeItem('impersonate_admin_token');
+        localStorage.removeItem('impersonate_admin_refresh_token');
         localStorage.removeItem('impersonate_admin_role');
         localStorage.removeItem('impersonate_admin_features');
         window.location.href = '/amministrazione/utenti';

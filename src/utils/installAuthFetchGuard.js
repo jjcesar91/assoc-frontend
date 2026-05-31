@@ -18,6 +18,8 @@ const INTERNAL_API_PATHS = [
   '/activities/',
 ];
 
+let refreshInFlight = null;
+
 function getRequestUrl(input) {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.toString();
@@ -37,9 +39,10 @@ function isInternalApiRequest(url) {
   return INTERNAL_API_PATHS.some((path) => url.includes(path));
 }
 
-function withAuthHeaderIfNeeded(input, init) {
+function withAuthHeaderIfNeeded(input, init, options = {}) {
+  const { tokenOverride, forceReplace = false } = options;
   const requestUrl = getRequestUrl(input);
-  const token = localStorage.getItem('token');
+  const token = tokenOverride || localStorage.getItem('token');
 
   if (!token || !isInternalApiRequest(requestUrl) || shouldBypass(requestUrl)) {
     return init;
@@ -57,7 +60,9 @@ function withAuthHeaderIfNeeded(input, init) {
     initHeaders.forEach((value, key) => mergedHeaders.set(key, value));
   }
 
-  if (!mergedHeaders.has('Authorization')) {
+  if (forceReplace) {
+    mergedHeaders.set('Authorization', `Bearer ${token}`);
+  } else if (!mergedHeaders.has('Authorization')) {
     mergedHeaders.set('Authorization', `Bearer ${token}`);
   }
 
@@ -69,12 +74,61 @@ function withAuthHeaderIfNeeded(input, init) {
 
 function clearSessionStorage() {
   localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
   localStorage.removeItem('user_role');
   localStorage.removeItem('user_features');
   localStorage.removeItem('selectedSocietaId');
   localStorage.removeItem('impersonate_admin_token');
+  localStorage.removeItem('impersonate_admin_refresh_token');
   localStorage.removeItem('impersonate_admin_role');
   localStorage.removeItem('impersonate_admin_features');
+}
+
+function redirectToLoginIfNeeded() {
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login');
+  }
+}
+
+async function refreshSession(originalFetch) {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+
+  refreshInFlight = (async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      return null;
+    }
+
+    try {
+      const response = await originalFetch('/auth/api/refresh-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = await response.json();
+      if (!payload?.accessToken || !payload?.refreshToken) {
+        return null;
+      }
+
+      localStorage.setItem('token', payload.accessToken);
+      localStorage.setItem('refresh_token', payload.refreshToken);
+      window.dispatchEvent(new Event('session-updated'));
+      return payload;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
 }
 
 export function installAuthFetchGuard() {
@@ -86,9 +140,35 @@ export function installAuthFetchGuard() {
   window.__authFetchGuardInstalled = true;
 
   window.fetch = async (input, init) => {
-    const nextInit = withAuthHeaderIfNeeded(input, init);
-    const response = await originalFetch(input, nextInit);
     const requestUrl = getRequestUrl(input);
+    const nextInit = withAuthHeaderIfNeeded(input, init);
+    let response = await originalFetch(input, nextInit);
+
+    const shouldTryRefresh =
+      isInternalApiRequest(requestUrl) &&
+      !shouldBypass(requestUrl) &&
+      !nextInit?.__authRetried &&
+      (response.status === 401 || response.status === 403);
+
+    if (shouldTryRefresh) {
+      const refreshedTokens = await refreshSession(originalFetch);
+
+      if (refreshedTokens?.accessToken) {
+        const retryInit = {
+          ...(nextInit || {}),
+          __authRetried: true,
+        };
+        const retryRequestInit = withAuthHeaderIfNeeded(input, retryInit, {
+          tokenOverride: refreshedTokens.accessToken,
+          forceReplace: true,
+        });
+        response = await originalFetch(input, retryRequestInit);
+      } else {
+        clearSessionStorage();
+        redirectToLoginIfNeeded();
+        return response;
+      }
+    }
 
     // Force logout only when session validation itself fails.
     // Other API endpoints can legitimately return 401/403 for permission scopes.
@@ -98,9 +178,7 @@ export function installAuthFetchGuard() {
       (response.status === 401 || response.status === 403)
     ) {
       clearSessionStorage();
-      if (window.location.pathname !== '/login') {
-        window.location.replace('/login');
-      }
+      redirectToLoginIfNeeded();
     }
 
     return response;

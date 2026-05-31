@@ -183,9 +183,11 @@ const Utenti = () => {
                 const data = await res.json();
                 // Salva i permessi admin prima di sovrascriverli
                 localStorage.setItem('impersonate_admin_token', token);
+                localStorage.setItem('impersonate_admin_refresh_token', localStorage.getItem('refresh_token') || '');
                 localStorage.setItem('impersonate_admin_role', localStorage.getItem('user_role') || 'admin');
                 localStorage.setItem('impersonate_admin_features', localStorage.getItem('user_features') || 'null');
                 localStorage.setItem('token', data.accessToken);
+                localStorage.removeItem('refresh_token');
                 // Carica le features dell'utente impersonato
                 try {
                     const meRes = await fetch('/auth/api/me', { headers: { 'Authorization': `Bearer ${data.accessToken}` } });
