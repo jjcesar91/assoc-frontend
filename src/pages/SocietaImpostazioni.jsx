@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
-import { Save, X } from 'lucide-react';
+import { Save, X, Upload } from 'lucide-react';
 
 const SocietaImpostazioni = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
     const [formData, setFormData] = useState({
         quota_tesseramento_unico: false
     });
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [currentLogoPath, setCurrentLogoPath] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
 
@@ -17,6 +20,7 @@ const SocietaImpostazioni = () => {
                 setFormData({
                     quota_tesseramento_unico: societa.quota_tesseramento_unico || false
                 });
+                setCurrentLogoPath(societa.logo_path || null);
             }
         }
     }, [selectedSocietaId, societaList]);
@@ -30,6 +34,16 @@ const SocietaImpostazioni = () => {
                 });
             }
         }
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
     };
 
     const handleSave = async () => {
@@ -37,6 +51,22 @@ const SocietaImpostazioni = () => {
         setLoading(true);
         setMessage(null);
         try {
+            // Upload Logo
+            if (selectedFile) {
+                const formData = new FormData();
+                formData.append('logo', selectedFile);
+                const logoResponse = await fetch(`/users/api/societa/${selectedSocietaId}/logo`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!logoResponse.ok) {
+                    const err = await logoResponse.json();
+                    throw new Error('Errore caricamento logo: ' + (err.error || err.message));
+                }
+                setSelectedFile(null);
+                setPreviewUrl(null);
+            }
+
             const response = await fetch(`/users/api/societa/${selectedSocietaId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,6 +104,45 @@ const SocietaImpostazioni = () => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                {/* Logo Intestazione */}
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Logo Intestazione</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>Il logo verrà mostrato in alto a sinistra nel template di stampa della modulistica e nelle ricevute.</p>
+                    <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', marginBottom: '15px' }}>
+                        <div>
+                            <span style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', color: '#666' }}>Attuale</span>
+                            {currentLogoPath ? (
+                                <div style={{ border: '1px solid #ddd', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+                                    <img
+                                        src={`/users/${currentLogoPath}`}
+                                        alt="Logo Società"
+                                        style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain' }}
+                                        onError={(e) => { e.target.onerror = null; e.target.src = ''; }}
+                                    />
+                                </div>
+                            ) : (
+                                <div style={{ color: '#999', fontStyle: 'italic', padding: '10px', border: '1px dashed #ddd', borderRadius: '4px' }}>Nessun logo caricato</div>
+                            )}
+                        </div>
+                        {previewUrl && (
+                            <div>
+                                <span style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', color: '#666' }}>Anteprima Nuovo</span>
+                                <div style={{ border: '1px solid #2e7d32', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+                                    <img src={previewUrl} alt="Preview" style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain' }} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                        />
+                    </div>
+                </div>
+
                 <div>
                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '12px', color: '#555', fontWeight: 600 }}>
                         Iscrizioni e Tesseramento
