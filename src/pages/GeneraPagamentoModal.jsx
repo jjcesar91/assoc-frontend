@@ -58,7 +58,7 @@ const GeneraPagamentoModal = ({
     useEffect(() => {
         if (isOpen) {
             if (socio) {
-                setIntestatario(`${socio.cognome} ${socio.nome}`);
+                setIntestatario(socio.tipo_socio === 'associazione' ? (socio.ragione_sociale || '') : `${socio.cognome} ${socio.nome}`);
                 setCodiceFiscale(socio.codice_fiscale || '');
                 setCodiceFiscaleGenitore(socio.cf_genitore || '');
                 setPartitaIva(socio.partita_iva || '');
