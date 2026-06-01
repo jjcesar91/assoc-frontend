@@ -20,6 +20,40 @@ const INTERNAL_API_PATHS = [
 
 let refreshInFlight = null;
 
+function hasFeatureAccess(featureId) {
+  const role = String(localStorage.getItem('user_role') || 'user').toLowerCase();
+  // Keep superuser unrestricted; other roles must respect feature flags.
+  if (role === 'superuser') {
+    return true;
+  }
+
+  const rawFeatures = localStorage.getItem('user_features');
+  // Fail closed for protected modules until features are explicitly available.
+  if (rawFeatures === null || rawFeatures === undefined) {
+    return false;
+  }
+
+  try {
+    const features = JSON.parse(rawFeatures);
+    if (features === null || features === undefined) {
+      return false;
+    }
+    return Array.isArray(features) && features.includes(featureId);
+  } catch {
+    return false;
+  }
+}
+
+function hasApiAccess(requestUrl) {
+  if (requestUrl.includes('/payments/')) {
+    return hasFeatureAccess('pagamenti');
+  }
+  if (requestUrl.includes('/products/')) {
+    return hasFeatureAccess('prodotti');
+  }
+  return true;
+}
+
 function getRequestUrl(input) {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.toString();
@@ -142,13 +176,30 @@ export function installAuthFetchGuard() {
   window.fetch = async (input, init) => {
     const requestUrl = getRequestUrl(input);
     const nextInit = withAuthHeaderIfNeeded(input, init);
+
+    if (
+      isInternalApiRequest(requestUrl) &&
+      !shouldBypass(requestUrl) &&
+      !hasApiAccess(requestUrl)
+    ) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden by frontend feature gate' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     let response = await originalFetch(input, nextInit);
 
+    // Refresh only for authentication failures (401).
+    // A 403 usually means missing permissions and refreshing would just create retry loops.
     const shouldTryRefresh =
       isInternalApiRequest(requestUrl) &&
       !shouldBypass(requestUrl) &&
       !nextInit?.__authRetried &&
-      (response.status === 401 || response.status === 403);
+      response.status === 401;
 
     if (shouldTryRefresh) {
       const refreshedTokens = await refreshSession(originalFetch);

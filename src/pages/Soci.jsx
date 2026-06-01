@@ -43,6 +43,23 @@ const Soci = ({ onLogout }) => {
     const navigate = useNavigate();
     const [hasOpenedFromUrl, setHasOpenedFromUrl] = useState(false);
 
+    const canReadPayments = (() => {
+        const role = (localStorage.getItem('user_role') || 'user').toLowerCase();
+        if (role === 'superuser') {
+            return true;
+        }
+
+        try {
+            const features = JSON.parse(localStorage.getItem('user_features'));
+            if (features === null || features === undefined) {
+                return true;
+            }
+            return Array.isArray(features) && features.includes('pagamenti');
+        } catch {
+            return true;
+        }
+    })();
+
     useEffect(() => {
         if (soci && soci.length > 0 && !hasOpenedFromUrl) {
             const params = new URLSearchParams(location.search);
@@ -62,7 +79,17 @@ const Soci = ({ onLogout }) => {
     // Fetch pagamenti quota_associativa per la società e filtra per anno selezionato
     useEffect(() => {
         const fetchQuotaPayments = async () => {
-            if (!selectedSocietaId || !selectedAnno) return;
+            if (!selectedSocietaId || !selectedAnno || !canReadPayments) {
+                setQuotaPaymentCFs(new Set());
+                setPastQuotaPaymentCFs(new Set());
+                setTessCurrentCFs(new Set());
+                setTessAnyPastCFs(new Set());
+                setQuotaPaymentSocioIds(new Set());
+                setPastQuotaPaymentSocioIds(new Set());
+                setTessCurrentSocioIds(new Set());
+                setTessAnyPastSocioIds(new Set());
+                return;
+            }
             const societa = societaList.find(s => s.id == selectedSocietaId);
             const { start, end } = getAnnoDateRange(selectedAnno, societa);
             try {
@@ -138,7 +165,7 @@ const Soci = ({ onLogout }) => {
             }
         };
         fetchQuotaPayments();
-    }, [selectedSocietaId, selectedAnno, societaList]);
+    }, [selectedSocietaId, selectedAnno, societaList, canReadPayments]);
 
     useEffect(() => {
         // Fetch current user info for the menu

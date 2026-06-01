@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 
 const SocietaContext = createContext();
 
@@ -6,16 +6,17 @@ export const useSocieta = () => useContext(SocietaContext);
 
 export const SocietaProvider = ({ children }) => {
     const [societaList, setSocietaList] = useState([]);
-    // Initialize from localStorage
-    const [selectedSocietaId, setSelectedSocietaId] = useState(() => {
-        return localStorage.getItem('selectedSocietaId') || '';
-    });
+    // Start neutral to avoid firing page-level requests with stale IDs before validation.
+    const [selectedSocietaId, setSelectedSocietaId] = useState('');
+    const storedSelectedSocietaIdRef = useRef(localStorage.getItem('selectedSocietaId') || '');
     const [loading, setLoading] = useState(true);
 
     // Persist to localStorage whenever selectedSocietaId changes
     useEffect(() => {
         if (selectedSocietaId) {
             localStorage.setItem('selectedSocietaId', selectedSocietaId);
+        } else {
+            localStorage.removeItem('selectedSocietaId');
         }
     }, [selectedSocietaId]);
 
@@ -63,13 +64,29 @@ export const SocietaProvider = ({ children }) => {
                     return;
                 }
 
-                // capture the initial value (from localStorage) or current closure value
-                const currentId = selectedSocietaId;
+                // Preserve the latest selected ID across refreshes; fallback only if it is no longer valid.
+                setSelectedSocietaId((prevSelectedId) => {
+                    if (!visibleSocieta.length) {
+                        return '';
+                    }
 
-                // If there's no selected ID, or the selected ID is not in the new list, select the first one
-                if (visibleSocieta.length > 0 && (!currentId || !visibleSocieta.find(s => s.id == currentId))) {
-                    setSelectedSocietaId(visibleSocieta[0].id);
-                }
+                    const prevId = prevSelectedId ? String(prevSelectedId) : '';
+                    const storedId = storedSelectedSocietaIdRef.current
+                        ? String(storedSelectedSocietaIdRef.current)
+                        : '';
+                    const stillValid = prevId && visibleSocieta.some(s => String(s.id) === prevId);
+                    const storedStillValid = storedId && visibleSocieta.some(s => String(s.id) === storedId);
+
+                    if (stillValid) {
+                        return prevId;
+                    }
+
+                    if (storedStillValid) {
+                        return storedId;
+                    }
+
+                    return String(visibleSocieta[0].id);
+                });
             }
         } catch (error) {
             console.error('Error fetching societa:', error);
