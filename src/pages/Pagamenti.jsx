@@ -215,7 +215,7 @@ const Pagamenti = () => {
         }).join('');
 
         const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
-        const footerText = societa?.footer_text ||
+        const footerText = societa?.receipt_footer_text || societa?.footer_text ||
             'Fuori campo iva art.4 dpr 633/72 - Esente imposte art.148 TUIR -<br/>Esente bollo L 30/12/2018 n. 145 art.1 c.646';
         const societaAddress = [societa?.indirizzo, societa?.comune].filter(Boolean).join(' - ');
 

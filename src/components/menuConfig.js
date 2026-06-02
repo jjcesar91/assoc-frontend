@@ -63,8 +63,9 @@ export const MENU_STRUCTURE = [
         label: 'Pagamenti',
         Icon: CreditCard,
         children: [
-            { id: 'pagamenti-lista',  label: 'Lista pagamenti', path: '/pagamenti' },
-            { id: 'pagamenti-conti',  label: 'Conti',           path: '/pagamenti/conti' },
+            { id: 'pagamenti-lista',    label: 'Lista pagamenti',  path: '/pagamenti' },
+            { id: 'pagamenti-conti',    label: 'Conti',            path: '/pagamenti/conti' },
+            { id: 'pagamenti-template', label: 'Template ricevute', path: '/pagamenti/template' },
         ],
     },
     { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },

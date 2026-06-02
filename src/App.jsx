@@ -10,6 +10,7 @@ import AnnoContabile from './pages/AnnoContabile'
 import SocietaComunicazioni from './pages/SocietaComunicazioni'
 import Modulistica from './pages/Modulistica'
 import TemplateStampa from './pages/TemplateStampa'
+import TemplateRicevuta from './pages/TemplateRicevuta'
 import Prodotti from './pages/Prodotti'
 import Pagamenti from './pages/Pagamenti';
 import NuovoPagamento from './pages/NuovoPagamento';
@@ -200,6 +201,11 @@ function App() {
           <Route path="/pagamenti/conti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Configurazione Conti">
               <Conti />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/pagamenti/template" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Template Ricevute">
+              <TemplateRicevuta />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
