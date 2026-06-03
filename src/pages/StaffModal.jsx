@@ -155,7 +155,7 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                         year: checkDate.getFullYear(),
                         birthplace: luogoNascita || updates.luogoNascita
                     });
-                    if (checkCF.code !== codiceFiscale) {
+                    if (checkCF.code !== codiceFiscale.toUpperCase()) {
                         conflicts.push('Il CF inserito non è coerente con Nome e Cognome specificati');
                     }
                 } catch (e) { /* ignora */ }

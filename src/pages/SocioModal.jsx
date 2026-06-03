@@ -1268,7 +1268,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 });
                 
                 // Update only if different to avoid infinite loops
-                if (cf.code && cf.code !== formData.codice_fiscale) {
+                if (cf.code && cf.code !== formData.codice_fiscale.toUpperCase()) {
                     console.log("Auto-updating CF to:", cf.code);
                     setFormData(prev => ({ ...prev, codice_fiscale: cf.code }));
                     // Clear warning if we successfully auto-generated a valid one based on current data
@@ -1381,7 +1381,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                      });
                      
                      // If the CF we calculate from the data (existing + derived) is different from the input CF
-                     if (checkCF.code !== codice_fiscale) {
+                     if (checkCF.code !== codice_fiscale.toUpperCase()) {
                          // The issue could be just Name or Surname, since we validated the others
                          // Or it could be the Check character
                          // We just issue a general inconsistency warning regarding identity
