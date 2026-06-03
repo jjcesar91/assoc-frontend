@@ -218,7 +218,8 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm(prev => ({ ...prev, [name]: value }));
+        const finalValue = name === 'codiceFiscale' ? value.toUpperCase() : value;
+        setForm(prev => ({ ...prev, [name]: finalValue }));
     };
 
     const handleComuneSelect = (city) => {

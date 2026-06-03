@@ -1227,10 +1227,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             return;
         }
 
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
+        const CF_FIELDS = ['codice_fiscale', 'cf_genitore'];
+        const finalValue = CF_FIELDS.includes(name)
+            ? value.toUpperCase()
+            : (type === 'checkbox' ? checked : value);
+        setFormData(prev => ({ ...prev, [name]: finalValue }));
     };
 
     // Case 1: Compute Codice Fiscale from fields

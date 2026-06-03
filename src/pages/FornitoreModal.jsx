@@ -31,7 +31,8 @@ const FornitoreModal = ({ isOpen, onClose, onSave, fornitore }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const finalValue = name === 'codice_fiscale' ? value.toUpperCase() : value;
+        setFormData(prev => ({ ...prev, [name]: finalValue }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
 
