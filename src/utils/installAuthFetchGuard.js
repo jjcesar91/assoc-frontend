@@ -22,21 +22,22 @@ let refreshInFlight = null;
 
 function hasFeatureAccess(featureId) {
   const role = String(localStorage.getItem('user_role') || 'user').toLowerCase();
-  // Keep superuser unrestricted; other roles must respect feature flags.
-  if (role === 'superuser') {
+  // Keep superuser and admin unrestricted; other roles must respect feature flags.
+  if (role === 'superuser' || role === 'admin') {
     return true;
   }
 
   const rawFeatures = localStorage.getItem('user_features');
-  // Fail closed for protected modules until features are explicitly available.
+  // Se le features non sono ancora caricate (race condition al login) o
+  // il valore è null (nessuna restrizione impostata) → accesso consentito.
   if (rawFeatures === null || rawFeatures === undefined) {
-    return false;
+    return true;
   }
 
   try {
     const features = JSON.parse(rawFeatures);
     if (features === null || features === undefined) {
-      return false;
+      return true; // null = nessuna restrizione, tutte le funzionalità abilitate
     }
     return Array.isArray(features) && features.includes(featureId);
   } catch {
@@ -49,7 +50,16 @@ function hasApiAccess(requestUrl) {
     return hasFeatureAccess('pagamenti');
   }
   if (requestUrl.includes('/products/')) {
-    return hasFeatureAccess('prodotti');
+    // products è una API condivisa usata da pagamenti, soci, attività, scadenziario, prodotti
+    // basta che l'utente abbia almeno una delle feature che la utilizzano
+    return (
+      hasFeatureAccess('prodotti') ||
+      hasFeatureAccess('pagamenti') ||
+      hasFeatureAccess('soci') ||
+      hasFeatureAccess('attivita') ||
+      hasFeatureAccess('scadenziario') ||
+      hasFeatureAccess('contabilita')
+    );
   }
   return true;
 }

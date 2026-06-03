@@ -670,7 +670,7 @@ const NuovoPagamento = () => {
                                     <X size={16} strokeWidth={2}/> Annulla
                                 </button>
                                 <button className={`np-btn ${cart.length > 0 ? 'np-btn-green' : 'np-btn-light-green'}`} onClick={generatePayment} disabled={cart.length === 0}>
-                                    <Check size={16} strokeWidth={2}/> Genera pagamento
+                                    <Check size={16} strokeWidth={2}/> Conferma
                                 </button>
                             </div>
                         </div>
