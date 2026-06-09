@@ -152,36 +152,38 @@
   gap: 20px;
 }
 
-.form-group {
+.login-card .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-label {
+.login-card .form-label {
   font-size: 0.8125rem;
   font-weight: 600;
   color: #374151;
   letter-spacing: 0.01em;
 }
 
-.input-wrapper {
+.login-card .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.input-icon {
+.login-card .input-icon {
   position: absolute;
   left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #94a3b8;
   pointer-events: none;
-  flex-shrink: 0;
+  display: flex;
 }
 
-.form-input {
+.login-card .form-input {
   width: 100%;
-  padding: 11px 14px 11px 40px;
+  padding: 11px 14px 11px 46px;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   background: #f8fafc;
@@ -192,18 +194,18 @@
   box-sizing: border-box;
 }
 
-.form-input::placeholder {
+.login-card .form-input::placeholder {
   color: #b0bec5;
 }
 
-.form-input:focus {
+.login-card .form-input:focus {
   outline: none;
   border-color: #1976d2;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
 }
 
-.form-input--password {
+.login-card .form-input--password {
   padding-right: 44px;
 }
 

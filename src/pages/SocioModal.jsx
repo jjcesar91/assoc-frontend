@@ -976,6 +976,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         const societa = societaList.find(s => s.id == selectedSocietaId);
 
         const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
+        const isProforma = p.tipo_documento === 'proforma';
 
         const modalitaMap = {
             'Contanti': 'CONTANTI',
@@ -1042,11 +1043,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         .total-row td { font-weight: bold; border-top: 2px solid #333; }
         .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
         .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
-        @media print { body { padding: 0; } }
+        .proforma-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 130px; font-weight: 900; color: rgba(180, 0, 0, 0.13); pointer-events: none; z-index: 9999; white-space: nowrap; letter-spacing: 8px; user-select: none; }
+        @media print { body { padding: 0; } .proforma-watermark { position: fixed; color: rgba(180, 0, 0, 0.13); } }
         @page { margin: 10mm; }
     </style>
 </head>
 <body>
+    ${isProforma ? '<div class="proforma-watermark">PROFORMA</div>' : ''}
     <div class="header">
         ${logoUrl ? `<div class="header-logo"><img src="${logoUrl}" alt="Logo" /></div>` : ''}
         <div class="header-info">
@@ -1065,9 +1068,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             <th>STATO DOCUMENTO</th>
         </tr>
         <tr>
-            <td>RICEVUTA</td>
-            <td>${p.numero_ricevuta || ''}</td>
-            <td>${p.progressivo_stagione || ''}</td>
+            <td>${isProforma ? 'PROFORMA' : 'RICEVUTA'}</td>
+            <td>${isProforma ? '' : (p.numero_ricevuta || '')}</td>
+            <td>${isProforma ? '' : (p.progressivo_stagione || '')}</td>
             <td>${(p.data_ricevuta || p.data_pagamento) ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
             <td>${statoLabel}</td>
         </tr>
@@ -2404,13 +2407,24 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             </div>
                                                         </td>
                                                         <td style={{padding: '12px'}}>
-                                                            <span style={{
-                                                                border: `1px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`,
-                                                                color: isEntrata ? '#2ecc71' : '#e74c3c',
-                                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
-                                                            }}>
-                                                                {p.numero_ricevuta || `#${p.id}`}
-                                                            </span>
+                                                            <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                                <span style={{
+                                                                    border: `1px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`,
+                                                                    color: isEntrata ? '#2ecc71' : '#e74c3c',
+                                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
+                                                                }}>
+                                                                    {p.tipo_documento === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`)}
+                                                                </span>
+                                                                {p.tipo_documento === 'proforma' && (
+                                                                    <span style={{
+                                                                        border: '1px solid #8e44ad', color: '#8e44ad',
+                                                                        padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+                                                                        display: 'inline-block', width: 'fit-content'
+                                                                    }}>
+                                                                        PROFORMA
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td style={{padding: '12px'}}>
                                                             <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
@@ -2470,7 +2484,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                     <Folder size={16} />
                                                                 </button>
                                                                 <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia email"><Mail size={16} /></button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia email" onClick={() => setShowComunicazioneModal(true)}><Mail size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -2930,6 +2944,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
+                onConvertProforma={(updated) => {
+                    setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
+                    setSelectedPaymentDetail(updated);
+                }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={prodottiSocieta}
             />

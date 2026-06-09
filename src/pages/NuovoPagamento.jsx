@@ -38,6 +38,7 @@ const NuovoPagamento = () => {
     const prefilledProductId = location.state?.prefilledProductId ?? null;
     const [snackbar, setSnackbar] = useState({ show: false, message: '', type: 'success' });
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+    const [lastPaymentType, setLastPaymentType] = useState('pagamento');
 
     const [showAbbWarningModal, setShowAbbWarningModal] = useState(false);
     const [isCorsoIscrizioneModalOpen, setIsCorsoIscrizioneModalOpen] = useState(false);
@@ -293,6 +294,7 @@ const NuovoPagamento = () => {
                 ...paymentData,
                 societa_id: selectedSocietaId
             };
+            setLastPaymentType(paymentData.tipo_documento || 'pagamento');
             const response = await fetch('/payments/api', {
                 method: 'POST',
                 headers: {
@@ -364,7 +366,7 @@ const NuovoPagamento = () => {
                         }}>
                             <Check size={32} strokeWidth={2.5} color="#059669" />
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Pagamento registrato</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{lastPaymentType === 'proforma' ? 'Proforma registrata' : 'Pagamento registrato'}</div>
                         <div style={{ fontSize: '13px', color: '#6b7280' }}>Reindirizzamento in corso...</div>
                     </div>
                 </div>

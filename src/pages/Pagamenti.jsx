@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
 import ImportVociRicevutaModal from './ImportVociRicevutaModal';
+import ComunicazioneModal from '../components/ComunicazioneModal';
 import './Soci.css';
 
 const Pagamenti = () => {
@@ -22,6 +23,8 @@ const Pagamenti = () => {
     const [isFastModalOpen, setIsFastModalOpen] = useState(false);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
     const [showImportVoci, setShowImportVoci] = useState(false);
+    const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
+    const [selectedSocioForComm, setSelectedSocioForComm] = useState(null);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -139,6 +142,7 @@ const Pagamenti = () => {
         const societa = societaList.find(s => s.id == selectedSocietaId);
 
         const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
+        const isProforma = p.tipo_documento === 'proforma';
 
         const modalitaMap = {
             'Contanti': 'CONTANTI',
@@ -274,11 +278,13 @@ const Pagamenti = () => {
         .total-row td { font-weight: bold; border-top: 2px solid #333; }
         .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
         .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
-        @media print { body { padding: 0; } }
+        .proforma-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 130px; font-weight: 900; color: rgba(180, 0, 0, 0.13); pointer-events: none; z-index: 9999; white-space: nowrap; letter-spacing: 8px; user-select: none; }
+        @media print { body { padding: 0; } .proforma-watermark { position: fixed; color: rgba(180, 0, 0, 0.13); } }
         @page { margin: 10mm; }
     </style>
 </head>
 <body>
+    ${isProforma ? '<div class="proforma-watermark">PROFORMA</div>' : ''}
     <div class="header">
         ${logoUrl ? `<div class="header-logo"><img src="${logoUrl}" alt="Logo" /></div>` : ''}
         <div class="header-info">
@@ -296,8 +302,8 @@ const Pagamenti = () => {
             <th>STATO DOCUMENTO</th>
         </tr>
         <tr>
-            <td>RICEVUTA</td>
-            <td>${p.numero_ricevuta || ''}</td>
+            <td>${isProforma ? 'PROFORMA' : 'RICEVUTA'}</td>
+            <td>${isProforma ? '' : (p.numero_ricevuta || '')}</td>
             <td>${(p.data_ricevuta || p.data_pagamento || '') ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
             <td>${statoLabel}</td>
         </tr>
@@ -410,9 +416,14 @@ const Pagamenti = () => {
             vb = b.data_pagamento || '';
         } else if (sort.key === 'numero_ricevuta') {
             const parseNum = (p) => {
+                if (p.tipo_documento === 'proforma') return Infinity;
                 const raw = p.numero_ricevuta || '';
-                const n = parseInt(raw.split('/')[0], 10);
-                return isNaN(n) ? p.id : n;
+                const parts = raw.split('/');
+                const num = parseInt(parts[0], 10);
+                const year = parseInt(parts[1], 10);
+                if (isNaN(num)) return 0;
+                if (isNaN(year)) return num;
+                return year * 100000 + num;
             };
             va = parseNum(a);
             vb = parseNum(b);
@@ -638,14 +649,25 @@ const Pagamenti = () => {
                                                     </div>
                                                 </td>
                                                 <td style={{padding: '12px'}}>
-                                                    <span style={{
-                                                        border: `1px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`, 
-                                                        color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
-                                                        padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
-                                                        textDecoration: isAnnullato ? 'line-through' : 'none'
-                                                    }}>
-                                                        {p.numero_ricevuta || `#${p.id}`}
-                                                    </span>
+                                                    <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                        <span style={{
+                                                            border: `1px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`, 
+                                                            color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                                                            padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
+                                                            textDecoration: isAnnullato ? 'line-through' : 'none'
+                                                        }}>
+                                                            {p.tipo_documento === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`)}
+                                                        </span>
+                                                        {p.tipo_documento === 'proforma' && (
+                                                            <span style={{
+                                                                border: '1px solid #8e44ad', color: '#8e44ad',
+                                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+                                                                display: 'inline-block', width: 'fit-content'
+                                                            }}>
+                                                                PROFORMA
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td style={{padding: '12px'}}>
                                                     <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
@@ -677,7 +699,7 @@ const Pagamenti = () => {
                                                             <Folder size={16} />
                                                         </button>
                                                         <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia"><Mail size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
 
                                                     </div>
                                                 </td>
@@ -719,6 +741,14 @@ const Pagamenti = () => {
                 onClose={() => setSelectedPaymentDetail(null)}
                 pagamento={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
+                onConvertProforma={(updated) => {
+                    setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
+                    setSelectedPaymentDetail(updated);
+                }}
+                onDeleteProforma={(id) => {
+                    setPayments(prev => prev.filter(p => p.id !== id));
+                    setSelectedPaymentDetail(null);
+                }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={products}
             />
@@ -729,6 +759,13 @@ const Pagamenti = () => {
                 societaId={selectedSocietaId}
                 onImported={fetchPayments}
             />
+
+            {showComunicazioneModal && selectedSocioForComm && (
+                <ComunicazioneModal
+                    socioId={selectedSocioForComm}
+                    onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); }}
+                />
+            )}
         </div>
     );
 };

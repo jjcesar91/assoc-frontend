@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar } from 'lucide-react';
+import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar, FileText } from 'lucide-react';
 import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -148,7 +148,7 @@ const GeneraPagamentoModal = ({
         return `${d}/${m}/${y}`;
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = (tipoDocumento = 'pagamento') => {
         if (submitting) return;
         setSubmitting(true);
         const periodoStr = (hasSubscription && subscriptionDates)
@@ -213,9 +213,10 @@ const GeneraPagamentoModal = ({
             codice_fiscale_genitore: codiceFiscaleGenitore,
             partita_iva: partitaIva,
             note: note,
-            emetti_ricevuta: emettiRicevuta,
-            anno_ricevuta: annoRicevuta,
+            emetti_ricevuta: tipoDocumento === 'proforma' ? 'NO' : emettiRicevuta,
+            anno_ricevuta: tipoDocumento === 'proforma' ? null : annoRicevuta,
             socio_id: socio?.id || null,
+            tipo_documento: tipoDocumento,
         };
         onConfirm(payload);
     };
@@ -377,7 +378,10 @@ const GeneraPagamentoModal = ({
 
                 </div>
                 <div className="gpm-footer">
-                    <button className="gpm-submit-btn" onClick={handleConfirm} disabled={submitting}>
+                    <button className="gpm-submit-btn gpm-submit-btn--proforma" onClick={() => handleConfirm('proforma')} disabled={submitting}>
+                        <FileText size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Genera proforma'}
+                    </button>
+                    <button className="gpm-submit-btn" onClick={() => handleConfirm('pagamento')} disabled={submitting}>
                         <Check size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Genera pagamento'}
                     </button>
                 </div>

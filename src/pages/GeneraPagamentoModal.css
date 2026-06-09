@@ -171,6 +171,7 @@
     padding: 15px 20px;
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     background-color: #fcfcfc;
 }
 
@@ -191,4 +192,12 @@
 
 .gpm-submit-btn:hover {
     background-color: #27ae60;
+}
+
+.gpm-submit-btn--proforma {
+    background-color: #8e44ad;
+}
+
+.gpm-submit-btn--proforma:hover {
+    background-color: #7d3c98;
 }
