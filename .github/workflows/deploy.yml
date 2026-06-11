@@ -19,5 +19,3 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin master
-            cd ../assoc-backend/docker
-            docker compose up -d --build frontend
