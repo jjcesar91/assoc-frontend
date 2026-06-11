@@ -9,32 +9,32 @@ export default defineConfig({
     allowedHosts: ['dev.etspoint.it'],
     proxy: {
       '/auth': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
       '/users': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
       '/documents': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
       '/products': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
       '/payments': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
       '/activities': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:80',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
       },
