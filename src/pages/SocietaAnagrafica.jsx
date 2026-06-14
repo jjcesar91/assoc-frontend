@@ -66,7 +66,8 @@ const SocietaAnagrafica = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi', 'denominazione', 'indirizzo', 'cognome_rappr_legale', 'nome_rappr_legale'];
-        const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
+        let finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
+        if (name === 'codice_sdi') finalValue = finalValue.replace(/[^A-Z0-9]/g, '').slice(0, 7);
         setFormData(prev => ({ ...prev, [name]: finalValue }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
@@ -211,6 +212,7 @@ const SocietaAnagrafica = () => {
                             name="codice_sdi"
                             value={formData.codice_sdi}
                             onChange={handleChange}
+                            maxLength={7}
                             style={{ width: '100%', padding: '8px 12px', ...(errors.codice_sdi ? { borderColor: 'var(--danger-color)', backgroundColor: '#fff5f5' } : {}) }}
                         />
                         {errors.codice_sdi && <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginTop: '4px' }}>{errors.codice_sdi}</div>}

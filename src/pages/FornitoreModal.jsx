@@ -32,7 +32,8 @@ const FornitoreModal = ({ isOpen, onClose, onSave, fornitore }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi', 'denominazione', 'indirizzo', 'comune'];
-        const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
+        let finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
+        if (name === 'codice_sdi') finalValue = finalValue.replace(/[^A-Z0-9]/g, '').slice(0, 7);
         setFormData(prev => ({ ...prev, [name]: finalValue }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
