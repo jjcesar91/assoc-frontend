@@ -327,20 +327,20 @@ const GeneraPagamentoModal = ({
                     <div className="gpm-row-3">
                         <div className="gpm-field-group">
                             <label>Codice fiscale intestatario</label>
-                            <input 
-                                type="text" 
-                                className="gpm-input" 
-                                value={codiceFiscale} 
-                                onChange={(e) => setCodiceFiscale(e.target.value)}
+                            <input
+                                type="text"
+                                className="gpm-input"
+                                value={codiceFiscale}
+                                onChange={(e) => setCodiceFiscale(e.target.value.toUpperCase())}
                             />
                         </div>
                         <div className="gpm-field-group">
                             <label>Codice fiscale genitore</label>
-                            <input 
-                                type="text" 
-                                className="gpm-input" 
-                                value={codiceFiscaleGenitore} 
-                                onChange={(e) => setCodiceFiscaleGenitore(e.target.value)}
+                            <input
+                                type="text"
+                                className="gpm-input"
+                                value={codiceFiscaleGenitore}
+                                onChange={(e) => setCodiceFiscaleGenitore(e.target.value.toUpperCase())}
                             />
                         </div>
                         <div className="gpm-field-group">

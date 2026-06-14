@@ -121,7 +121,7 @@ const FornitoreSelector = ({ fornitori, selected, onSelect, societaId, onFornito
                                 className="md-input"
                                 placeholder="Codice fiscale / P.IVA"
                                 value={newForm.codice_fiscale}
-                                onChange={e => setNewForm(p => ({ ...p, codice_fiscale: e.target.value }))}
+                                onChange={e => setNewForm(p => ({ ...p, codice_fiscale: e.target.value.toUpperCase() }))}
                             />
                         </div>
                         {newError && <div className="nom-nuovo-fornitore-error">{newError}</div>}

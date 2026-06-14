@@ -31,7 +31,8 @@ const FornitoreModal = ({ isOpen, onClose, onSave, fornitore }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        const finalValue = name === 'codice_fiscale' ? value.toUpperCase() : value;
+        const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi'];
+        const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
         setFormData(prev => ({ ...prev, [name]: finalValue }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
