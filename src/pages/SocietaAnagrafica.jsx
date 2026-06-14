@@ -64,7 +64,7 @@ const SocietaAnagrafica = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi'];
+        const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi', 'denominazione', 'indirizzo', 'cognome_rappr_legale', 'nome_rappr_legale'];
         const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
         setFormData(prev => ({ ...prev, [name]: finalValue }));
     };
@@ -221,10 +221,10 @@ const SocietaAnagrafica = () => {
                          {/* Comune with Autocomplete */}
                          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' }}>Comune</label>
                          {/* Remove the extra relative div wrapper and let CityAutocomplete handle it or wrap tightly */}
-                         <CityAutocomplete 
-                             value={formData.comune} 
-                             onChange={(e) => setFormData(prev => ({ ...prev, comune: e.target.value }))} 
-                             onSelect={(c) => setFormData(prev => ({ ...prev, comune: c.nome, cap: c.cap || prev.cap }))}
+                         <CityAutocomplete
+                             value={formData.comune}
+                             onChange={(e) => setFormData(prev => ({ ...prev, comune: e.target.value.toUpperCase() }))}
+                             onSelect={(c) => setFormData(prev => ({ ...prev, comune: c.nome.toUpperCase(), cap: c.cap || prev.cap }))}
                              style={{ marginTop: 0, width: '100%' }} 
                          />
                     </div>

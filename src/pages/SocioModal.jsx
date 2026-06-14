@@ -1230,8 +1230,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             return;
         }
 
-        const CF_FIELDS = ['codice_fiscale', 'cf_genitore'];
-        const finalValue = CF_FIELDS.includes(name)
+        const UPPERCASE_FIELDS = ['codice_fiscale', 'cf_genitore', 'nome', 'cognome', 'luogo_nascita', 'indirizzo', 'comune', 'nome_genitore', 'cognome_genitore'];
+        const finalValue = UPPERCASE_FIELDS.includes(name)
             ? value.toUpperCase()
             : (type === 'checkbox' ? checked : value);
         setFormData(prev => ({ ...prev, [name]: finalValue }));

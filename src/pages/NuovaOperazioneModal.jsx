@@ -108,7 +108,7 @@ const FornitoreSelector = ({ fornitori, selected, onSelect, societaId, onFornito
                             className="md-input"
                             placeholder="Denominazione *"
                             value={newForm.denominazione}
-                            onChange={e => setNewForm(p => ({ ...p, denominazione: e.target.value }))}
+                            onChange={e => setNewForm(p => ({ ...p, denominazione: e.target.value.toUpperCase() }))}
                         />
                         <div className="nom-nuovo-fornitore-row">
                             <input

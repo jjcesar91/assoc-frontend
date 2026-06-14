@@ -29,7 +29,8 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        const finalValue = name === 'codice_fiscale' ? value.toUpperCase() : value;
+        const UPPERCASE_FIELDS = ['codice_fiscale', 'denominazione'];
+        const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
         setForm(prev => ({ ...prev, [name]: finalValue }));
         setErrors(prev => ({ ...prev, [name]: undefined }));
     };

@@ -218,7 +218,8 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        const finalValue = name === 'codiceFiscale' ? value.toUpperCase() : value;
+        const UPPERCASE_FIELDS = ['codiceFiscale', 'cognome', 'nome', 'luogoNascita', 'indirizzo', 'comune', 'iban'];
+        const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
         setForm(prev => ({ ...prev, [name]: finalValue }));
     };
 
