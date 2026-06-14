@@ -35,6 +35,7 @@ const SocietaAnagrafica = () => {
     const [tempAffiliazione, setTempAffiliazione] = useState({ tipo: '', nome: '' });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (selectedSocietaId && societaList.length > 0) {
@@ -67,6 +68,7 @@ const SocietaAnagrafica = () => {
         const UPPERCASE_FIELDS = ['codice_fiscale', 'codice_sdi', 'denominazione', 'indirizzo', 'cognome_rappr_legale', 'nome_rappr_legale'];
         const finalValue = UPPERCASE_FIELDS.includes(name) ? value.toUpperCase() : value;
         setFormData(prev => ({ ...prev, [name]: finalValue }));
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
 
     const handleAddAffiliazione = (e) => {
@@ -95,6 +97,17 @@ const SocietaAnagrafica = () => {
 
     const handleSave = async () => {
         if (!selectedSocietaId) return;
+        const validationErrors = {};
+        if (formData.codice_sdi && formData.codice_sdi.trim().length > 0) {
+            if (!/^[A-Z0-9]{6,7}$/.test(formData.codice_sdi.trim())) {
+                validationErrors.codice_sdi = 'Codice SDI non valido (6-7 caratteri alfanumerici).';
+            }
+        }
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+        setErrors({});
         setLoading(true);
         setMessage(null);
         try {
@@ -193,7 +206,14 @@ const SocietaAnagrafica = () => {
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' }}>Codice SDI (es. 000000)</label>
-                        <input className="md-input" name="codice_sdi" value={formData.codice_sdi} onChange={handleChange} style={{ width: '100%', padding: '8px 12px' }} />
+                        <input
+                            className="md-input"
+                            name="codice_sdi"
+                            value={formData.codice_sdi}
+                            onChange={handleChange}
+                            style={{ width: '100%', padding: '8px 12px', ...(errors.codice_sdi ? { borderColor: 'var(--danger-color)', backgroundColor: '#fff5f5' } : {}) }}
+                        />
+                        {errors.codice_sdi && <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginTop: '4px' }}>{errors.codice_sdi}</div>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' }}>PEC</label>
