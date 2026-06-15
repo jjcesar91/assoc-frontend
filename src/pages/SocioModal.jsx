@@ -173,6 +173,21 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         tipo_associazione: '',
         cognome_rappresentante: '',
         nome_rappresentante: '',
+
+        // Campi extra associazione
+        anno_associativo: '',
+        codice_affiliazione: '',
+        scadenza_affiliazione: '',
+        costo_affiliazione: '',
+        costo_tessera_base: '',
+        costo_tessera_associativa: '',
+        costo_tessera_completa: '',
+        durata_consiglio_direttivo: '',
+        scadenza_consiglio_direttivo: '',
+        etichette: '',
+        runts: false,
+        somministrazione: false,
+        sito_web: '',
     };
 
     const [formData, setFormData] = useState(initialState);
@@ -692,6 +707,21 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 tipo_associazione: socioData.tipo_associazione || '',
                 cognome_rappresentante: socioData.cognome_rappresentante || '',
                 nome_rappresentante: socioData.nome_rappresentante || '',
+
+                // Campi extra associazione
+                anno_associativo: socioData.anno_associativo || '',
+                codice_affiliazione: socioData.codice_affiliazione || '',
+                scadenza_affiliazione: socioData.scadenza_affiliazione || '',
+                costo_affiliazione: socioData.costo_affiliazione ?? '',
+                costo_tessera_base: socioData.costo_tessera_base ?? '',
+                costo_tessera_associativa: socioData.costo_tessera_associativa ?? '',
+                costo_tessera_completa: socioData.costo_tessera_completa ?? '',
+                durata_consiglio_direttivo: socioData.durata_consiglio_direttivo ?? '',
+                scadenza_consiglio_direttivo: socioData.scadenza_consiglio_direttivo || '',
+                etichette: socioData.etichette || '',
+                runts: !!socioData.runts,
+                somministrazione: !!socioData.somministrazione,
+                sito_web: socioData.sito_web || '',
             }));
             
             // Set Checkbox state based on date existence
@@ -1604,6 +1634,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
         // { id: 'Crediti', icon: <Coins size={18}/>, label: 'Crediti' }
+        ...(formData.tipo_socio === 'associazione' ? [{ id: 'DatiAssociazione', icon: <Folder size={18}/>, label: 'Associazione' }] : []),
         ...(isEditMode ? [{ id: 'AccessoFrontend', icon: <Globe size={18}/>, label: 'Accesso Frontend' }] : []),
     ];
 
@@ -2694,6 +2725,183 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
+                        </div>
+                    )}
+
+                    {/* ── Tab Dati Associazione ────────────────────────── */}
+                    {activeTab === 'DatiAssociazione' && (
+                        <div className="md-form-grid-custom">
+
+                            {/* Sezione: Affiliazione */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Affiliazione</span>
+                            </div>
+
+                            <div className="form-group grid-span-3">
+                                <label className="field-label">Anno associativo</label>
+                                <input
+                                    className="md-input"
+                                    name="anno_associativo"
+                                    value={formData.anno_associativo}
+                                    onChange={handleChange}
+                                    placeholder="es. 01/09-31/08"
+                                />
+                            </div>
+                            <div className="form-group grid-span-3">
+                                <label className="field-label">Codice affiliazione</label>
+                                <input
+                                    className="md-input"
+                                    name="codice_affiliazione"
+                                    value={formData.codice_affiliazione}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="form-group grid-span-3">
+                                <label className="field-label">Scadenza affiliazione</label>
+                                <input
+                                    className="md-input"
+                                    type="date"
+                                    name="scadenza_affiliazione"
+                                    value={formData.scadenza_affiliazione}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="form-group grid-span-3">
+                                <label className="field-label">Costo affiliazione (€)</label>
+                                <input
+                                    className="md-input"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="costo_affiliazione"
+                                    value={formData.costo_affiliazione}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* Sezione: Costi tessere */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Costi tessere</span>
+                            </div>
+
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Costo tessera base (€)</label>
+                                <input
+                                    className="md-input"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="costo_tessera_base"
+                                    value={formData.costo_tessera_base}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Costo tessera associativa (€)</label>
+                                <input
+                                    className="md-input"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="costo_tessera_associativa"
+                                    value={formData.costo_tessera_associativa}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Costo tessera completa (€)</label>
+                                <input
+                                    className="md-input"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="costo_tessera_completa"
+                                    value={formData.costo_tessera_completa}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* Sezione: Consiglio direttivo */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consiglio direttivo</span>
+                            </div>
+
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Durata consiglio direttivo (anni)</label>
+                                <input
+                                    className="md-input"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    name="durata_consiglio_direttivo"
+                                    value={formData.durata_consiglio_direttivo}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Scadenza consiglio direttivo</label>
+                                <input
+                                    className="md-input"
+                                    type="date"
+                                    name="scadenza_consiglio_direttivo"
+                                    value={formData.scadenza_consiglio_direttivo}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* Sezione: Informazioni aggiuntive */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Informazioni aggiuntive</span>
+                            </div>
+
+                            <div className="form-group grid-span-6">
+                                <label className="field-label">Sito web</label>
+                                <input
+                                    className="md-input"
+                                    type="url"
+                                    name="sito_web"
+                                    value={formData.sito_web}
+                                    onChange={handleChange}
+                                    placeholder="https://"
+                                />
+                            </div>
+                            <div className="form-group grid-span-6">
+                                <label className="field-label">Etichette</label>
+                                <input
+                                    className="md-input"
+                                    name="etichette"
+                                    value={formData.etichette}
+                                    onChange={handleChange}
+                                    placeholder="es. Tecnici Sportivi, Gestionale"
+                                />
+                            </div>
+
+                            <div className="form-group grid-span-6">
+                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="runts"
+                                        checked={!!formData.runts}
+                                        onChange={handleChange}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                    />
+                                    Iscritta al RUNTS
+                                </label>
+                                <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>Registro Unico del Terzo Settore</span>
+                            </div>
+                            <div className="form-group grid-span-6">
+                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="somministrazione"
+                                        checked={!!formData.somministrazione}
+                                        onChange={handleChange}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                    />
+                                    Somministrazione
+                                </label>
+                            </div>
+
                         </div>
                     )}
 
