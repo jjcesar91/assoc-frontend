@@ -37,6 +37,7 @@ const Soci = ({ onLogout }) => {
     const [importReport, setImportReport] = useState(null); // { total, current, creati, saltati, errori[], logs[], done, headers, dataRecords }
     const [importLogFilters, setImportLogFilters] = useState({ creati: true, saltati: true, errori: true });
     const importFileRef = useRef(null);
+    const importOdooFileRef = useRef(null);
     const importLogRef = useRef(null);
 
     const location = useLocation();
@@ -614,6 +615,201 @@ const Soci = ({ onLogout }) => {
         if (importFileRef.current) importFileRef.current.value = '';
     };
 
+    const importOdooFromFile = async (file) => {
+        if (!selectedSocietaId) { showAlert('Seleziona una società prima di importare.', 'Nessuna società selezionata', 'warning'); return; }
+        const content = await file.text();
+
+        const parseCSV = (text) => {
+            const records = [];
+            let cur = ''; let inQ = false; let fields = [];
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (inQ) {
+                    if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
+                    else if (ch === '"') { inQ = false; }
+                    else { cur += ch; }
+                } else if (ch === '"') { inQ = true;
+                } else if (ch === ',') { fields.push(cur.trim()); cur = '';
+                } else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+                    if (ch === '\r') i++;
+                    fields.push(cur.trim()); cur = '';
+                    if (fields.some(f => f !== '')) records.push(fields);
+                    fields = [];
+                } else { cur += ch; }
+            }
+            if (cur.trim() || fields.length) { fields.push(cur.trim()); if (fields.some(f => f !== '')) records.push(fields); }
+            return records;
+        };
+
+        const allRecords = parseCSV(content);
+        if (allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
+
+        const headers = allRecords[0];
+        const col = (name) => headers.findIndex(h => h.trim() === name);
+        const rows = allRecords.slice(1);
+
+        const get = (cells, name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
+        const stripPhone = (p) => p.replace(/^'+/, '').trim();
+        const parseISODate = (s) => { if (!s) return null; return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; };
+        const parseDecimal = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
+        const parseInteger = (s) => { const n = parseInt(s, 10); return isNaN(n) ? null : n; };
+
+        // Separa aziende da contatti persona
+        const aziende = rows.filter(r => get(r, "È un'azienda") === 'True');
+        const contatti = rows.filter(r => get(r, "È un'azienda") !== 'True');
+
+        // Lookup presidente per azienda: cerca per "Azienda collegata" + "Posizione lavorativa" contiene "presid"
+        const presidentiMap = {};
+        for (const c of contatti) {
+            const azienda = get(c, 'Azienda collegata');
+            const posizione = get(c, 'Posizione lavorativa').toLowerCase();
+            if (azienda && posizione.includes('presid') && !presidentiMap[azienda]) {
+                presidentiMap[azienda] = c;
+            }
+        }
+
+        const total = aziende.length;
+        if (total === 0) { showAlert('Nessuna riga azienda trovata nel file (colonna "È un\'azienda" = True).', 'Nessuna associazione', 'warning'); return; }
+
+        const token = localStorage.getItem('token');
+        let existingNames = new Set();
+        let existingCFs = new Set();
+        try {
+            const res = await fetch(`/users/api/soci?societa_id=${selectedSocietaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    data.forEach(s => {
+                        if (s.codice_fiscale) existingCFs.add(s.codice_fiscale.toUpperCase());
+                        if (s.ragione_sociale) existingNames.add(s.ragione_sociale.toLowerCase());
+                    });
+                }
+            }
+        } catch(e) { /* usa set vuoti se fallisce */ }
+
+        setShowActionsMenu(false);
+        setImportLogFilters({ creati: true, saltati: true, errori: true });
+        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false });
+
+        let creati = 0; let saltati = 0; const errori = []; const logs = [];
+
+        for (let i = 0; i < aziende.length; i++) {
+            const cells = aziende[i];
+            const g = (name) => get(cells, name);
+
+            const ragione_sociale = g('Nome');
+            const cf = g('Codice Fiscale').toUpperCase();
+
+            if (!ragione_sociale) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2}: nome azienda assente` });
+                setImportReport(prev => ({ ...prev, current: i+1, saltati, errori: [...errori], logs: [...logs] }));
+                if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+                continue;
+            }
+
+            const isDup = (cf && existingCFs.has(cf)) || existingNames.has(ragione_sociale.toLowerCase());
+            if (isDup) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${ragione_sociale}): già presente nella società` });
+                setImportReport(prev => ({ ...prev, current: i+1, saltati, errori: [...errori], logs: [...logs] }));
+                if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+                continue;
+            }
+
+            // Presidente
+            let nome_rappresentante = ''; let cognome_rappresentante = '';
+            const presRow = presidentiMap[ragione_sociale];
+            if (presRow) {
+                const fullName = get(presRow, 'Nome').trim();
+                const parts = fullName.split(' ').filter(Boolean);
+                if (parts.length > 1) {
+                    cognome_rappresentante = parts.pop();
+                    nome_rappresentante = parts.join(' ');
+                } else {
+                    cognome_rappresentante = fullName;
+                }
+            }
+
+            // Telefono
+            const tel1 = stripPhone(g('Telefono'));
+            const tel2 = stripPhone(g('Dispositivo mobile'));
+            const telefono = tel1 || tel2;
+            const recapito_2 = tel1 && tel2 ? tel2 : '';
+
+            // PEC
+            const pec = g('E-mail PEC') || g('Pec') || '';
+
+            const payload = {
+                societa_id: selectedSocietaId,
+                tipo_socio: 'associazione',
+                ragione_sociale,
+                codice_fiscale: cf || null,
+                partita_iva: g('Partita IVA') || null,
+                codice_sdi: g('Codice destinatario') || null,
+                pec: pec || null,
+                email: g('E-mail') || null,
+                telefono: telefono || null,
+                recapito_2: recapito_2 || null,
+                indirizzo: g('Indirizzo') || null,
+                indirizzo_2: g('Indirizzo 2') || null,
+                comune: g('Città') || null,
+                cap: g('CAP') || null,
+                nome_rappresentante: nome_rappresentante || null,
+                cognome_rappresentante: cognome_rappresentante || null,
+                tipo_associazione: g('Tipologia associazione') || null,
+                anno_associativo: g('Anno associativo') || null,
+                codice_affiliazione: g('Codice affiliazione') || null,
+                scadenza_affiliazione: parseISODate(g('Scadenza affiliazione')),
+                costo_affiliazione: parseDecimal(g('Costo affiliazione')),
+                costo_tessera_base: parseDecimal(g('Costo tessera base')),
+                costo_tessera_associativa: parseDecimal(g('Costo tessera Associativa')),
+                costo_tessera_completa: parseDecimal(g('Costo tessera Completa')),
+                durata_consiglio_direttivo: parseInteger(g('Durata consiglio direttivo')),
+                scadenza_consiglio_direttivo: parseISODate(g('Scadenza consiglio direttivo')),
+                etichette: g('Etichette') || null,
+                runts: g('Runts') === 'True',
+                somministrazione: g('Somministrazione') === 'True',
+                note: g('Attività') || null,
+            };
+
+            try {
+                const res = await fetch('/users/api/soci', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload),
+                });
+                if (res.ok) {
+                    creati++;
+                    if (cf) existingCFs.add(cf);
+                    existingNames.add(ragione_sociale.toLowerCase());
+                    logs.push({ type: 'OK', rowIdx: i, message: `Riga ${i+2} - ${ragione_sociale}: creata` });
+                } else {
+                    const err = await res.json();
+                    const msg = err.error || err.message || 'errore sconosciuto';
+                    if (msg.toLowerCase().includes('duplicat')) {
+                        saltati++;
+                        logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${ragione_sociale}): duplicato rilevato dal server` });
+                    } else {
+                        errori.push(`Riga ${i+2} (${ragione_sociale}): ${msg}`);
+                        logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${ragione_sociale}): ${msg}` });
+                    }
+                }
+            } catch(e) {
+                errori.push(`Riga ${i+2} (${ragione_sociale}): errore di rete`);
+                logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${ragione_sociale}): errore di rete` });
+            }
+
+            setImportReport(prev => ({ ...prev, current: i+1, creati, saltati, errori: [...errori], logs: [...logs] }));
+            if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        }
+
+        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true });
+        if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        if (creati > 0) fetchSoci();
+        if (importOdooFileRef.current) importOdooFileRef.current.value = '';
+    };
+
     const handleEditSocio = (socio) => {
         setSelectedSocio(socio);
         setShowModal(true);
@@ -773,6 +969,7 @@ const Soci = ({ onLogout }) => {
                                     {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Altre azioni</div> */}
                                     {/* <button className="dropdown-item-custom"><Tag size={16}/> Gestione liste</button> */}
                                     <button className="dropdown-item-custom" onClick={() => importFileRef.current?.click()}><FileUp size={16}/> Importa Excel</button>
+                                    <button className="dropdown-item-custom" onClick={() => importOdooFileRef.current?.click()}><FileUp size={16}/> Importa CSV Odoo</button>
                                     <button className="dropdown-item-custom" onClick={handleExportTemplate}><FileDown size={16}/> Esporta template</button>
                                     {/* <button className="dropdown-item-custom"><RefreshCw size={16}/> Rielabora whitelist</button> */}
                                     {/* Accessi hidden */}
@@ -946,6 +1143,13 @@ const Soci = ({ onLogout }) => {
                 accept=".csv,.xlsx,.xls"
                 style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) importFromFile(e.target.files[0]); }}
+            />
+            <input
+                ref={importOdooFileRef}
+                type="file"
+                accept=".csv"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) importOdooFromFile(e.target.files[0]); }}
             />
 
             {/* Modal avanzamento/riepilogo importazione */}

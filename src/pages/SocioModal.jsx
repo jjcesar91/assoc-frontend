@@ -136,6 +136,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         
         // Indirizzo
         indirizzo: '',
+        indirizzo_2: '',
         comune: '',
         cap: '',
 
@@ -682,6 +683,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 email: socioData.user?.email || socioData.email || '',
                 telefono: socioData.telefono || '',
                 indirizzo: socioData.indirizzo || '',
+                indirizzo_2: socioData.indirizzo_2 || '',
                 comune: socioData.comune || '',
                 cap: socioData.cap || '',
                 cf_genitore: socioData.cf_genitore || '',
@@ -1900,6 +1902,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     <div className="form-group grid-span-2">
                                         <label className="field-label">Cap</label>
                                         <input className="md-input" name="cap" value={formData.cap} onChange={handleChange} />
+                                    </div>
+                                    <div className="form-group grid-span-12">
+                                        <label className="field-label">Indirizzo 2</label>
+                                        <input className="md-input" name="indirizzo_2" placeholder="Indirizzo aggiuntivo..." value={formData.indirizzo_2} onChange={handleChange} />
                                     </div>
 
                                     {/* Tipo Associazione */}
