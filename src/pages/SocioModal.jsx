@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
+import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import DettaglioPagamentoModal from './DettaglioPagamentoModal';
@@ -246,6 +246,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const [tuttiCorsi, setTuttiCorsi] = useState([]);
     const [prodottiSocieta, setProdottiSocieta] = useState([]);
     const [aggiungiCorsoLoading, setAggiungiCorsoLoading] = useState(false);
+
+    // Contatti Associazione State
+    const [contatti, setContatti] = useState([]);
+    const [contattiLoading, setContattiLoading] = useState(false);
+    const [showAddContattoForm, setShowAddContattoForm] = useState(false);
+    const [newContatto, setNewContatto] = useState({ nome: '', posizione_lavorativa: '', telefono: '', dispositivo_mobile: '', email: '' });
+    const [editingContatto, setEditingContatto] = useState(null);
 
     // Accesso Frontend State
     const [frontendAccess, setFrontendAccess] = useState({
@@ -780,6 +787,23 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     useEffect(() => {
         if (activeTab === 'Comunicazioni' && formData.id) {
             fetchComunicazioni();
+        }
+    }, [activeTab, formData.id]);
+
+    const fetchContatti = async () => {
+        if (!formData.id) return;
+        setContattiLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/users/api/soci/${formData.id}/contatti`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setContatti(await res.json());
+        } catch (e) { console.error(e); }
+        finally { setContattiLoading(false); }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'Contatti' && formData.id) {
+            fetchContatti();
         }
     }, [activeTab, formData.id]);
 
@@ -1627,16 +1651,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     };
     // ─────────────────────────────────────────────────────────────────────────
 
+    const isAssociazione = formData.tipo_socio === 'associazione';
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
-        // { id: 'Liste', icon: <Tag size={18}/>, label: 'Liste' },
         { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: socioPagamenti.length },
-        { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
-        { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
-        // { id: 'Deskalo', icon: <Monitor size={18}/>, label: 'Deskalo' },
+        ...(!isAssociazione ? [
+            { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
+            { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
+        ] : []),
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
-        // { id: 'Crediti', icon: <Coins size={18}/>, label: 'Crediti' }
-        ...(formData.tipo_socio === 'associazione' ? [{ id: 'DatiAssociazione', icon: <Folder size={18}/>, label: 'Associazione' }] : []),
+        ...(isAssociazione ? [
+            { id: 'DatiAssociazione', icon: <Folder size={18}/>, label: 'Associazione' },
+            { id: 'Contatti', icon: <Users size={18}/>, label: 'Contatti', count: contatti.length || undefined },
+        ] : []),
         ...(isEditMode ? [{ id: 'AccessoFrontend', icon: <Globe size={18}/>, label: 'Accesso Frontend' }] : []),
     ];
 
@@ -2728,7 +2755,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </div>
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && (
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
@@ -2908,6 +2935,106 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </label>
                             </div>
 
+                        </div>
+                    )}
+
+                    {/* ── Tab Contatti Associazione ────────────────────── */}
+                    {activeTab === 'Contatti' && (
+                        <div style={{ padding: '20px 28px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '1rem' }}>Contatti associati</span>
+                                <button className="btn-contained" style={{ backgroundColor: 'var(--primary-color)', height: '32px', fontSize: '0.85rem', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    onClick={() => { setShowAddContattoForm(true); setEditingContatto(null); setNewContatto({ nome: '', posizione_lavorativa: '', telefono: '', dispositivo_mobile: '', email: '' }); }}>
+                                    <PlusCircle size={14}/> Aggiungi
+                                </button>
+                            </div>
+
+                            {showAddContattoForm && (
+                                <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fafafa' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px', marginBottom: '12px' }}>
+                                        <div className="form-group">
+                                            <label className="field-label">Nome *</label>
+                                            <input className="md-input" value={newContatto.nome} onChange={e => setNewContatto(p => ({ ...p, nome: e.target.value }))} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="field-label">Posizione lavorativa</label>
+                                            <input className="md-input" value={newContatto.posizione_lavorativa} onChange={e => setNewContatto(p => ({ ...p, posizione_lavorativa: e.target.value }))} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="field-label">Telefono</label>
+                                            <input className="md-input" value={newContatto.telefono} onChange={e => setNewContatto(p => ({ ...p, telefono: e.target.value }))} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="field-label">Dispositivo mobile</label>
+                                            <input className="md-input" value={newContatto.dispositivo_mobile} onChange={e => setNewContatto(p => ({ ...p, dispositivo_mobile: e.target.value }))} />
+                                        </div>
+                                        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                            <label className="field-label">E-mail</label>
+                                            <input className="md-input" value={newContatto.email} onChange={e => setNewContatto(p => ({ ...p, email: e.target.value }))} />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        <button className="btn-outlined" style={{ height: '32px', fontSize: '0.85rem', padding: '0 12px' }} onClick={() => { setShowAddContattoForm(false); setEditingContatto(null); }}>Annulla</button>
+                                        <button className="btn-contained" style={{ backgroundColor: 'var(--primary-color)', height: '32px', fontSize: '0.85rem', padding: '0 12px' }}
+                                            onClick={async () => {
+                                                if (!newContatto.nome.trim()) return;
+                                                const token = localStorage.getItem('token');
+                                                const url = editingContatto
+                                                    ? `/users/api/soci/${formData.id}/contatti/${editingContatto.id}`
+                                                    : `/users/api/soci/${formData.id}/contatti`;
+                                                const method = editingContatto ? 'PUT' : 'POST';
+                                                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(newContatto) });
+                                                if (res.ok) { fetchContatti(); setShowAddContattoForm(false); setEditingContatto(null); }
+                                            }}>
+                                            {editingContatto ? 'Salva modifiche' : 'Aggiungi contatto'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {contattiLoading ? (
+                                <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Caricamento…</div>
+                            ) : contatti.length === 0 ? (
+                                <div style={{ color: '#aaa', fontSize: '0.9rem', textAlign: 'center', padding: '32px 0' }}>Nessun contatto associato</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid #e0e0e0' }}>
+                                            <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Nome</th>
+                                            <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Ruolo</th>
+                                            <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Telefono</th>
+                                            <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Cellulare</th>
+                                            <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>E-mail</th>
+                                            <th style={{ width: '60px' }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {contatti.map(c => (
+                                            <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                                <td style={{ padding: '8px' }}>{c.nome}</td>
+                                                <td style={{ padding: '8px', color: '#666' }}>{c.posizione_lavorativa || '—'}</td>
+                                                <td style={{ padding: '8px', color: '#666' }}>{c.telefono || '—'}</td>
+                                                <td style={{ padding: '8px', color: '#666' }}>{c.dispositivo_mobile || '—'}</td>
+                                                <td style={{ padding: '8px', color: '#666' }}>{c.email || '—'}</td>
+                                                <td style={{ padding: '8px', display: 'flex', gap: '6px' }}>
+                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-color)', padding: '2px 4px' }}
+                                                        onClick={() => { setEditingContatto(c); setNewContatto({ nome: c.nome, posizione_lavorativa: c.posizione_lavorativa || '', telefono: c.telefono || '', dispositivo_mobile: c.dispositivo_mobile || '', email: c.email || '' }); setShowAddContattoForm(true); }}>
+                                                        <RefreshCw size={14}/>
+                                                    </button>
+                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53935', padding: '2px 4px' }}
+                                                        onClick={async () => {
+                                                            const token = localStorage.getItem('token');
+                                                            const res = await fetch(`/users/api/soci/${formData.id}/contatti/${c.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                                                            if (res.ok) fetchContatti();
+                                                        }}>
+                                                        <Trash2 size={14}/>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     )}
 

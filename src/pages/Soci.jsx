@@ -656,14 +656,20 @@ const Soci = ({ onLogout }) => {
 
         // Separa aziende da contatti persona
         const aziende = rows.filter(r => get(r, "È un'azienda") === 'True');
-        const contatti = rows.filter(r => get(r, "È un'azienda") !== 'True');
+        // Contatti: righe con "Azienda collegata" valorizzato
+        const contattiRows = rows.filter(r => get(r, 'Azienda collegata') !== '');
 
-        // Lookup presidente per azienda: cerca per "Azienda collegata" + "Posizione lavorativa" contiene "presid"
+        // Lookup presidente per azienda (by "Azienda collegata" = "Nome visualizzato" dell'associazione)
         const presidentiMap = {};
-        for (const c of contatti) {
+        // Lookup tutti i contatti per azienda (by "Nome visualizzato")
+        const contattiByAzienda = {};
+        for (const c of contattiRows) {
             const azienda = get(c, 'Azienda collegata');
+            if (!azienda) continue;
+            if (!contattiByAzienda[azienda]) contattiByAzienda[azienda] = [];
+            contattiByAzienda[azienda].push(c);
             const posizione = get(c, 'Posizione lavorativa').toLowerCase();
-            if (azienda && posizione.includes('presid') && !presidentiMap[azienda]) {
+            if (posizione.includes('presid') && !presidentiMap[azienda]) {
                 presidentiMap[azienda] = c;
             }
         }
@@ -717,9 +723,12 @@ const Soci = ({ onLogout }) => {
                 continue;
             }
 
+            // Chiave per lookup contatti: "Nome visualizzato" dell'associazione
+            const nomeVisualizzato = g('Nome visualizzato') || ragione_sociale;
+
             // Presidente
             let nome_rappresentante = ''; let cognome_rappresentante = '';
-            const presRow = presidentiMap[ragione_sociale];
+            const presRow = presidentiMap[nomeVisualizzato] || presidentiMap[ragione_sociale];
             if (presRow) {
                 const fullName = get(presRow, 'Nome').trim();
                 const parts = fullName.split(' ').filter(Boolean);
@@ -780,10 +789,31 @@ const Soci = ({ onLogout }) => {
                     body: JSON.stringify(payload),
                 });
                 if (res.ok) {
+                    const newSocio = await res.json();
                     creati++;
                     if (cf) existingCFs.add(cf);
                     existingNames.add(ragione_sociale.toLowerCase());
                     logs.push({ type: 'OK', rowIdx: i, message: `Riga ${i+2} - ${ragione_sociale}: creata` });
+                    // Crea contatti associati
+                    const righeContatti = contattiByAzienda[nomeVisualizzato] || contattiByAzienda[ragione_sociale] || [];
+                    for (const cr of righeContatti) {
+                        const cNome = get(cr, 'Nome').trim();
+                        if (!cNome) continue;
+                        const cPayload = {
+                            nome: cNome,
+                            posizione_lavorativa: get(cr, 'Posizione lavorativa') || null,
+                            telefono: stripPhone(get(cr, 'Telefono')) || null,
+                            dispositivo_mobile: stripPhone(get(cr, 'Dispositivo mobile')) || null,
+                            email: get(cr, 'E-mail') || null,
+                        };
+                        try {
+                            await fetch(`/users/api/soci/${newSocio.id}/contatti`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify(cPayload),
+                            });
+                        } catch(e) { /* contatto fallito, non blocca */ }
+                    }
                 } else {
                     const err = await res.json();
                     const msg = err.error || err.message || 'errore sconosciuto';
