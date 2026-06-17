@@ -46,7 +46,8 @@ const Pagamenti = () => {
         dataA: '',
         utente: 'TUTTI',
         statoPagamento: 'TUTTI',
-        modalitaPagamento: 'TUTTI'
+        modalitaPagamento: 'TUTTI',
+        tipoDocumento: 'TUTTI'
     });
 
     useEffect(() => {
@@ -57,7 +58,8 @@ const Pagamenti = () => {
             dataA: '',
             utente: 'TUTTI',
             statoPagamento: 'TUTTI',
-            modalitaPagamento: 'TUTTI'
+            modalitaPagamento: 'TUTTI',
+            tipoDocumento: 'TUTTI'
         });
         setSelectedPaymentDetail(null);
         setIsFastModalOpen(false);
@@ -406,6 +408,8 @@ const Pagamenti = () => {
         if (filters.intestatario && !p.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
         if (filters.modalitaPagamento !== 'TUTTI' && p.modalita_pagamento !== filters.modalitaPagamento) return false;
         if (filters.statoPagamento !== 'TUTTI' && p.stato_pagamento !== filters.statoPagamento) return false;
+        if (filters.tipoDocumento === 'PROFORMA' && p.tipo_documento !== 'proforma') return false;
+        if (filters.tipoDocumento === 'NORMALE' && p.tipo_documento === 'proforma') return false;
         if (filters.dataDa && p.data_pagamento < filters.dataDa) return false;
         if (filters.dataA && p.data_pagamento > filters.dataA) return false;
         return true;
@@ -515,8 +519,8 @@ const Pagamenti = () => {
 
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità pagamento</label>
-                            <select 
-                                className="md-select" 
+                            <select
+                                className="md-select"
                                 style={{width: '100%', padding: '6px 12px'}}
                                 value={filters.modalitaPagamento}
                                 onChange={(e) => handleFilterChange('modalitaPagamento', e.target.value)}
@@ -530,14 +534,22 @@ const Pagamenti = () => {
                             </select>
                         </div>
 
-                        <div style={{display:'flex', gap:'8px', marginLeft: 'auto'}}>
-                            <button 
-                                className="btn-contained" 
-                                style={{backgroundColor: 'var(--primary-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Tipo documento</label>
+                            <select
+                                className="md-select"
+                                style={{width: '100%', padding: '6px 12px'}}
+                                value={filters.tipoDocumento}
+                                onChange={(e) => handleFilterChange('tipoDocumento', e.target.value)}
                             >
-                                <Printer size={14}/> Chiusura <ChevronDown size={14}/>
-                            </button>
-                            <button 
+                                <option value="TUTTI">TUTTI</option>
+                                <option value="NORMALE">NORMALE</option>
+                                <option value="PROFORMA">PROFORMA</option>
+                            </select>
+                        </div>
+
+                        <div style={{display:'flex', gap:'8px', marginLeft: 'auto'}}>
+                            <button
                                 className="btn-contained" 
                                 style={{backgroundColor: '#1abc9c', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                             >
