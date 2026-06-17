@@ -4,6 +4,7 @@ import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coi
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import DettaglioOrdineModal from './DettaglioOrdineModal';
+import { getStatoOrdine, getStatoOrdineBadgeStyle } from '../utils/ordineUtils';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
@@ -997,14 +998,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     };
 
     const handleDeleteSocioPagamento = async (id) => {
-        if (!await confirm('Sei sicuro di voler eliminare questo pagamento?')) return;
+        if (!await confirm('Sei sicuro di voler eliminare questo ordine?')) return;
         try {
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 setSocioPagamenti(prev => prev.filter(p => p.id !== id));
                 if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
             } else {
-                showAlert('Errore durante l\'eliminazione del pagamento', 'Errore');
+                showAlert('Errore durante l\'eliminazione dell\'ordine', 'Errore');
             }
         } catch (e) {
             console.error(e);
@@ -1660,7 +1661,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const isAssociazione = formData.tipo_socio === 'associazione';
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
-        { id: 'Pagamenti', icon: <CreditCard size={18}/>, label: 'Pagamenti', count: socioPagamenti.length },
+        { id: 'Ordini', icon: <CreditCard size={18}/>, label: 'Ordini', count: socioPagamenti.length },
         ...(!isAssociazione ? [
             { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
             { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
@@ -1750,7 +1751,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 <option value="iscrizione_senza_ricevuta">Iscrizione senza ricevuta</option>
                                 <option value="revoca_iscrizione">Revoca iscrizione</option>
                                 <option value="accetta_socio">Accetta come socio</option>
-                                <option value="nuovo_pagamento">Nuovo pagamento</option>
+                                <option value="nuovo_pagamento">Nuovo ordine</option>
                                 
                                 <optgroup label="Modulistica">
                                     <option value="modulo_iscrizione">MODULO ISCRIZIONE</option>
@@ -2356,20 +2357,20 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         )
                     )}
 
-                    {activeTab === 'Pagamenti' && (
+                    {activeTab === 'Ordini' && (
                         <div>
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Pagamenti</h3>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Ordini</h3>
                                 <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                                     <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
-                                        {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} pagament{filteredPagamenti.length === 1 ? 'o' : 'i'}
+                                        {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} ordin{filteredPagamenti.length === 1 ? 'e' : 'i'}
                                     </span>
                                     {isEditMode && formData.id && (
                                         <button
                                             style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, #2563eb)', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
                                             onClick={() => navigate('/nuovo-ordine', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
                                         >
-                                            <CreditCard size={15} /> Nuovo pagamento
+                                            <CreditCard size={15} /> Nuovo ordine
                                         </button>
                                     )}
                                 </div>
@@ -2454,7 +2455,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         ) : filteredPagamenti.length === 0 ? (
                                             <tr>
                                                 <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
-                                                    {socioPagamenti.length === 0 ? 'Nessun pagamento trovato' : 'Nessun pagamento corrisponde ai filtri'}
+                                                    {socioPagamenti.length === 0 ? 'Nessun ordine trovato' : 'Nessun ordine corrisponde ai filtri'}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -2493,22 +2494,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                         </td>
                                                         <td style={{padding: '12px'}}>
                                                             <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                                                                <span style={{
-                                                                    border: `1px solid ${isEntrata ? '#2ecc71' : '#e74c3c'}`,
-                                                                    color: isEntrata ? '#2ecc71' : '#e74c3c',
-                                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
-                                                                }}>
-                                                                    {p.tipo_documento === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`)}
+                                                                <span style={getStatoOrdineBadgeStyle(getStatoOrdine(p))}>
+                                                                    {(() => { const s = getStatoOrdine(p); return s === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`); })()}
                                                                 </span>
-                                                                {p.tipo_documento === 'proforma' && (
-                                                                    <span style={{
-                                                                        border: '1px solid #8e44ad', color: '#8e44ad',
-                                                                        padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
-                                                                        display: 'inline-block', width: 'fit-content'
-                                                                    }}>
-                                                                        PROFORMA
-                                                                    </span>
-                                                                )}
+                                                                <span style={getStatoOrdineBadgeStyle(getStatoOrdine(p))}>
+                                                                    {getStatoOrdine(p)?.toUpperCase()}
+                                                                </span>
                                                             </div>
                                                         </td>
                                                         <td style={{padding: '12px'}}>
@@ -2776,7 +2767,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </div>
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Pagamenti' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && (
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Ordini' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
