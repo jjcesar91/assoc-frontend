@@ -223,6 +223,12 @@ const Modulistica = () => {
                         </td>
                     </tr>
                 </table>
+
+                ${footerText ? `
+                <!-- FOOTER -->
+                <div style="margin-top: 40px; padding-top: 10px; border-top: 1px solid #000; font-size: 8pt; color: #555; text-align: center; line-height: 1.4;">
+                    ${footerText}
+                </div>` : ''}
             </div>
             `;
 
@@ -546,22 +552,18 @@ const Modulistica = () => {
                         
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>Seleziona la data per il documento</label>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <input 
-                                    type="date" 
+                            <div className="date-custom-icon" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    type="date"
                                     className="md-input"
-                                    value={printDate} 
+                                    value={printDate}
                                     onChange={(e) => setPrintDate(e.target.value)}
-                                    style={{ width: '100%', padding: '10px 35px 10px 10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333' }}
+                                    style={{ width: '100%', paddingRight: '35px' }}
                                 />
-                                <Calendar 
-                                    size={18} 
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }} 
-                                    onClick={(e) => {
-                                        // Try to find the input sibling to show picker
-                                        const input = e.currentTarget.parentNode.querySelector('input[type="date"]');
-                                        if (input && input.showPicker) input.showPicker();
-                                    }} 
+                                <Calendar
+                                    size={18}
+                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }}
+                                    onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>
                         </div>

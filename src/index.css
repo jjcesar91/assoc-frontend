@@ -90,3 +90,7 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.date-custom-icon input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}

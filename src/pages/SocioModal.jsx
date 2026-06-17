@@ -1275,7 +1275,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        
+
         // Handle Certificate Flag
         if (name === 'ha_certificato') {
             setHaCertificato(checked);
@@ -1291,6 +1291,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             ? value.toUpperCase()
             : (type === 'checkbox' ? checked : value);
         setFormData(prev => ({ ...prev, [name]: finalValue }));
+    };
+
+    const handleNumericOnlyChange = (e) => {
+        const { name, value } = e.target;
+        const filtered = value.replace(/\D/g, '').slice(0, 11);
+        setFormData(prev => ({ ...prev, [name]: filtered }));
     };
 
     // Case 1: Compute Codice Fiscale from fields
@@ -1883,11 +1889,26 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     {/* CF | P.IVA | SDI | PEC */}
                                     <div className="form-group grid-span-3">
                                         <label className="field-label">Codice fiscale *</label>
-                                        <input className="md-input" name="codice_fiscale" value={formData.codice_fiscale} onChange={handleChange} required />
+                                        <input
+                                            className="md-input"
+                                            name="codice_fiscale"
+                                            value={formData.codice_fiscale}
+                                            onChange={handleNumericOnlyChange}
+                                            inputMode="numeric"
+                                            maxLength={11}
+                                            required
+                                        />
                                     </div>
                                     <div className="form-group grid-span-3">
                                         <label className="field-label">Partita IVA</label>
-                                        <input className="md-input" name="partita_iva" value={formData.partita_iva} onChange={handleChange} />
+                                        <input
+                                            className="md-input"
+                                            name="partita_iva"
+                                            value={formData.partita_iva}
+                                            onChange={handleNumericOnlyChange}
+                                            inputMode="numeric"
+                                            maxLength={11}
+                                        />
                                     </div>
                                     <div className="form-group grid-span-3">
                                         <label className="field-label">Codice SDI (es. 000000)</label>
