@@ -5,12 +5,13 @@ import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
-import DettaglioPagamentoModal from './DettaglioPagamentoModal';
+import DettaglioOrdineModal from './DettaglioOrdineModal';
 import ImportVociRicevutaModal from './ImportVociRicevutaModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
+import { getStatoOrdine } from '../utils/ordineUtils';
 import './Soci.css';
 
-const Pagamenti = () => {
+const Ordini = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -45,9 +46,8 @@ const Pagamenti = () => {
         dataDa: '',
         dataA: '',
         utente: 'TUTTI',
-        statoPagamento: 'TUTTI',
-        modalitaPagamento: 'TUTTI',
-        tipoDocumento: 'TUTTI'
+        statoOrdine: 'TUTTI',
+        modalitaPagamento: 'TUTTI'
     });
 
     useEffect(() => {
@@ -57,9 +57,8 @@ const Pagamenti = () => {
             dataDa: '',
             dataA: '',
             utente: 'TUTTI',
-            statoPagamento: 'TUTTI',
-            modalitaPagamento: 'TUTTI',
-            tipoDocumento: 'TUTTI'
+            statoOrdine: 'TUTTI',
+            modalitaPagamento: 'TUTTI'
         });
         setSelectedPaymentDetail(null);
         setIsFastModalOpen(false);
@@ -407,11 +406,9 @@ const Pagamenti = () => {
         if (!p.socio_id) return false;
         if (filters.intestatario && !p.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
         if (filters.modalitaPagamento !== 'TUTTI' && p.modalita_pagamento !== filters.modalitaPagamento) return false;
-        if (filters.statoPagamento !== 'TUTTI' && p.stato_pagamento !== filters.statoPagamento) return false;
-        if (filters.tipoDocumento === 'PROFORMA' && p.tipo_documento !== 'proforma') return false;
-        if (filters.tipoDocumento === 'NORMALE' && p.tipo_documento === 'proforma') return false;
-        if (filters.dataDa && p.data_pagamento < filters.dataDa) return false;
-        if (filters.dataA && p.data_pagamento > filters.dataA) return false;
+        if (filters.statoOrdine !== 'TUTTI' && getStatoOrdine(p) !== filters.statoOrdine.toLowerCase()) return false;
+        if (filters.dataDa && (p.data_ricevuta || p.data_pagamento) < filters.dataDa) return false;
+        if (filters.dataA && (p.data_ricevuta || p.data_pagamento) > filters.dataA) return false;
         return true;
     }).sort((a, b) => {
         let va, vb;
@@ -452,7 +449,7 @@ const Pagamenti = () => {
     return (
         <div className="soci-full-container">
             <div className="main-content">
-                
+
                 {/* Filters Toolbar */}
                 <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch'}}>
                     <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px'}}>
@@ -503,17 +500,17 @@ const Pagamenti = () => {
                         </div>
                         
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato pagamento</label>
-                            <select 
-                                className="md-select" 
+                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato ordine</label>
+                            <select
+                                className="md-select"
                                 style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.statoPagamento}
-                                onChange={(e) => handleFilterChange('statoPagamento', e.target.value)}
+                                value={filters.statoOrdine}
+                                onChange={(e) => handleFilterChange('statoOrdine', e.target.value)}
                             >
                                 <option value="TUTTI">TUTTI</option>
-                                <option value="1. VALIDO CON RICEVUTA">1. VALIDO CON RICEVUTA</option>
-                                <option value="2. VALIDO SENZA RICEVUTA">2. VALIDO SENZA RICEVUTA</option>
-                                <option value="3. ANNULLATO CON RICEVUTA">3. ANNULLATO CON RICEVUTA</option>
+                                <option value="PROFORMA">PROFORMA</option>
+                                <option value="PAGATO">PAGATO</option>
+                                <option value="ANNULLATO">ANNULLATO</option>
                             </select>
                         </div>
 
@@ -531,20 +528,6 @@ const Pagamenti = () => {
                                 <option value="Assegno">ASSEGNO</option>
                                 <option value="Bonifico">BONIFICO</option>
                                 <option value="Online">ONLINE</option>
-                            </select>
-                        </div>
-
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Tipo documento</label>
-                            <select
-                                className="md-select"
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.tipoDocumento}
-                                onChange={(e) => handleFilterChange('tipoDocumento', e.target.value)}
-                            >
-                                <option value="TUTTI">TUTTI</option>
-                                <option value="NORMALE">NORMALE</option>
-                                <option value="PROFORMA">PROFORMA</option>
                             </select>
                         </div>
 
@@ -566,9 +549,9 @@ const Pagamenti = () => {
                                 <button 
                                     className="btn-contained" 
                                     style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
-                                    onClick={() => navigate('/nuovo-pagamento')}
+                                    onClick={() => navigate('/nuovo-ordine')}
                                 >
-                                    <Plus size={14}/> Nuovo Pagamento
+                                    <Plus size={14}/> Nuovo Ordine
                                 </button>
                                 {/* Payment type dropdown hidden - keep code for future use
                                 onClick={() => setShowPaymentMenu(!showPaymentMenu)}
@@ -589,7 +572,7 @@ const Pagamenti = () => {
                                         flexDirection: 'column',
                                         padding: '5px 0'
                                     }}>
-                                        <button onClick={() => { setShowPaymentMenu(false); navigate('/nuovo-pagamento'); }}>
+                                        <button onClick={() => { setShowPaymentMenu(false); navigate('/nuovo-ordine'); }}>
                                             <span>€</span> Normale
                                         </button>
                                         <button onClick={() => { setShowPaymentMenu(false); setIsFastModalOpen(true); }}>
@@ -748,10 +731,10 @@ const Pagamenti = () => {
                 societaId={selectedSocietaId} 
             />
 
-            <DettaglioPagamentoModal
+            <DettaglioOrdineModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                pagamento={selectedPaymentDetail}
+                ordine={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 onConvertProforma={(updated) => {
                     setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -782,4 +765,4 @@ const Pagamenti = () => {
     );
 };
 
-export default Pagamenti;
+export default Ordini;

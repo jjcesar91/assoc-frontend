@@ -12,8 +12,8 @@ import Modulistica from './pages/Modulistica'
 import TemplateStampa from './pages/TemplateStampa'
 import TemplateRicevuta from './pages/TemplateRicevuta'
 import Prodotti from './pages/Prodotti'
-import Pagamenti from './pages/Pagamenti';
-import NuovoPagamento from './pages/NuovoPagamento';
+import Ordini from './pages/Ordini';
+import NuovoOrdine from './pages/NuovoOrdine';
 import Conti from './pages/Conti';
 import Scadenziario from './pages/Scadenziario';
 import Contabilita from './pages/Contabilita';
@@ -188,26 +188,31 @@ function App() {
               <Prodotti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/nuovo-pagamento" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Nuovo Pagamento">
-              <NuovoPagamento />
+          <Route path="/nuovo-ordine" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Nuovo Ordine">
+              <NuovoOrdine />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/pagamenti" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Pagamenti">
-              <Pagamenti />
+          <Route path="/ordini" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Ordini">
+              <Ordini />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/pagamenti/conti" element={isAuthenticated && !isSocio ? (
+          <Route path="/ordini/conti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Configurazione Conti">
               <Conti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/pagamenti/template" element={isAuthenticated && !isSocio ? (
+          <Route path="/ordini/template" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Template Ricevute">
               <TemplateRicevuta />
             </Layout>
           ) : <Navigate to="/login" />} />
+          {/* Redirect vecchi percorsi per compatibilità */}
+          <Route path="/pagamenti" element={<Navigate to="/ordini" replace />} />
+          <Route path="/pagamenti/conti" element={<Navigate to="/ordini/conti" replace />} />
+          <Route path="/pagamenti/template" element={<Navigate to="/ordini/template" replace />} />
+          <Route path="/nuovo-pagamento" element={<Navigate to="/nuovo-ordine" replace />} />
           <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Scadenziario">
               <Scadenziario />

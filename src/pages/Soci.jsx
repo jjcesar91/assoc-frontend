@@ -1125,7 +1125,7 @@ const Soci = ({ onLogout }) => {
                                             >
                                                 <Mail size={18}/>
                                             </button>
-                                            <button className="btn-icon-small" title="Nuovo pagamento" onClick={() => navigate('/nuovo-pagamento', { state: { socio } })}><Euro size={18}/></button>
+                                            <button className="btn-icon-small" title="Nuovo pagamento" onClick={() => navigate('/nuovo-ordine', { state: { socio } })}><Euro size={18}/></button>
                                         </td>
                                     </tr>
                                 ))}

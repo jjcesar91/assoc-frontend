@@ -744,7 +744,7 @@ const Scadenziario = () => {
                                                     <button
                                                         title="Paga"
                                                         style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#2ecc71', color: 'white' }}
-                                                        onClick={() => navigate('/nuovo-pagamento', {
+                                                        onClick={() => navigate('/nuovo-ordine', {
                                                             state: {
                                                                 socio: {
                                                                     id: p.socio_id || null,

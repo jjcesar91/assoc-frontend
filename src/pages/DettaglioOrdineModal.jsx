@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Ban, Calendar, Check, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
+import { getStatoOrdine, getStatoOrdineBadgeStyle } from '../utils/ordineUtils';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConvertProforma, onDeleteProforma, societa, products }) => {
+const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, societa, products }) => {
     const [showConferma, setShowConferma] = useState(false);
     const [showConvertForm, setShowConvertForm] = useState(false);
     const [showEliminaConferma, setShowEliminaConferma] = useState(false);
@@ -155,7 +156,7 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                 <div className="dpm-header">
                     <div className="dpm-title">
                         <Calendar size={20} />
-                        <h2>Dettaglio pagamento</h2>
+                        <h2>Dettaglio ordine</h2>
                     </div>
                     <button className="dpm-close-btn" onClick={onClose}>
                         <X size={20} />
@@ -166,15 +167,15 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                     {/* Dettagli Section */}
                     <div className="dpm-section">
                         <div className="dpm-section-title">Dettagli</div>
-                        
+
                         <div className="dpm-grid-3">
                             <div className="dpm-field">
                                 <label><User size={14} /> Intestatario</label>
                                 <div className="dpm-value">{pagamento.intestatario}</div>
                             </div>
                             <div className="dpm-field">
-                                <label><Calendar size={14} /> Data pagamento</label>
-                                <div className="dpm-value">{formatDate(pagamento.data_pagamento)}</div>
+                                <label><Calendar size={14} /> Data ordine</label>
+                                <div className="dpm-value">{formatDate(pagamento.data_ricevuta || pagamento.data_pagamento)}</div>
                             </div>
                             <div className="dpm-field">
                                 <label>€ Importo</label>
@@ -186,12 +187,11 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
 
                         <div className="dpm-grid-3">
                             <div className="dpm-field">
-                                <label>Tipo documento</label>
+                                <label>Stato ordine</label>
                                 <div className="dpm-value">
-                                    {pagamento.tipo_documento === 'proforma'
-                                        ? <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem', background: '#f3e8ff', color: '#7c3aed', border: '1.5px solid #a855f7', letterSpacing: '0.5px' }}>PROFORMA</span>
-                                        : <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem', background: '#dcfce7', color: '#15803d', border: '1.5px solid #22c55e', letterSpacing: '0.5px' }}>PAGAMENTO</span>
-                                    }
+                                    <span style={getStatoOrdineBadgeStyle(getStatoOrdine(pagamento))}>
+                                        {getStatoOrdine(pagamento)?.toUpperCase()}
+                                    </span>
                                 </div>
                             </div>
                             <div className="dpm-field">
@@ -206,8 +206,13 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                                 </div>
                             </div>
                             <div className="dpm-field">
-                                <label>Data ricevuta</label>
-                                <div className="dpm-value">{pagamento.tipo_documento === 'proforma' ? '—' : formatDate(pagamento.data_ricevuta)}</div>
+                                <label>Data pagamento</label>
+                                <div className="dpm-value">
+                                    {pagamento.tipo_documento === 'proforma'
+                                        ? <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Non ancora registrato</span>
+                                        : formatDate(pagamento.data_pagamento)
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -295,13 +300,13 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', border: 'none', borderRadius: '6px', background: '#7c3aed', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
                             onClick={handleOpenConvertForm}
                         >
-                            <Check size={16} /> Converti in Pagamento
+                            <Check size={16} /> Registra Pagamento
                         </button>
                         <button
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', border: '1.5px solid #dc2626', borderRadius: '6px', background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
                             onClick={() => setShowEliminaConferma(true)}
                         >
-                            <Trash2 size={16} /> Elimina Proforma
+                            <Trash2 size={16} /> Elimina Ordine
                         </button>
                     </div>
                 )}
@@ -319,11 +324,11 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                     <div className="dpm-confirm-modal" style={{ maxWidth: '480px' }}>
                         <div className="dpm-confirm-header" style={{ background: '#7c3aed' }}>
                             <Check size={22} />
-                            <span>Converti Proforma in Pagamento</span>
+                            <span>Registra Pagamento</span>
                         </div>
                         <div className="dpm-confirm-body">
                             <p style={{ marginBottom: '16px' }}>
-                                Stai per convertire la proforma intestata a <strong>{pagamento.intestatario}</strong> in un pagamento valido con ricevuta.
+                                Stai per registrare il pagamento per l'ordine intestato a <strong>{pagamento.intestatario}</strong> e generare la relativa ricevuta.
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                 <div>
@@ -380,10 +385,10 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                     <div className="dpm-confirm-modal">
                         <div className="dpm-confirm-header" style={{ background: '#dc2626' }}>
                             <Trash2 size={22} />
-                            <span>Conferma eliminazione proforma</span>
+                            <span>Conferma eliminazione ordine</span>
                         </div>
                         <div className="dpm-confirm-body">
-                            <p>Stai per eliminare definitivamente la proforma intestata a <strong>{pagamento.intestatario}</strong> di <strong>€ {formatCurrency(pagamento.importo)}</strong>.</p>
+                            <p>Stai per eliminare definitivamente l'ordine intestato a <strong>{pagamento.intestatario}</strong> di <strong>€ {formatCurrency(pagamento.importo)}</strong>.</p>
                             <p className="dpm-confirm-warning">Il record verrà cancellato dal database in modo permanente. Questa operazione non può essere annullata.</p>
                         </div>
                         <div className="dpm-confirm-footer">
@@ -395,7 +400,7 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
                                 onClick={handleConfermaEliminaProforma}
                                 disabled={deleting}
                             >
-                                <Trash2 size={15} /> {deleting ? 'Eliminazione…' : 'Sì, elimina proforma'}
+                                <Trash2 size={15} /> {deleting ? 'Eliminazione…' : 'Sì, elimina ordine'}
                             </button>
                         </div>
                     </div>
@@ -430,4 +435,4 @@ const DettaglioPagamentoModal = ({ isOpen, onClose, pagamento, onAnnulla, onConv
     );
 };
 
-export default DettaglioPagamentoModal;
+export default DettaglioOrdineModal;

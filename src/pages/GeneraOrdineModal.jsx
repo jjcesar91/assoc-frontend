@@ -4,7 +4,7 @@ import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 
-const GeneraPagamentoModal = ({ 
+const GeneraOrdineModal = ({
     isOpen, 
     onClose, 
     onConfirm, 
@@ -226,7 +226,7 @@ const GeneraPagamentoModal = ({
             <div className="gpm-modal">
                 <div className="gpm-header">
                     <div className="gpm-title">
-                        <Euro size={20} strokeWidth={2}/> Conferma
+                        <Euro size={20} strokeWidth={2}/> Nuovo Ordine
                     </div>
                     <button className="gpm-close-btn" onClick={onClose}>
                         <X size={20} />
@@ -304,7 +304,7 @@ const GeneraPagamentoModal = ({
                             </div>
                         </div>
                         <div className="gpm-field-group">
-                            <label>Data ricevuta</label>
+                            <label>Data documento</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                 <input 
                                     type="date" 
@@ -379,10 +379,10 @@ const GeneraPagamentoModal = ({
                 </div>
                 <div className="gpm-footer">
                     <button className="gpm-submit-btn gpm-submit-btn--proforma" onClick={() => handleConfirm('proforma')} disabled={submitting}>
-                        <FileText size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Genera proforma'}
+                        <FileText size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Salva come Proforma'}
                     </button>
                     <button className="gpm-submit-btn" onClick={() => handleConfirm('pagamento')} disabled={submitting}>
-                        <Check size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Genera pagamento'}
+                        <Check size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Registra Pagamento'}
                     </button>
                 </div>
             </div>
@@ -390,4 +390,4 @@ const GeneraPagamentoModal = ({
     );
 };
 
-export default GeneraPagamentoModal;
+export default GeneraOrdineModal;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
-import DettaglioPagamentoModal from './DettaglioPagamentoModal';
+import DettaglioOrdineModal from './DettaglioOrdineModal';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
@@ -981,7 +981,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     }, [socioPagamenti, prodottiSocieta]);
 
     const handleRinnovaPagamento = (p) => {
-        navigate('/nuovo-pagamento', {
+        navigate('/nuovo-ordine', {
             state: {
                 socio: {
                     id: formData.id || p.socio_id || null,
@@ -1724,7 +1724,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     if (val === 'comunicazione') {
                                         setShowComunicazioneModal(true);
                                     } else if (val === 'nuovo_pagamento') {
-                                        navigate('/nuovo-pagamento', { state: { socio: socioData } });
+                                        navigate('/nuovo-ordine', { state: { socio: socioData } });
                                     } else if (val === 'iscrizione_senza_ricevuta') {
                                         setShowIscrizioneModal(true);
                                     } else if (val === 'revoca_iscrizione') {
@@ -2367,7 +2367,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     {isEditMode && formData.id && (
                                         <button
                                             style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, #2563eb)', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
-                                            onClick={() => navigate('/nuovo-pagamento', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
+                                            onClick={() => navigate('/nuovo-ordine', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
                                         >
                                             <CreditCard size={15} /> Nuovo pagamento
                                         </button>
@@ -3301,10 +3301,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                  />
             )}
 
-            <DettaglioPagamentoModal
+            <DettaglioOrdineModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                pagamento={selectedPaymentDetail}
+                ordine={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 onConvertProforma={(updated) => {
                     setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));

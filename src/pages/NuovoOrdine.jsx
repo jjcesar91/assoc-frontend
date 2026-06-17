@@ -5,9 +5,9 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificato } from '../utils/certificatoUtils';
 import RicercaSocioModal from './RicercaSocioModal';
-import GeneraPagamentoModal from './GeneraPagamentoModal';
+import GeneraOrdineModal from './GeneraOrdineModal';
 import AbbonamentoDateModal from './AbbonamentoDateModal';
-import DettaglioPagamentoModal from './DettaglioPagamentoModal';
+import DettaglioOrdineModal from './DettaglioOrdineModal';
 import IscrizioneCorsoDopoModal from './IscrizioneCorsoDopoModal';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
@@ -22,7 +22,7 @@ const getCertStatus = (scadenza) => {
     return 'ISCRITTO';
 };
 
-const NuovoPagamento = () => {
+const NuovoOrdine = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
@@ -327,7 +327,7 @@ const NuovoPagamento = () => {
                 }
 
                 setShowSuccessOverlay(true);
-                setTimeout(() => navigate('/pagamenti', { replace: true }), 1200);
+                setTimeout(() => navigate('/ordini', { replace: true }), 1200);
             } else {
                 showSnackbar('Errore durante la generazione del pagamento', 'error');
             }
@@ -340,7 +340,7 @@ const NuovoPagamento = () => {
     const handleCorsoModalClose = () => {
         setIsCorsoIscrizioneModalOpen(false);
         setShowSuccessOverlay(true);
-        setTimeout(() => navigate('/pagamenti', { replace: true }), 1200);
+        setTimeout(() => navigate('/ordini', { replace: true }), 1200);
     };
 
     const getItemUnitPrice = (item) => parseFloat((item.unitPriceStr || '0').replace(',', '.')) || 0;
@@ -366,7 +366,7 @@ const NuovoPagamento = () => {
                         }}>
                             <Check size={32} strokeWidth={2.5} color="#059669" />
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{lastPaymentType === 'proforma' ? 'Proforma registrata' : 'Pagamento registrato'}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{lastPaymentType === 'proforma' ? 'Proforma creata' : 'Ordine registrato'}</div>
                         <div style={{ fontSize: '13px', color: '#6b7280' }}>Reindirizzamento in corso...</div>
                     </div>
                 </div>
@@ -421,7 +421,7 @@ const NuovoPagamento = () => {
                 duration={subscriptionDuration}
             />
 
-            <GeneraPagamentoModal
+            <GeneraOrdineModal
                 isOpen={isGeneraModalOpen}
                 onClose={() => setIsGeneraModalOpen(false)}
                 onConfirm={handleConfirmPayment}
@@ -431,10 +431,10 @@ const NuovoPagamento = () => {
                 subscriptionDates={subscriptionDates}
             />
 
-            <DettaglioPagamentoModal
+            <DettaglioOrdineModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                pagamento={selectedPaymentDetail}
+                ordine={selectedPaymentDetail}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={products}
             />
@@ -455,14 +455,14 @@ const NuovoPagamento = () => {
                     {/* INTESTATARIO BLOCK */}
                     <div className="np-card">
                         <div className="np-card-header np-header-default">
-                            Intestatario pagamento
+                            Intestatario ordine
                         </div>
                         <div className="np-card-body">
                             {!selectedSocio ? (
                                 <>
                                     <div className="np-alert-red">
                                         <AlertTriangle size={18} strokeWidth={1.5}/>
-                                        Seleziona un socio, oppure imposta l'intestatario (non censito) dopo aver fatto click su 'Genera Pagamento'
+                                        Seleziona un socio, oppure imposta l'intestatario (non censito) dopo aver fatto click su 'Registra Pagamento'
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                                         <button className="np-btn np-btn-yellow" onClick={() => setIsRicercaModalOpen(true)}>
@@ -573,13 +573,13 @@ const NuovoPagamento = () => {
                     {/* ULTIMI 3 PAGAMENTI */}
                     <div className="np-card">
                         <div className="np-card-header np-header-default">
-                            € Ultimi 3 pagamenti
+                            Ultimi 3 ordini
                         </div>
                         <div className="np-card-body">
                             {!selectedSocio || recentPayments.length === 0 ? (
                                 <div className="np-alert-red" style={{ padding: '30px 0' }}>
                                     <AlertTriangle size={18} strokeWidth={1.5}/>
-                                    Non sono presenti pagamenti per il socio selezionato come intestatario del pagamento corrente
+                                    Non sono presenti ordini per il socio selezionato
                                 </div>
                             ) : (
                                 <div>
@@ -672,7 +672,7 @@ const NuovoPagamento = () => {
                                     <X size={16} strokeWidth={2}/> Annulla
                                 </button>
                                 <button className={`np-btn ${cart.length > 0 ? 'np-btn-green' : 'np-btn-light-green'}`} onClick={generatePayment} disabled={cart.length === 0}>
-                                    <Check size={16} strokeWidth={2}/> Conferma
+                                    <Check size={16} strokeWidth={2}/> Procedi
                                 </button>
                             </div>
                         </div>
@@ -693,4 +693,4 @@ const NuovoPagamento = () => {
     );
 };
 
-export default NuovoPagamento;
+export default NuovoOrdine;

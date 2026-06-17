@@ -59,13 +59,13 @@ export const MENU_STRUCTURE = [
         ],
     },
     {
-        id: 'pagamenti',
-        label: 'Pagamenti',
+        id: 'ordini',
+        label: 'Ordini',
         Icon: CreditCard,
         children: [
-            { id: 'pagamenti-lista',    label: 'Lista pagamenti',  path: '/pagamenti' },
-            { id: 'pagamenti-conti',    label: 'Conti',            path: '/pagamenti/conti' },
-            { id: 'pagamenti-template', label: 'Template ricevute', path: '/pagamenti/template' },
+            { id: 'ordini-lista',    label: 'Lista ordini',     path: '/ordini' },
+            { id: 'ordini-conti',    label: 'Conti',            path: '/ordini/conti' },
+            { id: 'ordini-template', label: 'Template ricevute', path: '/ordini/template' },
         ],
     },
     { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
