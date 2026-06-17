@@ -1046,12 +1046,34 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         const modalitaLabel = modalitaMap[p.modalita_pagamento] || (p.modalita_pagamento?.toUpperCase() || '');
 
         const importoFormatted = Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',');
-        const quoteItems = (p.quote || '').split(', ').filter(Boolean);
 
-        const quoteRows = quoteItems.map(q => `
+        // Parse payment_items: estrae descrizione, qty, costo unitario, subtotale
+        let lineItems;
+        const piRaw = p.payment_items;
+        const piArr = Array.isArray(piRaw) ? piRaw
+            : (typeof piRaw === 'string' ? (() => { try { return JSON.parse(piRaw); } catch { return null; } })() : null);
+        if (Array.isArray(piArr) && piArr.length > 0) {
+            lineItems = piArr.map(pi => {
+                const qtyMatch = (pi.quote || '').match(/\(x(\d+)\)/);
+                const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                const subtotale = Math.abs(parseFloat(pi.importo || 0));
+                const unitPrice = qty > 0 ? subtotale / qty : subtotale;
+                const descrizione = (pi.quote || '').replace(/\s*\(x\d+\)\s*€[\d,.]+(\s*\(Scadenza[^)]*\))?/, '').trim() || (pi.quote || '');
+                return { descrizione, qty, unitPrice, subtotale };
+            });
+        } else {
+            const quoteItems = (p.quote || '').split(', ').filter(Boolean);
+            const totalAmount = Math.abs(parseFloat(p.importo || 0));
+            lineItems = quoteItems.length === 1
+                ? [{ descrizione: quoteItems[0], qty: 1, unitPrice: totalAmount, subtotale: totalAmount }]
+                : quoteItems.map(q => ({ descrizione: q, qty: null, unitPrice: null, subtotale: null }));
+        }
+        const quoteRows = lineItems.map(li => `
             <tr>
-                <td>${q}</td>
-                <td style="text-align:right">${quoteItems.length === 1 ? importoFormatted : ''}</td>
+                <td>${li.descrizione}</td>
+                <td style="text-align:center">${li.qty !== null ? li.qty : '—'}</td>
+                <td style="text-align:right">${li.unitPrice !== null ? li.unitPrice.toFixed(2).replace('.', ',') : '—'}</td>
+                <td style="text-align:right">${li.subtotale !== null ? li.subtotale.toFixed(2).replace('.', ',') : '—'}</td>
             </tr>
         `).join('');
 
@@ -1094,9 +1116,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
-        .items-table th:last-child { text-align: right; }
+        .items-table th:nth-child(2) { text-align: center; width: 50px; }
+        .items-table th:nth-child(3), .items-table th:last-child { text-align: right; }
         .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
-        .items-table td:last-child { text-align: right; }
+        .items-table td:nth-child(2) { text-align: center; }
+        .items-table td:nth-child(3), .items-table td:last-child { text-align: right; }
         .total-row td { font-weight: bold; border-top: 2px solid #333; }
         .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
         .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
@@ -1156,11 +1180,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     <table class="items-table">
         <tr>
             <th>Descrizione</th>
+            <th>Qtà</th>
+            <th>Costo unitario</th>
             <th>Subtotale</th>
         </tr>
         ${quoteRows}
         <tr class="total-row">
-            <td>TOTALE</td>
+            <td colspan="3">TOTALE</td>
             <td>${importoFormatted}</td>
         </tr>
     </table>

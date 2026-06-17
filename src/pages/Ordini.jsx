@@ -174,8 +174,8 @@ const Ordini = () => {
         }
 
         // Costruisce le righe della ricevuta:
-        // Priorità: payment_items (con importo per voce) → fallback: split del campo quote
-        let lineItems; // array di { descrizione, importo: number|null }
+        // Priorità: payment_items (con importo per voce, qty estratta da quote) → fallback: split del campo quote
+        let lineItems; // array di { descrizione, qty, unitPrice, subtotale }
         const piSource = allItems.find(i => {
             const pi = i.payment_items;
             if (!pi) return false;
@@ -186,38 +186,44 @@ const Ordini = () => {
             const arr = Array.isArray(piSource.payment_items)
                 ? piSource.payment_items
                 : JSON.parse(piSource.payment_items);
-            lineItems = arr.map(pi => ({
-                descrizione: (pi.product_id && products.length)
-                    ? (products.find(pr => Number(pr.id) === Number(pi.product_id))?.description || pi.quote || piSource.quote || '')
-                    : (pi.quote || piSource.quote || ''),
-                importo: Math.abs(parseFloat(pi.importo || 0)),
-            }));
+            lineItems = arr.map(pi => {
+                const qtyMatch = (pi.quote || '').match(/\(x(\d+)\)/);
+                const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+                const subtotale = Math.abs(parseFloat(pi.importo || 0));
+                const unitPrice = qty > 0 ? subtotale / qty : subtotale;
+                const rawDesc = (pi.product_id && products.length)
+                    ? (products.find(pr => Number(pr.id) === Number(pi.product_id))?.description || null)
+                    : null;
+                const descrizione = rawDesc
+                    || (pi.quote || '').replace(/\s*\(x\d+\)\s*€[\d,.]+(\s*\(Scadenza[^)]*\))?/, '').trim()
+                    || (pi.quote || '');
+                return { descrizione, qty, unitPrice, subtotale };
+            });
         } else {
-            // Fallback: splittare il campo quote per righe visibili distinte
-            // Non abbiamo importi individuali → importo = null (si mostra solo il TOTALE)
             const primaryItem = allItems[0] || p;
             const rawQuote = primaryItem.quote || '';
             const sep = rawQuote.includes(' + ') ? ' + ' : ', ';
             const parts = rawQuote.split(sep).map(s => s.trim()).filter(Boolean);
             const totalSplit = Math.abs(parseFloat(primaryItem.importo || 0));
             if (parts.length <= 1) {
-                lineItems = [{ descrizione: rawQuote, importo: totalSplit }];
+                lineItems = [{ descrizione: rawQuote, qty: 1, unitPrice: totalSplit, subtotale: totalSplit }];
             } else {
-                // Righe senza importo individuale, solo totale
-                lineItems = parts.map(d => ({ descrizione: d, importo: null }));
+                lineItems = parts.map(d => ({ descrizione: d, qty: null, unitPrice: null, subtotale: null }));
             }
         }
 
-        const totalAmount = lineItems.reduce((acc, li) => acc + (li.importo ?? 0), 0) ||
+        const totalAmount = lineItems.reduce((acc, li) => acc + (li.subtotale ?? 0), 0) ||
             Math.abs(parseFloat((allItems[0] || p).importo || 0));
         const importoFormatted = totalAmount.toFixed(2).replace('.', ',');
 
-        const quoteRows = lineItems.map(li => {
-            const cell = li.importo !== null
-                ? `<td style="text-align:right">${li.importo.toFixed(2).replace('.', ',')}</td>`
-                : `<td style="text-align:right; color:#aaa;">—</td>`;
-            return `<tr><td>${li.descrizione}</td>${cell}</tr>`;
-        }).join('');
+        const quoteRows = lineItems.map(li => `
+            <tr>
+                <td>${li.descrizione}</td>
+                <td style="text-align:center">${li.qty !== null ? li.qty : '—'}</td>
+                <td style="text-align:right">${li.unitPrice !== null ? li.unitPrice.toFixed(2).replace('.', ',') : '—'}</td>
+                <td style="text-align:right">${li.subtotale !== null ? li.subtotale.toFixed(2).replace('.', ',') : '—'}</td>
+            </tr>
+        `).join('');
 
         const logoUrl = societa?.logo_path ? `/users/${societa.logo_path}` : null;
         const footerText = societa?.receipt_footer_text || societa?.footer_text ||
@@ -273,9 +279,11 @@ const Ordini = () => {
         .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
-        .items-table th:last-child { text-align: right; }
+        .items-table th:nth-child(2) { text-align: center; width: 50px; }
+        .items-table th:nth-child(3), .items-table th:last-child { text-align: right; }
         .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
-        .items-table td:last-child { text-align: right; }
+        .items-table td:nth-child(2) { text-align: center; }
+        .items-table td:nth-child(3), .items-table td:last-child { text-align: right; }
         .total-row td { font-weight: bold; border-top: 2px solid #333; }
         .footer-text { font-size: 10px; color: #555; margin-top: 20px; margin-bottom: 20px; }
         .separator { letter-spacing: 2px; color: #999; margin: 20px 0; text-align: center; }
@@ -333,11 +341,13 @@ const Ordini = () => {
     <table class="items-table">
         <tr>
             <th>Descrizione</th>
+            <th>Qtà</th>
+            <th>Costo unitario</th>
             <th>Subtotale</th>
         </tr>
         ${quoteRows}
         <tr class="total-row">
-            <td>TOTALE</td>
+            <td colspan="3">TOTALE</td>
             <td>${importoFormatted}</td>
         </tr>
     </table>
