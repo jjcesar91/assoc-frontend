@@ -1048,25 +1048,36 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         const importoFormatted = Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',');
 
         // Parse payment_items: estrae descrizione, qty, costo unitario, subtotale
+        // NOTA: il backend rimuove il campo 'quote' dagli item prima di salvare → usa product lookup + top-level p.quote
+        const stripQuoteSuffix = s => (s || '').replace(/\s*\(x\d+\)\s*€[\d,.]+(\s*\[.*?\]|\s*\(Scadenza[^)]*\))?/, '').trim();
         let lineItems;
         const piRaw = p.payment_items;
         const piArr = Array.isArray(piRaw) ? piRaw
             : (typeof piRaw === 'string' ? (() => { try { return JSON.parse(piRaw); } catch { return null; } })() : null);
+        // Top-level p.quote è "Desc1 (x1) €50,00 + Desc2 (x2) €60,00" → usato come fallback per nome
+        const topParts = (p.quote || '').split(/\s+\+\s+/).map(s => s.trim()).filter(Boolean);
         if (Array.isArray(piArr) && piArr.length > 0) {
-            lineItems = piArr.map(pi => {
-                const qtyMatch = (pi.quote || '').match(/\(x(\d+)\)/);
+            lineItems = piArr.map((pi, idx) => {
+                const topPart = topParts[idx] || '';
+                const qtyMatch = topPart.match(/\(x(\d+)\)/);
                 const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
                 const subtotale = Math.abs(parseFloat(pi.importo || 0));
                 const unitPrice = qty > 0 ? subtotale / qty : subtotale;
-                const descrizione = (pi.quote || '').replace(/\s*\(x\d+\)\s*€[\d,.]+(\s*\(Scadenza[^)]*\))?/, '').trim() || (pi.quote || '');
+                const fromProduct = (pi.product_id && prodottiSocieta.length)
+                    ? (prodottiSocieta.find(pr => Number(pr.id) === Number(pi.product_id))?.description || null)
+                    : null;
+                const descrizione = fromProduct || stripQuoteSuffix(topPart) || `Voce ${idx + 1}`;
                 return { descrizione, qty, unitPrice, subtotale };
             });
         } else {
-            const quoteItems = (p.quote || '').split(', ').filter(Boolean);
             const totalAmount = Math.abs(parseFloat(p.importo || 0));
-            lineItems = quoteItems.length === 1
-                ? [{ descrizione: quoteItems[0], qty: 1, unitPrice: totalAmount, subtotale: totalAmount }]
-                : quoteItems.map(q => ({ descrizione: q, qty: null, unitPrice: null, subtotale: null }));
+            if (topParts.length === 0) {
+                lineItems = [{ descrizione: '', qty: 1, unitPrice: totalAmount, subtotale: totalAmount }];
+            } else if (topParts.length === 1) {
+                lineItems = [{ descrizione: stripQuoteSuffix(topParts[0]), qty: 1, unitPrice: totalAmount, subtotale: totalAmount }];
+            } else {
+                lineItems = topParts.map(q => ({ descrizione: stripQuoteSuffix(q), qty: null, unitPrice: null, subtotale: null }));
+            }
         }
         const quoteRows = lineItems.map(li => `
             <tr>
