@@ -459,3 +459,16 @@
     outline: none !important;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
+
+.etichetta-chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--chip-bg, #dbeafe);
+    color: var(--chip-color, #1e40af);
+    padding: 1px 8px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.5;
+}

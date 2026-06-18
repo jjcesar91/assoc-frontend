@@ -11,6 +11,25 @@ import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
+const TAG_PALETTE = [
+    { bg: '#dbeafe', text: '#1e40af' }, { bg: '#ede9fe', text: '#5b21b6' },
+    { bg: '#dcfce7', text: '#166534' }, { bg: '#ffedd5', text: '#9a3412' },
+    { bg: '#fce7f3', text: '#9d174d' }, { bg: '#ccfbf1', text: '#134e4a' },
+    { bg: '#fef9c3', text: '#713f12' }, { bg: '#fae8ff', text: '#86198f' },
+    { bg: '#ecfdf5', text: '#065f46' }, { bg: '#fee2e2', text: '#991b1b' },
+    { bg: '#fff7ed', text: '#c2410c' }, { bg: '#f0fdf4', text: '#15803d' },
+];
+const getTagStyle = (tag) => {
+    let h = 0;
+    for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0x7fffffff;
+    return TAG_PALETTE[h % TAG_PALETTE.length];
+};
+const parseEtichette = (val) => {
+    if (!val) return [];
+    try { const p = JSON.parse(val); return Array.isArray(p) ? p : [String(val)]; }
+    catch { return val.split(',').map(s => s.trim()).filter(Boolean); }
+};
+
 const Soci = ({ onLogout }) => {
     const { selectedSocietaId, societaList } = useSocieta();
     const { selectedAnno } = useAnno();
@@ -1052,6 +1071,7 @@ const Soci = ({ onLogout }) => {
                                     <th>Tesserato</th>
                                     <th>Certificato Medico</th>
                                     <th>Contatti</th>
+                                    <th>Etichette</th>
                                     <th style={{textAlign:'right'}}>Azioni</th>
                                 </tr>
                             </thead>
@@ -1135,6 +1155,18 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{fontSize: '0.875rem'}}>{socio.telefono}</div>
                                         </td>
+                                        <td>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                                {parseEtichette(socio.etichette).map((tag, i) => {
+                                                    const ts = getTagStyle(tag);
+                                                    return (
+                                                        <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
+                                                            {tag}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </td>
                                         <td style={{textAlign:'right'}}>
                                             <button className="btn-icon-small" title="Modifica" onClick={() => handleEditSocio(socio)}><Edit size={18}/></button>
                                             <button 
@@ -1150,7 +1182,7 @@ const Soci = ({ onLogout }) => {
                                 ))}
                                 {filteredSoci.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
+                                        <td colSpan="9" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
                                             Nessun socio trovato
                                         </td>
                                     </tr>

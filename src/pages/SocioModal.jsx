@@ -2449,6 +2449,45 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     </div>
                                 </div>
                                 
+                                {/* Etichette */}
+                                <div className="form-group grid-span-6">
+                                    <label className="field-label">Etichette</label>
+                                    <div
+                                        style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
+                                        onClick={() => etichetteInputRef.current?.focus()}
+                                    >
+                                        {etichetteList.map((tag, i) => {
+                                            const ts = getTagStyle(tag);
+                                            return (
+                                                <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
+                                                    {tag}
+                                                    <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }}>×</button>
+                                                </span>
+                                            );
+                                        })}
+                                        <input
+                                            ref={etichetteInputRef}
+                                            type="text"
+                                            value={etichetteInput}
+                                            onChange={e => setEtichetteInput(e.target.value)}
+                                            onKeyDown={e => {
+                                                if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
+                                                    e.preventDefault();
+                                                    addEtichetta(etichetteInput);
+                                                } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
+                                                    setEtichetteList(prev => prev.slice(0, -1));
+                                                }
+                                            }}
+                                            onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
+                                            placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
+                                            style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
+                                        />
+                                    </div>
+                                    {etichetteInput.trim() && (
+                                        <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
+                                    )}
+                                </div>
+
                                 {/* Row 6 - Note and Extra */}
                                 <div className="form-group grid-span-12" style={{gridRow: 'span 2'}}>
                                     <label className="field-label" style={{color: 'var(--success-color)', fontWeight:'bold'}}>Note</label>
@@ -3158,6 +3197,86 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab === 'DatiAssociazione' && (
                         <div className="md-form-grid-custom">
 
+                            {/* Sezione: Informazioni aggiuntive */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Informazioni aggiuntive</span>
+                            </div>
+
+                            <div className="form-group grid-span-6">
+                                <label className="field-label">Sito web</label>
+                                <input
+                                    className="md-input"
+                                    type="url"
+                                    name="sito_web"
+                                    value={formData.sito_web}
+                                    onChange={handleChange}
+                                    placeholder="https://"
+                                />
+                            </div>
+                            <div className="form-group grid-span-6">
+                                <label className="field-label">Etichette</label>
+                                <div
+                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
+                                    onClick={() => etichetteInputRef.current?.focus()}
+                                >
+                                    {etichetteList.map((tag, i) => {
+                                        const ts = getTagStyle(tag);
+                                        return (
+                                            <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
+                                                {tag}
+                                                <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }}>×</button>
+                                            </span>
+                                        );
+                                    })}
+                                    <input
+                                        ref={etichetteInputRef}
+                                        type="text"
+                                        value={etichetteInput}
+                                        onChange={e => setEtichetteInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
+                                                e.preventDefault();
+                                                addEtichetta(etichetteInput);
+                                            } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
+                                                setEtichetteList(prev => prev.slice(0, -1));
+                                            }
+                                        }}
+                                        onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
+                                        placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
+                                        style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
+                                    />
+                                </div>
+                                {etichetteInput.trim() && (
+                                    <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
+                                )}
+                            </div>
+
+                            <div className="form-group grid-span-6">
+                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="runts"
+                                        checked={!!formData.runts}
+                                        onChange={handleChange}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                    />
+                                    Iscritta al RUNTS
+                                </label>
+                                <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>Registro Unico del Terzo Settore</span>
+                            </div>
+                            <div className="form-group grid-span-6">
+                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="somministrazione"
+                                        checked={!!formData.somministrazione}
+                                        onChange={handleChange}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                    />
+                                    Somministrazione
+                                </label>
+                            </div>
+
                             {/* Sezione: Affiliazione */}
                             <div className="form-group grid-span-12" style={{ marginBottom: '4px' }}>
                                 <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Affiliazione</span>
@@ -3273,86 +3392,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     value={formData.scadenza_consiglio_direttivo}
                                     onChange={handleChange}
                                 />
-                            </div>
-
-                            {/* Sezione: Informazioni aggiuntive */}
-                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Informazioni aggiuntive</span>
-                            </div>
-
-                            <div className="form-group grid-span-6">
-                                <label className="field-label">Sito web</label>
-                                <input
-                                    className="md-input"
-                                    type="url"
-                                    name="sito_web"
-                                    value={formData.sito_web}
-                                    onChange={handleChange}
-                                    placeholder="https://"
-                                />
-                            </div>
-                            <div className="form-group grid-span-6">
-                                <label className="field-label">Etichette</label>
-                                <div
-                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
-                                    onClick={() => etichetteInputRef.current?.focus()}
-                                >
-                                    {etichetteList.map((tag, i) => {
-                                        const ts = getTagStyle(tag);
-                                        return (
-                                            <span key={i} style={{ display:'inline-flex', alignItems:'center', gap:'3px', backgroundColor:ts.bg, color:ts.text, padding:'2px 7px 2px 8px', borderRadius:'3px', fontSize:'0.8rem', fontWeight:600, whiteSpace:'nowrap', lineHeight:'1.4' }}>
-                                                {tag}
-                                                <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }} style={{ background:'none', border:'none', cursor:'pointer', padding:'0 0 0 2px', lineHeight:1, color:ts.text, opacity:0.65, fontSize:'1rem', display:'flex', alignItems:'center' }}>×</button>
-                                            </span>
-                                        );
-                                    })}
-                                    <input
-                                        ref={etichetteInputRef}
-                                        type="text"
-                                        value={etichetteInput}
-                                        onChange={e => setEtichetteInput(e.target.value)}
-                                        onKeyDown={e => {
-                                            if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
-                                                e.preventDefault();
-                                                addEtichetta(etichetteInput);
-                                            } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
-                                                setEtichetteList(prev => prev.slice(0, -1));
-                                            }
-                                        }}
-                                        onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
-                                        placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
-                                        style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
-                                    />
-                                </div>
-                                {etichetteInput.trim() && (
-                                    <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
-                                )}
-                            </div>
-
-                            <div className="form-group grid-span-6">
-                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        name="runts"
-                                        checked={!!formData.runts}
-                                        onChange={handleChange}
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                    />
-                                    Iscritta al RUNTS
-                                </label>
-                                <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>Registro Unico del Terzo Settore</span>
-                            </div>
-                            <div className="form-group grid-span-6">
-                                <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        name="somministrazione"
-                                        checked={!!formData.somministrazione}
-                                        onChange={handleChange}
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                    />
-                                    Somministrazione
-                                </label>
                             </div>
 
                         </div>
