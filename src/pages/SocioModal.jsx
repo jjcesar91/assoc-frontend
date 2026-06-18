@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
@@ -193,6 +193,37 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     };
 
     const [formData, setFormData] = useState(initialState);
+
+    // ── Etichette (tag) state ─────────────────────────────────────────────────
+    const [etichetteList, setEtichetteList] = useState([]);
+    const [etichetteInput, setEtichetteInput] = useState('');
+    const etichetteInputRef = useRef(null);
+
+    const parseEtichette = (val) => {
+        if (!val) return [];
+        try { const p = JSON.parse(val); return Array.isArray(p) ? p : [String(val)]; }
+        catch { return val.split(',').map(s => s.trim()).filter(Boolean); }
+    };
+
+    const TAG_PALETTE = [
+        { bg: '#dbeafe', text: '#1e40af' }, { bg: '#ede9fe', text: '#5b21b6' },
+        { bg: '#dcfce7', text: '#166534' }, { bg: '#ffedd5', text: '#9a3412' },
+        { bg: '#fce7f3', text: '#9d174d' }, { bg: '#ccfbf1', text: '#134e4a' },
+        { bg: '#fef9c3', text: '#713f12' }, { bg: '#fae8ff', text: '#86198f' },
+        { bg: '#ecfdf5', text: '#065f46' }, { bg: '#fee2e2', text: '#991b1b' },
+        { bg: '#fff7ed', text: '#c2410c' }, { bg: '#f0fdf4', text: '#15803d' },
+    ];
+    const getTagStyle = (tag) => {
+        let h = 0;
+        for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0x7fffffff;
+        return TAG_PALETTE[h % TAG_PALETTE.length];
+    };
+    const addEtichetta = (raw) => {
+        const tag = raw.trim().replace(/,$/, '').trim();
+        if (tag && !etichetteList.includes(tag)) setEtichetteList(prev => [...prev, tag]);
+        setEtichetteInput('');
+    };
+
     const [activeTab, setActiveTab] = useState('Anagrafica');
     const [warningMessage, setWarningMessage] = useState(null);
     const [highlightCF, setHighlightCF] = useState(false);
@@ -748,6 +779,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             
             // Set Checkbox state based on date existence
             setHaCertificato(!!socioData.scadenza_certificato);
+            setEtichetteList(parseEtichette(socioData.etichette));
+            setEtichetteInput('');
 
             // Popola stato accesso frontend
             setFrontendAccess({
@@ -1707,7 +1740,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             }
         }
         setGenitoreErrors({});
-        onSave(formData);
+        onSave({ ...formData, etichette: etichetteList.length > 0 ? JSON.stringify(etichetteList) : null });
     };
 
     // ── Attività helpers ──────────────────────────────────────────────────────
@@ -3260,13 +3293,40 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </div>
                             <div className="form-group grid-span-6">
                                 <label className="field-label">Etichette</label>
-                                <input
-                                    className="md-input"
-                                    name="etichette"
-                                    value={formData.etichette}
-                                    onChange={handleChange}
-                                    placeholder="es. Tecnici Sportivi, Gestionale"
-                                />
+                                <div
+                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
+                                    onClick={() => etichetteInputRef.current?.focus()}
+                                >
+                                    {etichetteList.map((tag, i) => {
+                                        const ts = getTagStyle(tag);
+                                        return (
+                                            <span key={i} style={{ display:'inline-flex', alignItems:'center', gap:'3px', backgroundColor:ts.bg, color:ts.text, padding:'2px 7px 2px 8px', borderRadius:'3px', fontSize:'0.8rem', fontWeight:600, whiteSpace:'nowrap', lineHeight:'1.4' }}>
+                                                {tag}
+                                                <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }} style={{ background:'none', border:'none', cursor:'pointer', padding:'0 0 0 2px', lineHeight:1, color:ts.text, opacity:0.65, fontSize:'1rem', display:'flex', alignItems:'center' }}>×</button>
+                                            </span>
+                                        );
+                                    })}
+                                    <input
+                                        ref={etichetteInputRef}
+                                        type="text"
+                                        value={etichetteInput}
+                                        onChange={e => setEtichetteInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
+                                                e.preventDefault();
+                                                addEtichetta(etichetteInput);
+                                            } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
+                                                setEtichetteList(prev => prev.slice(0, -1));
+                                            }
+                                        }}
+                                        onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
+                                        placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
+                                        style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
+                                    />
+                                </div>
+                                {etichetteInput.trim() && (
+                                    <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
+                                )}
                             </div>
 
                             <div className="form-group grid-span-6">

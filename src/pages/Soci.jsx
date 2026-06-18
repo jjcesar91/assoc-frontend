@@ -654,6 +654,25 @@ const Soci = ({ onLogout }) => {
         const parseDecimal = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
         const parseInteger = (s) => { const n = parseInt(s, 10); return isNaN(n) ? null : n; };
 
+        // Pre-processo sequenziale: raccoglie tutte le etichette per associazione
+        // incluse le righe vuote successive con solo la colonna "Etichette" valorizzata
+        const etichetteByNome = {};
+        let lastAssocNome = null;
+        for (const cells of rows) {
+            const isAz = get(cells, "È un'azienda") === 'True';
+            const hasLinked = get(cells, 'Azienda collegata') !== '';
+            const etichetta = get(cells, 'Etichette');
+            const nomeVis = (get(cells, 'Nome visualizzato') || get(cells, 'Nome')).trim();
+            if (isAz) {
+                lastAssocNome = nomeVis;
+                if (!etichetteByNome[nomeVis]) etichetteByNome[nomeVis] = [];
+                if (etichetta) etichetteByNome[nomeVis].push(etichetta);
+            } else if (!hasLinked && !nomeVis && etichetta && lastAssocNome) {
+                // riga-etichetta aggiuntiva (vuota tranne colonna Etichette)
+                etichetteByNome[lastAssocNome].push(etichetta);
+            }
+        }
+
         // Separa aziende da contatti persona
         const aziende = rows.filter(r => get(r, "È un'azienda") === 'True');
         // Contatti: righe con "Azienda collegata" valorizzato
@@ -776,7 +795,7 @@ const Soci = ({ onLogout }) => {
                 costo_tessera_completa: parseDecimal(g('Costo tessera Completa')),
                 durata_consiglio_direttivo: parseInteger(g('Durata consiglio direttivo')),
                 scadenza_consiglio_direttivo: parseISODate(g('Scadenza consiglio direttivo')),
-                etichette: g('Etichette') || null,
+                etichette: (() => { const tags = etichetteByNome[nomeVisualizzato]; return (tags && tags.length > 0) ? JSON.stringify(tags) : null; })(),
                 runts: g('Runts') === 'True',
                 somministrazione: g('Somministrazione') === 'True',
                 note: g('Attività') || null,
