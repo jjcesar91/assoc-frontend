@@ -2563,42 +2563,48 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Form nuova nota */}
                             {showNotaForm && (
-                                <div style={{ padding: '16px 28px', borderBottom: '1px solid #e5e7eb', background: '#fffbeb' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                                        <MessageSquare size={16} color="#d97706" />
-                                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#92400e' }}>Nuova nota</span>
-                                    </div>
-                                    <textarea
-                                        rows={3}
-                                        value={notaTesto}
-                                        onChange={e => setNotaTesto(e.target.value)}
-                                        placeholder="Inserisci una nota..."
-                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
-                                    />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#6b7280', cursor: 'pointer', padding: '6px 12px', border: '1px dashed #d1d5db', borderRadius: '6px', background: '#f9fafb' }}>
-                                            <Paperclip size={14} />
-                                            {notaFile ? notaFile.name : 'Allega file (opzionale)'}
-                                            <input type="file" style={{ display: 'none' }} onChange={e => setNotaFile(e.target.files[0] || null)} />
-                                        </label>
-                                        {notaFile && (
-                                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => setNotaFile(null)}>
-                                                <X size={13} /> Rimuovi
+                                <div style={{ padding: '16px 28px 0' }}>
+                                    <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '16px', backgroundColor: '#fafafa' }}>
+                                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                                            <label className="field-label">Testo nota *</label>
+                                            <textarea
+                                                rows={3}
+                                                value={notaTesto}
+                                                onChange={e => setNotaTesto(e.target.value)}
+                                                placeholder="Inserisci una nota..."
+                                                className="md-input"
+                                                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '14px' }}>
+                                            <label className="field-label">Allegato</label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#374151', cursor: 'pointer', padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', fontWeight: 500 }}>
+                                                    <Paperclip size={14} color="#6b7280" />
+                                                    {notaFile ? notaFile.name : 'Scegli file…'}
+                                                    <input type="file" style={{ display: 'none' }} onChange={e => setNotaFile(e.target.files[0] || null)} />
+                                                </label>
+                                                {notaFile && (
+                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} onClick={() => setNotaFile(null)}>
+                                                        <X size={13} /> Rimuovi
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            <button className="btn-outlined" style={{ height: '32px', fontSize: '0.82rem', padding: '0 14px' }}
+                                                onClick={() => { setShowNotaForm(false); setNotaTesto(''); setNotaFile(null); }}>
+                                                Annulla
                                             </button>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                        <button style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}
-                                            onClick={() => { setShowNotaForm(false); setNotaTesto(''); setNotaFile(null); }}>
-                                            Annulla
-                                        </button>
-                                        <button
-                                            disabled={notaLoading || !notaTesto.trim()}
-                                            style={{ padding: '7px 16px', borderRadius: '6px', border: 'none', background: notaLoading || !notaTesto.trim() ? '#d1d5db' : '#d97706', color: '#fff', cursor: notaLoading || !notaTesto.trim() ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
-                                            onClick={handleSalvaNota}
-                                        >
-                                            {notaLoading ? 'Salvataggio…' : 'Salva nota'}
-                                        </button>
+                                            <button
+                                                className="btn-contained"
+                                                disabled={notaLoading || !notaTesto.trim()}
+                                                style={{ height: '32px', fontSize: '0.82rem', padding: '0 14px', opacity: notaLoading || !notaTesto.trim() ? 0.5 : 1, cursor: notaLoading || !notaTesto.trim() ? 'not-allowed' : 'pointer' }}
+                                                onClick={handleSalvaNota}
+                                            >
+                                                {notaLoading ? 'Salvataggio…' : 'Salva nota'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
