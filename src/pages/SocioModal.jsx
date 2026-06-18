@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
+import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import DettaglioOrdineModal from './DettaglioOrdineModal';
@@ -264,6 +264,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     });
     const [frontendAccessLoading, setFrontendAccessLoading] = useState(false);
     const [showFrontendPassword, setShowFrontendPassword] = useState(false);
+
+    // Storico State
+    const [storico, setStorico] = useState([]);
+    const [storicoLoading, setStoricoLoading] = useState(false);
+    const [showNotaForm, setShowNotaForm] = useState(false);
+    const [notaTesto, setNotaTesto] = useState('');
+    const [notaFile, setNotaFile] = useState(null);
+    const [notaLoading, setNotaLoading] = useState(false);
 
     // Load html2pdf
     useEffect(() => {
@@ -786,10 +794,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     };
 
     useEffect(() => {
-        if (activeTab === 'Comunicazioni' && formData.id) {
+        if ((activeTab === 'Comunicazioni' || activeTab === 'Storico') && formData.id) {
             fetchComunicazioni();
         }
     }, [activeTab, formData.id]);
+
+    useEffect(() => {
+        if (activeTab === 'Storico' && formData.id) {
+            fetchStorico();
+        }
+    }, [activeTab, formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchContatti = async () => {
         if (!formData.id) return;
@@ -807,6 +821,29 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             fetchContatti();
         }
     }, [activeTab, formData.id]);
+
+    const fetchStorico = async () => {
+        if (!formData.id) return;
+        setStoricoLoading(true);
+        try {
+            const res = await fetch(`/users/api/soci/${formData.id}/storico`);
+            if (res.ok) setStorico(await res.json());
+        } catch (e) { console.error(e); }
+        finally { setStoricoLoading(false); }
+    };
+
+    const logToStorico = async (tipo, azione, dettagli = null) => {
+        if (!formData.id) return;
+        try {
+            const token = localStorage.getItem('token');
+            await fetch(`/users/api/soci/${formData.id}/storico`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tipo, azione, dettagli }),
+            });
+            if (activeTab === 'Storico') fetchStorico();
+        } catch (e) { console.error('Storico log error', e); }
+    };
 
     const fetchSocioPagamenti = async () => {
         if (!formData.id || !selectedSocietaId) return;
@@ -1682,6 +1719,115 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         return best;
     }, [prodottiSocieta, socioPagamenti]);
 
+    const storicoTimeline = useMemo(() => {
+        const items = [];
+
+        // DB storico (note e accessi frontend)
+        storico.forEach(s => {
+            items.push({
+                id: `storico-${s.id}`,
+                tipo: s.tipo,
+                azione: s.azione,
+                owner: s.owner_label || 'Sistema',
+                data: new Date(s.data_evento),
+                allegato: s.allegato_path ? { storiciId: s.id, nome: s.allegato_nome || 'allegato' } : null,
+                source: 'db',
+            });
+        });
+
+        // Ordini e abbonamenti dai pagamenti
+        socioPagamenti.forEach(p => {
+            const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+            const isAbb = types.includes('subscription');
+            const importoAbs = Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',');
+            const statoLabel = p.stato_pagamento?.startsWith('3.') ? ' [ANNULLATO]' : '';
+            items.push({
+                id: `pag-${p.id}`,
+                tipo: isAbb ? 'abbonamento' : 'ordine',
+                azione: isAbb
+                    ? `Abbonamento: ${p.quote || 'Abbonamento'} — €${importoAbs}${statoLabel}`
+                    : `Ordine: ${p.quote || 'Pagamento'} — €${importoAbs}${statoLabel}`,
+                owner: 'Sistema',
+                data: p.data_pagamento ? new Date(p.data_pagamento) : new Date(p.createdAt),
+                allegato: null,
+                source: 'pagamento',
+            });
+        });
+
+        // Comunicazioni
+        comunicazioni.forEach(c => {
+            const desc = c.tipo === 'EMAIL'
+                ? `Email inviata: "${c.oggetto || '(senza oggetto)'}"`
+                : `Comunicazione (${c.tipo}): ${(c.testo || '').slice(0, 80)}${(c.testo || '').length > 80 ? '…' : ''}`;
+            items.push({
+                id: `com-${c.id}`,
+                tipo: 'comunicazione',
+                azione: desc,
+                owner: c.mittente_nome || 'Sistema',
+                data: c.data_invio ? new Date(c.data_invio) : new Date(c.createdAt),
+                allegato: null,
+                source: 'comunicazione',
+            });
+        });
+
+        // Iscrizioni attività (corsi)
+        socioCorsi.forEach(iscrizione => {
+            const corso = iscrizione.corso;
+            const attivita = corso?.attivita?.descrizione || 'Corso';
+            const orario = corso ? `${GIORNI_SETTIMANA[corso.giorno] || ''} ${corso.oraInizio || ''}`.trim() : '';
+            items.push({
+                id: `corso-${iscrizione.id}`,
+                tipo: 'iscrizione_attivita',
+                azione: `Iscrizione attività: ${attivita}${orario ? ` (${orario})` : ''}`,
+                owner: 'Sistema',
+                data: iscrizione.createdAt ? new Date(iscrizione.createdAt) : new Date(),
+                allegato: null,
+                source: 'corso',
+            });
+        });
+
+        return items.sort((a, b) => b.data - a.data);
+    }, [storico, socioPagamenti, comunicazioni, socioCorsi]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const storicoTipoConfig = {
+        ordine: { color: '#2563eb', bg: '#eff6ff', label: 'Ordine', icon: <CreditCard size={14}/> },
+        abbonamento: { color: '#7c3aed', bg: '#f5f3ff', label: 'Abbonamento', icon: <BookOpen size={14}/> },
+        iscrizione_attivita: { color: '#059669', bg: '#ecfdf5', label: 'Attività', icon: <Activity size={14}/> },
+        comunicazione: { color: '#ea580c', bg: '#fff7ed', label: 'Comunicazione', icon: <Mail size={14}/> },
+        accesso_frontend: { color: '#0891b2', bg: '#ecfeff', label: 'Accesso', icon: <Globe size={14}/> },
+        nota: { color: '#d97706', bg: '#fffbeb', label: 'Nota', icon: <MessageSquare size={14}/> },
+    };
+
+    const handleSalvaNota = async () => {
+        if (!notaTesto.trim()) { showSnackbar('Inserisci il testo della nota', 'error'); return; }
+        setNotaLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const formDataUpload = new FormData();
+            formDataUpload.append('testo', notaTesto.trim());
+            if (notaFile) formDataUpload.append('allegato', notaFile);
+            const res = await fetch(`/users/api/soci/${formData.id}/storico/nota`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formDataUpload,
+            });
+            if (res.ok) {
+                setShowNotaForm(false);
+                setNotaTesto('');
+                setNotaFile(null);
+                await fetchStorico();
+                showSnackbar('Nota aggiunta allo storico');
+            } else {
+                const err = await res.json();
+                showSnackbar(err.error || 'Errore durante il salvataggio', 'error');
+            }
+        } catch {
+            showSnackbar('Errore di rete', 'error');
+        } finally {
+            setNotaLoading(false);
+        }
+    };
+
     const isCorsoAccessibile = (abbonamentoId) => {
         if (passepartoutScadenza) return true;
         if (!abbonamentoId) return false;
@@ -1698,6 +1844,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const isAssociazione = formData.tipo_socio === 'associazione';
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
+        { id: 'Storico', icon: <ClipboardList size={18}/>, label: 'Storico' },
         { id: 'Ordini', icon: <CreditCard size={18}/>, label: 'Ordini', count: socioPagamenti.length },
         ...(!isAssociazione ? [
             { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
@@ -2394,6 +2541,139 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         )
                     )}
 
+                    {/* ── Tab Storico ──────────────────────────────────── */}
+                    {activeTab === 'Storico' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 28px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                        <ClipboardList size={20} color="#6b7280" />
+                                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>Storico attività</h3>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>Log completo di ordini, abbonamenti, comunicazioni e accessi del socio</p>
+                                </div>
+                                <button
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '7px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem', color: '#374151' }}
+                                    onClick={() => { setShowNotaForm(true); setNotaTesto(''); setNotaFile(null); }}
+                                >
+                                    <PlusCircle size={15} /> Aggiungi nota
+                                </button>
+                            </div>
+
+                            {/* Form nuova nota */}
+                            {showNotaForm && (
+                                <div style={{ padding: '16px 28px', borderBottom: '1px solid #e5e7eb', background: '#fffbeb' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                        <MessageSquare size={16} color="#d97706" />
+                                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#92400e' }}>Nuova nota</span>
+                                    </div>
+                                    <textarea
+                                        rows={3}
+                                        value={notaTesto}
+                                        onChange={e => setNotaTesto(e.target.value)}
+                                        placeholder="Inserisci una nota..."
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#6b7280', cursor: 'pointer', padding: '6px 12px', border: '1px dashed #d1d5db', borderRadius: '6px', background: '#f9fafb' }}>
+                                            <Paperclip size={14} />
+                                            {notaFile ? notaFile.name : 'Allega file (opzionale)'}
+                                            <input type="file" style={{ display: 'none' }} onChange={e => setNotaFile(e.target.files[0] || null)} />
+                                        </label>
+                                        {notaFile && (
+                                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => setNotaFile(null)}>
+                                                <X size={13} /> Rimuovi
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        <button style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}
+                                            onClick={() => { setShowNotaForm(false); setNotaTesto(''); setNotaFile(null); }}>
+                                            Annulla
+                                        </button>
+                                        <button
+                                            disabled={notaLoading || !notaTesto.trim()}
+                                            style={{ padding: '7px 16px', borderRadius: '6px', border: 'none', background: notaLoading || !notaTesto.trim() ? '#d1d5db' : '#d97706', color: '#fff', cursor: notaLoading || !notaTesto.trim() ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+                                            onClick={handleSalvaNota}
+                                        >
+                                            {notaLoading ? 'Salvataggio…' : 'Salva nota'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Timeline */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px' }}>
+                                {storicoLoading ? (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Caricamento…</div>
+                                ) : storicoTimeline.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ backgroundColor: '#f3f4f6', padding: '16px', borderRadius: '50%' }}>
+                                            <ClipboardList size={32} />
+                                        </div>
+                                        <p style={{ margin: 0, fontWeight: 500 }}>Nessuna attività registrata</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                        {storicoTimeline.map((item, idx) => {
+                                            const cfg = storicoTipoConfig[item.tipo] || { color: '#6b7280', bg: '#f9fafb', label: item.tipo, icon: <ClipboardList size={14}/> };
+                                            return (
+                                                <div key={item.id} style={{ display: 'flex', gap: '12px', paddingBottom: idx < storicoTimeline.length - 1 ? '0' : '0' }}>
+                                                    {/* Timeline line + dot */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px', flexShrink: 0 }}>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: cfg.bg, border: `2px solid ${cfg.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: cfg.color }}>
+                                                            {cfg.icon}
+                                                        </div>
+                                                        {idx < storicoTimeline.length - 1 && (
+                                                            <div style={{ width: '2px', flex: 1, backgroundColor: '#e5e7eb', minHeight: '20px', margin: '2px 0' }} />
+                                                        )}
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div style={{ flex: 1, paddingBottom: '16px', minWidth: 0 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', backgroundColor: cfg.bg, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+                                                                    {cfg.label}
+                                                                </span>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                                {item.data.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                                {' '}
+                                                                {item.data.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                        <p style={{ margin: '4px 0 4px', fontSize: '0.88rem', color: '#111827', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                                                            {item.azione}
+                                                        </p>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                                <span style={{ fontWeight: 600 }}>
+                                                                    {item.owner === 'Sistema' ? '🤖' : '👤'} {item.owner}
+                                                                </span>
+                                                            </span>
+                                                            {item.allegato && (
+                                                                <a
+                                                                    href={`/users/api/soci/${formData.id}/storico/${item.allegato.storiciId}/allegato`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}
+                                                                >
+                                                                    <Download size={12} /> {item.allegato.nome}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'Ordini' && (
                         <div>
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
@@ -2804,7 +3084,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </div>
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Ordini' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && (
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Ordini' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && activeTab !== 'Storico' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
@@ -3149,6 +3429,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             body: JSON.stringify({ frontend_enabled: false, frontend_password_plain: null, frontend_user_id: null }),
                                                         });
                                                         setFrontendAccess({ enabled: false, email: formData.email, password_plain: '', user_id: null });
+                                                        logToStorico('accesso_frontend', `Accesso frontend revocato (email: ${formData.email})`);
                                                         showSnackbar('Accesso frontend revocato', 'success');
                                                     } else {
                                                         const err = await res.json();
@@ -3204,6 +3485,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             }),
                                                         });
                                                         setFrontendAccess({ enabled: true, email: formData.email, password_plain: data.password_plain, user_id: data.user_id });
+                                                        if (!data.already_existed) logToStorico('accesso_frontend', `Accesso frontend abilitato (email: ${formData.email})`);
                                                         showSnackbar(data.already_existed ? 'Accesso già presente — stato sincronizzato' : 'Accesso frontend abilitato con successo', 'success');
                                                     } else {
                                                         showSnackbar(data.error || 'Errore durante l\'abilitazione', 'error');
@@ -3290,6 +3572,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                     });
                                                     setFrontendAccess(prev => ({ ...prev, password_plain: data.password_plain }));
                                                     setShowFrontendPassword(true);
+                                                    logToStorico('accesso_frontend', `Password accesso frontend rigenerata`);
                                                     showSnackbar('Nuova password generata', 'success');
                                                 } else {
                                                     showSnackbar(data.error || 'Errore durante il reset', 'error');
