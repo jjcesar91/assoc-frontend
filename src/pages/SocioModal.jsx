@@ -617,6 +617,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                      setCurrentIscrizioneDate(data.iscrizione.data_iscrizione);
                 }
                 setShowIscrizioneModal(false);
+                logToStorico('iscrizione',
+                    `Iscrizione senza ricevuta registrata per l'anno ${data.anno}`,
+                    { anno: data.anno, data_iscrizione: data.iscrizione.data_iscrizione }
+                );
             }
         } catch (e) {
             console.error("Error creating iscrizione", e);
@@ -1037,10 +1041,18 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const handleDeleteSocioPagamento = async (id) => {
         if (!await confirm('Sei sicuro di voler eliminare questo ordine?')) return;
         try {
+            const pagamento = socioPagamenti.find(p => p.id === id);
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 setSocioPagamenti(prev => prev.filter(p => p.id !== id));
                 if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
+                const isProforma = pagamento?.tipo_documento === 'proforma';
+                logToStorico('ordine',
+                    isProforma
+                        ? `Proforma eliminata${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`
+                        : `Ordine #${pagamento?.numero_ricevuta || id} eliminato${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`,
+                    { ordine_id: id, tipo_documento: pagamento?.tipo_documento }
+                );
             } else {
                 showAlert('Errore durante l\'eliminazione dell\'ordine', 'Errore');
             }
@@ -1057,6 +1069,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 const updated = await response.json();
                 setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                 setSelectedPaymentDetail(updated);
+                logToStorico('ordine',
+                    `Ricevuta #${updated.numero_ricevuta} annullata${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
+                    { ordine_id: id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
+                );
             } else {
                 showAlert('Errore durante l\'annullamento della ricevuta', 'Errore');
             }
@@ -1662,6 +1678,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             if (response.ok) {
                 setIscrizioneStatus('NON ISCRITTO');
                 setCurrentIscrizioneDate('');
+                logToStorico('iscrizione',
+                    `Iscrizione revocata per l'anno ${currentRefYear}`,
+                    { anno: currentRefYear }
+                );
             } else {
                 showAlert('Errore revoca iscrizione', 'Errore');
             }
@@ -1792,6 +1812,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const storicoTipoConfig = {
         ordine: { color: '#2563eb', bg: '#eff6ff', label: 'Ordine', icon: <CreditCard size={14}/> },
         abbonamento: { color: '#7c3aed', bg: '#f5f3ff', label: 'Abbonamento', icon: <BookOpen size={14}/> },
+        iscrizione: { color: '#0d9488', bg: '#f0fdfa', label: 'Iscrizione', icon: <ClipboardList size={14}/> },
         iscrizione_attivita: { color: '#059669', bg: '#ecfdf5', label: 'Attività', icon: <Activity size={14}/> },
         comunicazione: { color: '#ea580c', bg: '#fff7ed', label: 'Comunicazione', icon: <Mail size={14}/> },
         accesso_frontend: { color: '#0891b2', bg: '#ecfeff', label: 'Accesso', icon: <Globe size={14}/> },
@@ -3071,6 +3092,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                 if (res.ok) {
                                                                     setSocioCorsi(prev => prev.filter(i => i.id !== iscrizione.id));
                                                                     showSnackbar('Socio disiscritto dal corso');
+                                                                    logToStorico('iscrizione_attivita',
+                                                                        `Disiscritto dal corso "${corso.attivita?.descrizione || corso.descrizione || 'corso'}"`,
+                                                                        { corso_id: corso.id, attivita: corso.attivita?.descrizione }
+                                                                    );
                                                                 } else {
                                                                     showSnackbar('Errore durante la disiscrizione', 'error');
                                                                 }
@@ -3626,6 +3651,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 onConvertProforma={(updated) => {
                     setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                     setSelectedPaymentDetail(updated);
+                    logToStorico('ordine',
+                        `Proforma convertita in pagamento — ricevuta #${updated.numero_ricevuta}${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
+                        { ordine_id: updated.id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
+                    );
                 }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={prodottiSocieta}
@@ -3981,6 +4010,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             await fetchSocioCorsi();
                                                             setShowAggiungiCorsoModal(false);
                                                             showSnackbar('Socio iscritto al corso con successo');
+                                                            logToStorico('iscrizione_attivita',
+                                                                `Iscritto al corso "${corso.attivita?.descrizione || corso.descrizione || 'corso'}"`,
+                                                                { corso_id: corso.id, attivita: corso.attivita?.descrizione }
+                                                            );
                                                         } else {
                                                             const err = await res.json();
                                                             showSnackbar(err.error || 'Errore durante l\'iscrizione', 'error');
