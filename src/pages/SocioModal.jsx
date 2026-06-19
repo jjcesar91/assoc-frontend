@@ -1898,6 +1898,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     const isAssociazione = formData.tipo_socio === 'associazione';
     const tabs = [
         { id: 'Anagrafica', icon: <User size={18}/>, label: 'Anagrafica' },
+        ...(isAssociazione ? [
+            { id: 'DatiAssociazione', icon: <Folder size={18}/>, label: 'Associazione' },
+            { id: 'Contatti', icon: <Users size={18}/>, label: 'Contatti', count: contatti.length || undefined },
+        ] : []),
         { id: 'Storico', icon: <ClipboardList size={18}/>, label: 'Storico' },
         { id: 'Ordini', icon: <CreditCard size={18}/>, label: 'Ordini', count: socioPagamenti.length },
         ...(!isAssociazione ? [
@@ -1905,10 +1909,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
         ] : []),
         { id: 'Comunicazioni', icon: <Mail size={18}/>, label: 'Comunicazioni' },
-        ...(isAssociazione ? [
-            { id: 'DatiAssociazione', icon: <Folder size={18}/>, label: 'Associazione' },
-            { id: 'Contatti', icon: <Users size={18}/>, label: 'Contatti', count: contatti.length || undefined },
-        ] : []),
         ...(isEditMode ? [{ id: 'AccessoFrontend', icon: <Globe size={18}/>, label: 'Accesso Frontend' }] : []),
     ];
 
