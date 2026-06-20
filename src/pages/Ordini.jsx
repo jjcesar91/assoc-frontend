@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
 import DettaglioOrdineModal from './DettaglioOrdineModal';
 import ImportVociRicevutaModal from './ImportVociRicevutaModal';
+import ImportOrdiniOdooModal from './ImportOrdiniOdooModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import { getStatoOrdine } from '../utils/ordineUtils';
 import './Soci.css';
@@ -24,6 +25,7 @@ const Ordini = () => {
     const [isFastModalOpen, setIsFastModalOpen] = useState(false);
     const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
     const [showImportVoci, setShowImportVoci] = useState(false);
+    const [showImportOdoo, setShowImportOdoo] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [selectedSocioForComm, setSelectedSocioForComm] = useState(null);
     const menuRef = useRef(null);
@@ -556,6 +558,13 @@ const Ordini = () => {
                             >
                                 <FileInput size={14}/> Importa ricevute
                             </button>
+                            <button
+                                className="btn-contained"
+                                style={{backgroundColor: '#e67e22', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                onClick={() => setShowImportOdoo(true)}
+                            >
+                                <FileInput size={14}/> Importa da Odoo
+                            </button>
                             <div style={{ position: 'relative' }} ref={menuRef}>
                                 <button 
                                     className="btn-contained" 
@@ -606,6 +615,7 @@ const Ordini = () => {
                                     <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('data')}>Intestatario - Data - operatore<SortIcon col="data" /></th>
                                     <th style={{padding: '12px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('numero_ricevuta')}>Identificativi documento<SortIcon col="numero_ricevuta" /></th>
                                     <th style={{padding: '12px', color:'#000'}}>Quote</th>
+                                    <th style={{padding: '12px', color:'#000', whiteSpace:'nowrap'}}>Etichette</th>
                                     <th style={{padding: '12px', textAlign:'right', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('importo')}>Importo<SortIcon col="importo" /></th>
                                     <th style={{padding: '12px', textAlign:'right', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', color:'#000'}}>Azioni</th>
                                 </tr>
@@ -686,6 +696,22 @@ const Ordini = () => {
                                                         ))}
                                                     </div>
                                                 </td>
+                                                <td style={{padding: '12px'}}>
+                                                    {p.etichette
+                                                        ? <div style={{display:'flex', flexWrap:'wrap', gap:'4px'}}>
+                                                            {p.etichette.split(',').map((e, i) => (
+                                                                <span key={i} style={{
+                                                                    display:'inline-block', background:'#eff6ff', color:'#1d4ed8',
+                                                                    border:'1px solid #bfdbfe', borderRadius:'4px',
+                                                                    padding:'2px 8px', fontSize:'0.75rem', fontWeight:600, whiteSpace:'nowrap'
+                                                                }}>
+                                                                    {e.trim()}
+                                                                </span>
+                                                            ))}
+                                                          </div>
+                                                        : null
+                                                    }
+                                                </td>
                                                 <td style={{padding: '12px', textAlign:'right'}}>
                                                     <span style={{
                                                         backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#f1948a'),
@@ -762,6 +788,13 @@ const Ordini = () => {
             <ImportVociRicevutaModal
                 isOpen={showImportVoci}
                 onClose={() => setShowImportVoci(false)}
+                societaId={selectedSocietaId}
+                onImported={fetchPayments}
+            />
+
+            <ImportOrdiniOdooModal
+                isOpen={showImportOdoo}
+                onClose={() => setShowImportOdoo(false)}
                 societaId={selectedSocietaId}
                 onImported={fetchPayments}
             />

@@ -817,7 +817,7 @@ const Soci = ({ onLogout }) => {
                 etichette: (() => { const tags = etichetteByNome[nomeVisualizzato]; return (tags && tags.length > 0) ? JSON.stringify(tags) : null; })(),
                 runts: g('Runts') === 'True',
                 somministrazione: g('Somministrazione') === 'True',
-                note: g('Attività') || null,
+                note: g('Note') || null,
             };
 
             try {
