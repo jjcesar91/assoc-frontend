@@ -22,6 +22,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const etichettaInputRef = useRef(null);
     const savedTimerRef = useRef(null);
     const [activeIdx, setActiveIdx] = useState(-1);
+    const [inputFocused, setInputFocused] = useState(false);
 
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
@@ -36,6 +37,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         setEtichette(tags);
         setNewEtichetta('');
         setActiveIdx(-1);
+        setInputFocused(false);
         setSavedFlash(false);
         clearTimeout(savedTimerRef.current);
     }, [pagamento?.id]);
@@ -312,12 +314,13 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
                     {/* ── Etichette ── */}
                     {(() => {
+                        const query = newEtichetta.toLowerCase().trim();
                         const suggestions = allEtichette.filter(t =>
                             !etichette.includes(t) &&
-                            t.toLowerCase().includes(newEtichetta.toLowerCase().trim())
+                            (query === '' || t.toLowerCase().includes(query))
                         );
-                        const showDropdown = newEtichetta.trim().length > 0 && suggestions.length > 0;
-                        const isNewValue = newEtichetta.trim() && !allEtichette.includes(newEtichetta.trim());
+                        const showDropdown = inputFocused && suggestions.length > 0;
+                        const isNewValue = newEtichetta.trim() !== '' && !allEtichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase()) && !etichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase());
 
                         return (
                             <div className="dpm-card">
@@ -352,6 +355,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                             className="dpm-chip-input"
                                             value={newEtichetta}
                                             onChange={e => { setNewEtichetta(e.target.value); setActiveIdx(-1); }}
+                                            onFocus={() => setInputFocused(true)}
+                                            onBlur={() => { setInputFocused(false); setActiveIdx(-1); }}
                                             onKeyDown={e => {
                                                 if (e.key === 'ArrowDown') {
                                                     e.preventDefault();
@@ -360,11 +365,12 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                                     e.preventDefault();
                                                     if (showDropdown) setActiveIdx(i => Math.max(i - 1, -1));
                                                 } else if (e.key === 'Escape') {
-                                                    setActiveIdx(-1); setNewEtichetta('');
+                                                    e.preventDefault();
+                                                    setInputFocused(false); setActiveIdx(-1); setNewEtichetta('');
                                                 } else if (e.key === 'Enter') {
                                                     e.preventDefault();
                                                     if (showDropdown && activeIdx >= 0) handleAddEtichetta(suggestions[activeIdx]);
-                                                    else handleAddEtichetta();
+                                                    else if (newEtichetta.trim()) handleAddEtichetta();
                                                 } else if (e.key === 'Backspace' && !newEtichetta && etichette.length > 0) {
                                                     handleRemoveEtichetta(etichette[etichette.length - 1]);
                                                 }
