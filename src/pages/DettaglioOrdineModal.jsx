@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Ban, Calendar, Check, Trash2, User, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, Ban, Calendar, Check, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoOrdine, getStatoOrdineBadgeStyle } from '../utils/ordineUtils';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, societa, products }) => {
+const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products }) => {
     const [showConferma, setShowConferma] = useState(false);
     const [showConvertForm, setShowConvertForm] = useState(false);
     const [showEliminaConferma, setShowEliminaConferma] = useState(false);
@@ -14,9 +14,69 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [convertNextNumero, setConvertNextNumero] = useState(null);
     const [converting, setConverting] = useState(false);
 
+    // Etichette
+    const [etichette, setEtichette] = useState([]);
+    const [newEtichetta, setNewEtichetta] = useState('');
+    const [savingEtichette, setSavingEtichette] = useState(false);
+    const [savedFlash, setSavedFlash] = useState(false);
+    const etichettaInputRef = useRef(null);
+    const savedTimerRef = useRef(null);
+
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
     const todayStr = new Date().toISOString().split('T')[0];
+
+    // Sincronizza etichette locali all'apertura/cambio ordine
+    useEffect(() => {
+        if (!pagamento) return;
+        const tags = pagamento.etichette
+            ? pagamento.etichette.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        setEtichette(tags);
+        setNewEtichetta('');
+        setSavedFlash(false);
+        clearTimeout(savedTimerRef.current);
+    }, [pagamento?.id]);
+
+    const saveEtichette = async (tags) => {
+        if (!pagamento?.id || savingEtichette) return;
+        setSavingEtichette(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/payments/api/${pagamento.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ etichette: tags.join(', ') || null }),
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setSavedFlash(true);
+                clearTimeout(savedTimerRef.current);
+                savedTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
+                if (onUpdate) onUpdate(updated);
+            }
+        } catch (e) {
+            console.error('Errore salvataggio etichette:', e);
+        } finally {
+            setSavingEtichette(false);
+        }
+    };
+
+    const handleAddEtichetta = () => {
+        const val = newEtichetta.trim();
+        if (!val || etichette.includes(val)) { setNewEtichetta(''); return; }
+        const updated = [...etichette, val];
+        setEtichette(updated);
+        setNewEtichetta('');
+        saveEtichette(updated);
+        etichettaInputRef.current?.focus();
+    };
+
+    const handleRemoveEtichetta = (tag) => {
+        const updated = etichette.filter(t => t !== tag);
+        setEtichette(updated);
+        saveEtichette(updated);
+    };
 
     // Fetch preview numero ricevuta al cambio dell'anno nel form di conversione
     useEffect(() => {
@@ -282,6 +342,80 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                 </div>
                             );
                         })()}
+                    </div>
+
+                    {/* Etichette Section */}
+                    <div className="dpm-section">
+                        <div className="dpm-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Tag size={14} /> Etichette
+                            </span>
+                            {savedFlash && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: '#15803d', fontWeight: 600 }}>
+                                    <Check size={13} /> Salvato
+                                </span>
+                            )}
+                            {savingEtichette && (
+                                <span style={{ fontSize: '0.78rem', color: '#6b7280', fontStyle: 'italic' }}>Salvataggio…</span>
+                            )}
+                        </div>
+
+                        {/* Chips etichette correnti */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                            {etichette.map(tag => (
+                                <span key={tag} style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    background: '#eff6ff', color: '#1d4ed8',
+                                    border: '1px solid #bfdbfe', borderRadius: '6px',
+                                    padding: '3px 10px', fontSize: '0.82rem', fontWeight: 600,
+                                }}>
+                                    {tag}
+                                    <button
+                                        onClick={() => handleRemoveEtichetta(tag)}
+                                        disabled={savingEtichette}
+                                        style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: 'none', cursor: savingEtichette ? 'not-allowed' : 'pointer', padding: '0', color: '#6b7280', lineHeight: 1 }}
+                                        title="Rimuovi etichetta"
+                                    >
+                                        <X size={13} />
+                                    </button>
+                                </span>
+                            ))}
+                            {etichette.length === 0 && (
+                                <span style={{ fontSize: '0.85rem', color: '#9ca3af', fontStyle: 'italic' }}>Nessuna etichetta</span>
+                            )}
+                        </div>
+
+                        {/* Input aggiungi etichetta */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                                ref={etichettaInputRef}
+                                type="text"
+                                value={newEtichetta}
+                                onChange={e => setNewEtichetta(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddEtichetta(); } }}
+                                placeholder="Nuova etichetta…"
+                                disabled={savingEtichette}
+                                style={{
+                                    flex: 1, padding: '6px 12px', border: '1px solid #d1d5db',
+                                    borderRadius: '6px', fontSize: '0.88rem', outline: 'none',
+                                    opacity: savingEtichette ? 0.6 : 1,
+                                }}
+                            />
+                            <button
+                                onClick={handleAddEtichetta}
+                                disabled={!newEtichetta.trim() || savingEtichette}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    padding: '6px 14px', border: 'none', borderRadius: '6px',
+                                    background: (!newEtichetta.trim() || savingEtichette) ? '#e5e7eb' : '#2563eb',
+                                    color: (!newEtichetta.trim() || savingEtichette) ? '#9ca3af' : '#fff',
+                                    fontWeight: 600, fontSize: '0.85rem',
+                                    cursor: (!newEtichetta.trim() || savingEtichette) ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                <Plus size={14} /> Aggiungi
+                            </button>
+                        </div>
                     </div>
                 </div>
 

@@ -781,6 +781,10 @@ const Ordini = () => {
                     setPayments(prev => prev.filter(p => p.id !== id));
                     setSelectedPaymentDetail(null);
                 }}
+                onUpdate={(updated) => {
+                    setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
+                    setSelectedPaymentDetail(updated);
+                }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={products}
             />
