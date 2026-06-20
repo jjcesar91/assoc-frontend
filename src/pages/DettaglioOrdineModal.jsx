@@ -4,7 +4,7 @@ import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '../utils/ordineUtils';
 import './DettaglioPagamentoModal.css';
 
-const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products }) => {
+const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
     const [showConferma, setShowConferma] = useState(false);
     const [showConvertForm, setShowConvertForm] = useState(false);
     const [showEliminaConferma, setShowEliminaConferma] = useState(false);
@@ -21,6 +21,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [savedFlash, setSavedFlash] = useState(false);
     const etichettaInputRef = useRef(null);
     const savedTimerRef = useRef(null);
+    const [activeIdx, setActiveIdx] = useState(-1);
 
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
@@ -34,6 +35,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             : [];
         setEtichette(tags);
         setNewEtichetta('');
+        setActiveIdx(-1);
         setSavedFlash(false);
         clearTimeout(savedTimerRef.current);
     }, [pagamento?.id]);
@@ -62,12 +64,13 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         }
     };
 
-    const handleAddEtichetta = () => {
-        const val = newEtichetta.trim();
-        if (!val || etichette.includes(val)) { setNewEtichetta(''); return; }
+    const handleAddEtichetta = (forced) => {
+        const val = (forced ?? newEtichetta).trim();
+        if (!val || etichette.includes(val)) { setNewEtichetta(''); setActiveIdx(-1); return; }
         const updated = [...etichette, val];
         setEtichette(updated);
         setNewEtichetta('');
+        setActiveIdx(-1);
         saveEtichette(updated);
         etichettaInputRef.current?.focus();
     };
@@ -308,53 +311,104 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                     )}
 
                     {/* ── Etichette ── */}
-                    <div className="dpm-card">
-                        <div className="dpm-card-label dpm-card-label-row">
-                            <span className="dpm-card-label-icon"><Tag size={11} /> Etichette</span>
-                            <span className={`dpm-save-status ${savedFlash ? 'dpm-save-flash' : ''}`}>
-                                {savedFlash && <><Check size={11} /> Salvato</>}
-                                {savingEtichette && !savedFlash && 'Salvataggio…'}
-                            </span>
-                        </div>
-                        {/* Tag-input: chips + input in flow */}
-                        <div
-                            className="dpm-tag-input"
-                            onClick={() => etichettaInputRef.current?.focus()}
-                        >
-                            {etichette.map(tag => (
-                                <span key={tag} className="dpm-chip">
-                                    {tag}
-                                    <button
-                                        className="dpm-chip-remove"
-                                        onClick={e => { e.stopPropagation(); handleRemoveEtichetta(tag); }}
-                                        disabled={savingEtichette}
-                                        title="Rimuovi"
+                    {(() => {
+                        const suggestions = allEtichette.filter(t =>
+                            !etichette.includes(t) &&
+                            t.toLowerCase().includes(newEtichetta.toLowerCase().trim())
+                        );
+                        const showDropdown = newEtichetta.trim().length > 0 && suggestions.length > 0;
+                        const isNewValue = newEtichetta.trim() && !allEtichette.includes(newEtichetta.trim());
+
+                        return (
+                            <div className="dpm-card">
+                                <div className="dpm-card-label dpm-card-label-row">
+                                    <span className="dpm-card-label-icon"><Tag size={11} /> Etichette</span>
+                                    <span className={`dpm-save-status ${savedFlash ? 'dpm-save-flash' : ''}`}>
+                                        {savedFlash && <><Check size={11} /> Salvato</>}
+                                        {savingEtichette && !savedFlash && 'Salvataggio…'}
+                                    </span>
+                                </div>
+                                {/* Tag-input: chips + input in flow */}
+                                <div style={{ position: 'relative' }}>
+                                    <div
+                                        className="dpm-tag-input"
+                                        onClick={() => etichettaInputRef.current?.focus()}
                                     >
-                                        <X size={11} />
-                                    </button>
-                                </span>
-                            ))}
-                            <input
-                                ref={etichettaInputRef}
-                                className="dpm-chip-input"
-                                value={newEtichetta}
-                                onChange={e => setNewEtichetta(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter') { e.preventDefault(); handleAddEtichetta(); }
-                                    if (e.key === 'Backspace' && !newEtichetta && etichette.length > 0) {
-                                        handleRemoveEtichetta(etichette[etichette.length - 1]);
-                                    }
-                                }}
-                                placeholder={etichette.length === 0 ? 'Aggiungi etichetta…' : 'Altra…'}
-                                disabled={savingEtichette}
-                            />
-                        </div>
-                        {newEtichetta.trim() && (
-                            <div className="dpm-chip-hint">
-                                Premi <kbd>Invio</kbd> per aggiungere <strong>"{newEtichetta.trim()}"</strong>
+                                        {etichette.map(tag => (
+                                            <span key={tag} className="dpm-chip">
+                                                {tag}
+                                                <button
+                                                    className="dpm-chip-remove"
+                                                    onClick={e => { e.stopPropagation(); handleRemoveEtichetta(tag); }}
+                                                    disabled={savingEtichette}
+                                                    title="Rimuovi"
+                                                >
+                                                    <X size={11} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                        <input
+                                            ref={etichettaInputRef}
+                                            className="dpm-chip-input"
+                                            value={newEtichetta}
+                                            onChange={e => { setNewEtichetta(e.target.value); setActiveIdx(-1); }}
+                                            onKeyDown={e => {
+                                                if (e.key === 'ArrowDown') {
+                                                    e.preventDefault();
+                                                    if (showDropdown) setActiveIdx(i => Math.min(i + 1, suggestions.length - 1));
+                                                } else if (e.key === 'ArrowUp') {
+                                                    e.preventDefault();
+                                                    if (showDropdown) setActiveIdx(i => Math.max(i - 1, -1));
+                                                } else if (e.key === 'Escape') {
+                                                    setActiveIdx(-1); setNewEtichetta('');
+                                                } else if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    if (showDropdown && activeIdx >= 0) handleAddEtichetta(suggestions[activeIdx]);
+                                                    else handleAddEtichetta();
+                                                } else if (e.key === 'Backspace' && !newEtichetta && etichette.length > 0) {
+                                                    handleRemoveEtichetta(etichette[etichette.length - 1]);
+                                                }
+                                            }}
+                                            placeholder={etichette.length === 0 ? 'Aggiungi etichetta…' : 'Altra…'}
+                                            disabled={savingEtichette}
+                                        />
+                                    </div>
+
+                                    {/* Dropdown suggerimenti */}
+                                    {showDropdown && (
+                                        <ul className="dpm-suggestions">
+                                            {suggestions.map((s, i) => (
+                                                <li
+                                                    key={s}
+                                                    className={`dpm-suggestion-item${i === activeIdx ? ' dpm-suggestion-active' : ''}`}
+                                                    onMouseDown={e => e.preventDefault()}
+                                                    onClick={() => handleAddEtichetta(s)}
+                                                >
+                                                    <Tag size={11} className="dpm-suggestion-icon" />
+                                                    {s}
+                                                </li>
+                                            ))}
+                                            {isNewValue && (
+                                                <li
+                                                    className="dpm-suggestion-new"
+                                                    onMouseDown={e => e.preventDefault()}
+                                                    onClick={() => handleAddEtichetta()}
+                                                >
+                                                    <Plus size={11} /> Crea <strong>"{newEtichetta.trim()}"</strong>
+                                                </li>
+                                            )}
+                                        </ul>
+                                    )}
+                                    {/* Hint: solo se nessun dropdown e valore nuovo */}
+                                    {!showDropdown && isNewValue && (
+                                        <div className="dpm-chip-hint">
+                                            Premi <kbd>Invio</kbd> per aggiungere <strong>"{newEtichetta.trim()}"</strong>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        );
+                    })()}
 
                 </div>
 

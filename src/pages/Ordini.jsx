@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap, FileInput } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
@@ -413,6 +413,14 @@ const Ordini = () => {
         return <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>{sort.dir === 'asc' ? '↑' : '↓'}</span>;
     };
 
+    const allEtichette = useMemo(() => {
+        const set = new Set();
+        payments.forEach(p => {
+            if (p.etichette) p.etichette.split(',').forEach(t => { const v = t.trim(); if (v) set.add(v); });
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
+    }, [payments]);
+
     const filteredPayments = payments.filter(p => {
         // Lista Pagamenti: solo entrate (importo >= 0) legate a un socio
         if (parseFloat(p.importo) < 0) return false;
@@ -787,6 +795,7 @@ const Ordini = () => {
                 }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={products}
+                allEtichette={allEtichette}
             />
 
             <ImportVociRicevutaModal

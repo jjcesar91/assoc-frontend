@@ -334,6 +334,61 @@
     font-family: inherit;
 }
 
+/* ── Autocomplete dropdown ───────────────────────────────────────────────── */
+.dpm-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    z-index: 50;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dpm-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.dpm-suggestion-item:hover,
+.dpm-suggestion-active {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.dpm-suggestion-icon {
+    flex-shrink: 0;
+    color: #93c5fd;
+}
+
+.dpm-suggestion-new {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    color: #6b7280;
+    cursor: pointer;
+    border-top: 1px solid #f3f4f6;
+    transition: background 0.1s;
+}
+.dpm-suggestion-new:hover {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 .dpm-footer {
     display: flex;
