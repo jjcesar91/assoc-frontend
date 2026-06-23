@@ -16,6 +16,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
     // Etichette
     const [etichette, setEtichette] = useState([]);
+    const [originalEtichette, setOriginalEtichette] = useState([]); // pool fisso all'apertura
     const [newEtichetta, setNewEtichetta] = useState('');
     const [savingEtichette, setSavingEtichette] = useState(false);
     const [savedFlash, setSavedFlash] = useState(false);
@@ -35,6 +36,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             ? pagamento.etichette.split(',').map(s => s.trim()).filter(Boolean)
             : [];
         setEtichette(tags);
+        setOriginalEtichette(tags); // snapshot immutabile per il pool suggerimenti
         setNewEtichetta('');
         setActiveIdx(-1);
         setInputFocused(false);
@@ -315,7 +317,10 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                     {/* ── Etichette ── */}
                     {(() => {
                         const query = newEtichetta.toLowerCase().trim();
-                        const suggestions = allEtichette.filter(t =>
+                        // Pool = etichette globali + quelle originali dell'ordine (rimangono
+                        // disponibili come suggerimento anche dopo essere state rimosse)
+                        const pool = [...new Set([...allEtichette, ...originalEtichette])].sort((a, b) => a.localeCompare(b, 'it'));
+                        const suggestions = pool.filter(t =>
                             !etichette.includes(t) &&
                             (query === '' || t.toLowerCase().includes(query))
                         );
