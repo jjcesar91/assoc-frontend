@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Ban, Calendar, Check, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '../utils/ordineUtils';
@@ -22,6 +23,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [savedFlash, setSavedFlash] = useState(false);
     const etichettaInputRef = useRef(null);
     const savedTimerRef = useRef(null);
+    const tagInputRef = useRef(null);
     const [activeIdx, setActiveIdx] = useState(-1);
     const [inputFocused, setInputFocused] = useState(false);
 
@@ -222,6 +224,12 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         if (name) quoteItems = [{ name, importo: pagamento.importo }];
     }
 
+    const _etichetteQuery = newEtichetta.toLowerCase().trim();
+    const _etichettePool = [...new Set([...allEtichette, ...originalEtichette])].sort((a, b) => a.localeCompare(b, 'it'));
+    const suggestions = _etichettePool.filter(t => !etichette.includes(t) && (_etichetteQuery === '' || t.toLowerCase().includes(_etichetteQuery)));
+    const showDropdown = inputFocused && suggestions.length > 0;
+    const isNewValue = newEtichetta.trim() !== '' && !allEtichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase()) && !etichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase());
+
     return (
         <div className="dpm-overlay">
             <div className="dpm-modal">
@@ -315,20 +323,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                     )}
 
                     {/* ── Etichette ── */}
-                    {(() => {
-                        const query = newEtichetta.toLowerCase().trim();
-                        // Pool = etichette globali + quelle originali dell'ordine (rimangono
-                        // disponibili come suggerimento anche dopo essere state rimosse)
-                        const pool = [...new Set([...allEtichette, ...originalEtichette])].sort((a, b) => a.localeCompare(b, 'it'));
-                        const suggestions = pool.filter(t =>
-                            !etichette.includes(t) &&
-                            (query === '' || t.toLowerCase().includes(query))
-                        );
-                        const showDropdown = inputFocused && suggestions.length > 0;
-                        const isNewValue = newEtichetta.trim() !== '' && !allEtichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase()) && !etichette.some(t => t.toLowerCase() === newEtichetta.trim().toLowerCase());
-
-                        return (
-                            <div className="dpm-card">
+                    <div className="dpm-card">
                                 <div className="dpm-card-label dpm-card-label-row">
                                     <span className="dpm-card-label-icon"><Tag size={11} /> Etichette</span>
                                     <span className={`dpm-save-status ${savedFlash ? 'dpm-save-flash' : ''}`}>
@@ -337,7 +332,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                     </span>
                                 </div>
                                 {/* Tag-input: chips + input in flow */}
-                                <div style={{ position: 'relative' }}>
+                                <div ref={tagInputRef}>
                                     <div
                                         className="dpm-tag-input"
                                         onClick={() => etichettaInputRef.current?.focus()}
@@ -385,31 +380,6 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                         />
                                     </div>
 
-                                    {/* Dropdown suggerimenti */}
-                                    {showDropdown && (
-                                        <ul className="dpm-suggestions">
-                                            {suggestions.map((s, i) => (
-                                                <li
-                                                    key={s}
-                                                    className={`dpm-suggestion-item${i === activeIdx ? ' dpm-suggestion-active' : ''}`}
-                                                    onMouseDown={e => e.preventDefault()}
-                                                    onClick={() => handleAddEtichetta(s)}
-                                                >
-                                                    <Tag size={11} className="dpm-suggestion-icon" />
-                                                    {s}
-                                                </li>
-                                            ))}
-                                            {isNewValue && (
-                                                <li
-                                                    className="dpm-suggestion-new"
-                                                    onMouseDown={e => e.preventDefault()}
-                                                    onClick={() => handleAddEtichetta()}
-                                                >
-                                                    <Plus size={11} /> Crea <strong>"{newEtichetta.trim()}"</strong>
-                                                </li>
-                                            )}
-                                        </ul>
-                                    )}
                                     {/* Hint: solo se nessun dropdown e valore nuovo */}
                                     {!showDropdown && isNewValue && (
                                         <div className="dpm-chip-hint">
@@ -418,8 +388,43 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                     )}
                                 </div>
                             </div>
-                        );
-                    })()}
+                    {showDropdown && tagInputRef.current && createPortal(
+                        (() => {
+                            const rect = tagInputRef.current.getBoundingClientRect();
+                            return (
+                                <ul className="dpm-suggestions" style={{
+                                    position: 'fixed',
+                                    top: rect.bottom + 2,
+                                    left: rect.left,
+                                    right: 'auto',
+                                    width: rect.width,
+                                    zIndex: 9999,
+                                }}>
+                                    {suggestions.map((s, i) => (
+                                        <li
+                                            key={s}
+                                            className={`dpm-suggestion-item${i === activeIdx ? ' dpm-suggestion-active' : ''}`}
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => handleAddEtichetta(s)}
+                                        >
+                                            <Tag size={11} className="dpm-suggestion-icon" />
+                                            {s}
+                                        </li>
+                                    ))}
+                                    {isNewValue && (
+                                        <li
+                                            className="dpm-suggestion-new"
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => handleAddEtichetta()}
+                                        >
+                                            <Plus size={11} /> Crea <strong>"{newEtichetta.trim()}"</strong>
+                                        </li>
+                                    )}
+                                </ul>
+                            );
+                        })(),
+                        document.body
+                    )}
 
                 </div>
 

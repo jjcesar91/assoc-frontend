@@ -54,7 +54,7 @@ const Soci = ({ onLogout }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [importReport, setImportReport] = useState(null); // { total, current, creati, saltati, errori[], logs[], done, headers, dataRecords }
-    const [importLogFilters, setImportLogFilters] = useState({ creati: true, saltati: true, errori: true });
+    const [importLogFilters, setImportLogFilters] = useState({ creati: true, aggiornati: true, saltati: true, errori: true });
     const importFileRef = useRef(null);
     const importOdooFileRef = useRef(null);
     const importLogRef = useRef(null);
@@ -460,9 +460,10 @@ const Soci = ({ onLogout }) => {
         }
         const { headers, dataRecords, logs } = importReport;
         const visibleLogs = (logs || []).filter(l =>
-            (l.type === 'OK'   && importLogFilters.creati)  ||
-            (l.type === 'SKIP' && importLogFilters.saltati) ||
-            (l.type === 'ERR'  && importLogFilters.errori)
+            (l.type === 'OK'     && importLogFilters.creati)     ||
+            (l.type === 'UPDATE' && importLogFilters.aggiornati) ||
+            (l.type === 'SKIP'   && importLogFilters.saltati)    ||
+            (l.type === 'ERR'    && importLogFilters.errori)
         );
         const rowIdxSet = new Set(visibleLogs.map(l => l.rowIdx));
         const filteredRows = (dataRecords || []).filter((_, idx) => rowIdxSet.has(idx));
@@ -545,54 +546,106 @@ const Soci = ({ onLogout }) => {
 
         // Fetch CF già presenti per questa specifica società (dati freschi dal server)
         const token = localStorage.getItem('token');
-        let existingCFs = new Set();
+        // Map<CF_uppercase, socio> per confrontare i dati ed eventualmente aggiornare
+        let existingCFsMap = new Map();
         try {
             const res = await fetch(`/users/api/soci?societa_id=${selectedSocietaId}`);
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
-                    data.forEach(s => { if (s.codice_fiscale) existingCFs.add(s.codice_fiscale.toUpperCase()); });
+                    data.forEach(s => { if (s.codice_fiscale) existingCFsMap.set(s.codice_fiscale.toUpperCase(), s); });
                 }
             }
-        } catch(e) { /* usa set vuoto se fallisce */ }
+        } catch(e) { /* usa map vuota se fallisce */ }
 
         setShowActionsMenu(false);
-        setImportLogFilters({ creati: true, saltati: true, errori: true });
-        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords });
+        setImportLogFilters({ creati: true, aggiornati: true, saltati: true, errori: true });
+        setImportReport({ total, current: 0, creati: 0, aggiornati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords });
 
-        let creati = 0; let saltati = 0; const errori = []; const logs = [];
+        let creati = 0; let aggiornati = 0; let saltati = 0; const errori = []; const logs = [];
 
         for (let i = 0; i < dataRecords.length; i++) {
             const cells = dataRecords[i];
             const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
 
             const cf = get('CODICE_FISCALE').toUpperCase();
+
+            const buildPayload = () => ({
+                societa_id: selectedSocietaId,
+                cognome: get('COGNOME') || '-',
+                nome: get('NOME') || '-',
+                sesso: get('SESSO') || 'M',
+                data_nascita: parseDate(get('DATA_NASCITA')) || '1900-01-01',
+                luogo_nascita: get('COMUNE_NASCITA') || '',
+                codice_fiscale: cf,
+                email: get('EMAIL') || `${cf.toLowerCase()}@import.local`,
+                telefono: get('TELEFONO') || '',
+                indirizzo: get('INDIRIZZO_RESIDENZA') || null,
+                comune: get('COMUNE_RESIDENZA') || null,
+                cap: get('CAP') || null,
+                scadenza_certificato: parseDate(get('DATA SCADENZA CERTIFICATO')) || null,
+                data_ammissione: parseDate(get('DATA_ISCRIZIONE')) || null,
+                note: get('NOTE') || null,
+            });
+
+            // Normalizza valori per il confronto: null/undefined/'' → '', date tronca al giorno
+            const normStr = (v) => (v === null || v === undefined) ? '' : String(v).trim();
+            const normDate = (v) => { if (!v) return ''; return String(v).trim().substring(0, 10); };
+
             if (!cf) {
                 saltati++;
                 logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2}: codice fiscale assente` });
-            } else if (existingCFs.has(cf)) {
-                saltati++;
-                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): già presente nella società` });
+            } else if (existingCFsMap.has(cf)) {
+                const existing = existingCFsMap.get(cf);
+                const payload = buildPayload();
+                const cognome = payload.cognome;
+                const nome = payload.nome;
+
+                const isDifferent =
+                    normStr(payload.cognome) !== normStr(existing.cognome) ||
+                    normStr(payload.nome) !== normStr(existing.nome) ||
+                    normStr(payload.sesso) !== normStr(existing.sesso) ||
+                    normDate(payload.data_nascita) !== normDate(existing.data_nascita) ||
+                    normStr(payload.luogo_nascita) !== normStr(existing.luogo_nascita) ||
+                    normStr(payload.email) !== normStr(existing.email) ||
+                    normStr(payload.telefono) !== normStr(existing.telefono) ||
+                    normStr(payload.indirizzo) !== normStr(existing.indirizzo) ||
+                    normStr(payload.comune) !== normStr(existing.comune) ||
+                    normStr(payload.cap) !== normStr(existing.cap) ||
+                    normDate(payload.scadenza_certificato) !== normDate(existing.scadenza_certificato) ||
+                    normDate(payload.data_ammissione) !== normDate(existing.data_ammissione) ||
+                    normStr(payload.note) !== normStr(existing.note);
+
+                if (isDifferent) {
+                    try {
+                        const res = await fetch(`/users/api/soci/${existing.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify(payload),
+                        });
+                        if (res.ok) {
+                            aggiornati++;
+                            const updated = await res.json();
+                            existingCFsMap.set(cf, updated);
+                            logs.push({ type: 'UPDATE', rowIdx: i, message: `Riga ${i+2} - ${cognome} ${nome} (${cf}): aggiornato` });
+                        } else {
+                            const err = await res.json();
+                            const msg = err.error || err.message || 'errore sconosciuto';
+                            errori.push(`Riga ${i+2} (${cf}): ${msg}`);
+                            logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): ${msg}` });
+                        }
+                    } catch (e) {
+                        errori.push(`Riga ${i+2} (${cf}): errore di rete`);
+                        logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): errore di rete` });
+                    }
+                } else {
+                    saltati++;
+                    logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): già presente nella società` });
+                }
             } else {
                 const cognome = get('COGNOME') || '-';
                 const nome = get('NOME') || '-';
-                const payload = {
-                    societa_id: selectedSocietaId,
-                    cognome: get('COGNOME') || '-',
-                    nome: get('NOME') || '-',
-                    sesso: get('SESSO') || 'M',
-                    data_nascita: parseDate(get('DATA_NASCITA')) || '1900-01-01',
-                    luogo_nascita: get('COMUNE_NASCITA') || '',
-                    codice_fiscale: cf,
-                    email: get('EMAIL') || `${cf.toLowerCase()}@import.local`,
-                    telefono: get('TELEFONO') || '',
-                    indirizzo: get('INDIRIZZO_RESIDENZA') || null,
-                    comune: get('COMUNE_RESIDENZA') || null,
-                    cap: get('CAP') || null,
-                    scadenza_certificato: parseDate(get('DATA SCADENZA CERTIFICATO')) || null,
-                    data_ammissione: parseDate(get('DATA_ISCRIZIONE')) || null,
-                    note: get('NOTE') || null,
-                };
+                const payload = buildPayload();
                 try {
                     const res = await fetch('/users/api/soci', {
                         method: 'POST',
@@ -601,7 +654,8 @@ const Soci = ({ onLogout }) => {
                     });
                     if (res.ok) {
                         creati++;
-                        existingCFs.add(cf);
+                        const created = await res.json();
+                        existingCFsMap.set(cf, created);
                         logs.push({ type: 'OK', rowIdx: i, message: `Riga ${i+2} - ${cognome} ${nome} (${cf}): creato` });
                     } else {
                         const err = await res.json();
@@ -621,16 +675,16 @@ const Soci = ({ onLogout }) => {
             }
 
             // Aggiorna progress ogni riga
-            const snap = { total, current: i + 1, creati, saltati, errori: [...errori], logs: [...logs], done: false, headers, dataRecords };
+            const snap = { total, current: i + 1, creati, aggiornati, saltati, errori: [...errori], logs: [...logs], done: false, headers, dataRecords };
             setImportReport(snap);
             // Auto-scroll log
             if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         }
 
         // Completato
-        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true, headers, dataRecords });
+        setImportReport({ total, current: total, creati, aggiornati, saltati, errori, logs, done: true, headers, dataRecords });
         if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
-        if (creati > 0) fetchSoci();
+        if (creati > 0 || aggiornati > 0) fetchSoci();
         if (importFileRef.current) importFileRef.current.value = '';
     };
 
@@ -1254,6 +1308,7 @@ const Soci = ({ onLogout }) => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', fontSize: '0.88rem', marginBottom: '16px' }}>
                                     <span style={{ color: '#2e7d32' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
+                                    <span style={{ color: '#f57c00' }}>↻ Aggiornati: <strong>{importReport.aggiornati ?? 0}</strong></span>
                                     <span style={{ color: '#888' }}>↷ Saltati: <strong>{importReport.saltati}</strong></span>
                                     <span style={{ color: '#c62828' }}>✗ Errori: <strong>{importReport.errori.length}</strong></span>
                                 </div>
@@ -1266,8 +1321,8 @@ const Soci = ({ onLogout }) => {
                                 }}>
                                     {(importReport.logs || []).map((l, i) => (
                                         <div key={i} style={{
-                                            color: l.type === 'OK' ? '#6fcf97' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
-                                        }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
+                                            color: l.type === 'OK' ? '#6fcf97' : l.type === 'UPDATE' ? '#ffb74d' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                        }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'UPDATE' ? '[UPD]  ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
                                     ))}
                                 </div>
                             </>
@@ -1296,6 +1351,20 @@ const Soci = ({ onLogout }) => {
                                         <strong style={{ color: '#2e7d32' }}>{importReport.creati}</strong>
                                     </div>
                                     <div
+                                        onClick={() => setImportLogFilters(f => ({ ...f, aggiornati: !f.aggiornati }))}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
+                                            backgroundColor: importLogFilters.aggiornati ? '#fff8e1' : '#f9f9f9',
+                                            borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
+                                            border: `2px solid ${importLogFilters.aggiornati ? '#ffb74d' : '#e0e0e0'}`,
+                                            opacity: importLogFilters.aggiornati ? 1 : 0.5,
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <span style={{ color: '#e65100' }}>↻ Soci aggiornati</span>
+                                        <strong style={{ color: '#e65100' }}>{importReport.aggiornati ?? 0}</strong>
+                                    </div>
+                                    <div
                                         onClick={() => setImportLogFilters(f => ({ ...f, saltati: !f.saltati }))}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
@@ -1306,7 +1375,7 @@ const Soci = ({ onLogout }) => {
                                             transition: 'all 0.15s',
                                         }}
                                     >
-                                        <span style={{ color: '#666' }}>↷ Saltati (già esistenti o CF assente)</span>
+                                        <span style={{ color: '#666' }}>↷ Saltati (dati identici o CF assente)</span>
                                         <strong style={{ color: '#666' }}>{importReport.saltati}</strong>
                                     </div>
                                     <div
@@ -1333,14 +1402,15 @@ const Soci = ({ onLogout }) => {
                                 }}>
                                     {(importReport.logs || [])
                                         .filter(l =>
-                                            (l.type === 'OK'   && importLogFilters.creati)  ||
-                                            (l.type === 'SKIP' && importLogFilters.saltati) ||
-                                            (l.type === 'ERR'  && importLogFilters.errori)
+                                            (l.type === 'OK'     && importLogFilters.creati)     ||
+                                            (l.type === 'UPDATE' && importLogFilters.aggiornati) ||
+                                            (l.type === 'SKIP'   && importLogFilters.saltati)    ||
+                                            (l.type === 'ERR'    && importLogFilters.errori)
                                         )
                                         .map((l, i) => (
                                             <div key={i} style={{
-                                                color: l.type === 'OK' ? '#6fcf97' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
-                                            }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
+                                                color: l.type === 'OK' ? '#6fcf97' : l.type === 'UPDATE' ? '#ffb74d' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                            }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'UPDATE' ? '[UPD]  ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
                                         ))
                                     }
                                 </div>
