@@ -207,10 +207,10 @@ const Layout = ({ children, onLogout, title }) => {
                 flexShrink: 0
             }}>
                 <div style={{display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
-                    <button className="icon-btn profile-btn" onClick={() => setSidebarOpen(true)} style={{ color: 'white' }}>
+                    <button className="icon-btn profile-btn" onClick={() => setSidebarOpen(prev => !prev)} style={{ color: 'white' }}>
                         <Menu size={24}/>
                     </button>
-                    <h1 style={{ fontSize: '1.25rem', fontWeight: 500, margin: 0 }}>{title}</h1>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'white' }}>{title}</h1>
                     {Object.entries(favorites).map(([id, fav]) => {
                         const parentItem = MENU_STRUCTURE.find(m => m.id === fav.parentId);
                         const Icon = parentItem?.Icon;

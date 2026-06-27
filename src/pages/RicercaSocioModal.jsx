@@ -1,29 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, MousePointerClick, Contact } from 'lucide-react';
-import { computeScadenzaCertificato } from '../utils/certificatoUtils';
+import { Search, X, User, Building2, MousePointerClick, Contact } from 'lucide-react';
+import { useAnno } from '../data/AnnoContext';
 import './RicercaSocioModal.css';
 
-const getCertStatus = (scadenza) => {
-    if (!scadenza) return 'NON ISCRITTO';
-    // Calcola scadenza: data presentazione + 1 anno - 1 giorno
-    const scadenzaDate = computeScadenzaCertificato(scadenza);
-    if (!scadenzaDate) return 'NON ISCRITTO';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (scadenzaDate < today) {
-        return 'SCADUTO';
-    } else {
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-        if (scadenzaDate <= thirtyDaysFromNow) {
-            return 'IN SCADENZA';
-        }
-        return 'ISCRITTO';
-    }
-};
+// Nome visualizzato: ragione sociale per le associazioni, cognome + nome altrimenti
+const getNomeSocio = (s) => s.tipo_socio === 'associazione'
+    ? (s.ragione_sociale || '-')
+    : `${s.cognome || ''} ${s.nome || ''}`.trim() || '-';
 
 const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId, abbonamentoNome, enrolledIds = [] }) => {
+    const { selectedAnno } = useAnno();
+
+    // Stato di iscrizione, coerente con la vista Soci (senza dati pagamenti: usa libro soci e iscrizioni)
+    const getIscrizioneLabel = (socio) => {
+        if (socio.data_ammissione) return 'SOCIO';
+        const hasCurrent = (socio.iscrizioni || []).some(i => i.anno === selectedAnno);
+        if (hasCurrent) return 'ISCRITTO';
+        const hasPast = (socio.iscrizioni || []).some(i => i.anno < selectedAnno);
+        if (hasPast) return 'SCADUTO';
+        return 'NO';
+    };
+
     const enrolledSet = new Set(enrolledIds);
     const enrolledKey = enrolledIds.join(',');
     const [soci, setSoci] = useState([]);
@@ -122,10 +119,15 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
     useEffect(() => {
         let result = soci;
         if (filters.cognome) {
-            result = result.filter(s => s.cognome.toLowerCase().includes(filters.cognome.toLowerCase()));
+            const v = filters.cognome.toLowerCase();
+            result = result.filter(s =>
+                (s.cognome || '').toLowerCase().includes(v) ||
+                (s.ragione_sociale || '').toLowerCase().includes(v)
+            );
         }
         if (filters.nome) {
-            result = result.filter(s => s.nome.toLowerCase().includes(filters.nome.toLowerCase()));
+            const v = filters.nome.toLowerCase();
+            result = result.filter(s => (s.nome || '').toLowerCase().includes(v));
         }
         // Già iscritti in fondo
         result = [...result].sort((a, b) => {
@@ -188,7 +190,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                     <th style={{width: abbonamentoId ? '35%' : '40%'}}>Socio</th>
                                     <th style={{width: '18%'}}>Data nascita</th>
                                     {abbonamentoId && <th style={{width: '20%'}}>Ult. pagamento</th>}
-                                    <th style={{width: '17%'}}>Certificato</th>
+                                    <th style={{width: '17%'}}>Iscrizione</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -209,12 +211,12 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                     return (
                                     <tr key={socio.id} style={isEnrolled ? { opacity: 0.5, background: 'var(--surface-1)' } : {}}>
                                         <td style={{width: abbonamentoId ? '35%' : '40%'}}>
-                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? 'var(--text-tertiary)' : (socio.sesso === 'F' ? 'var(--primary)' : 'var(--primary)'), fontWeight: 'bold'}}>
-                                                <User size={18}/>
+                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? 'var(--text-tertiary)' : 'var(--primary)', fontWeight: 'bold'}}>
+                                                {socio.tipo_socio === 'associazione' ? <Building2 size={18}/> : <User size={18}/>}
                                                 <span
                                                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
                                                     onClick={() => window.open(`/soci?apriSocioPath=${socio.id}`, '_blank')}
-                                                >{socio.cognome} {socio.nome}</span>
+                                                >{getNomeSocio(socio)}</span>
                                                 {isEnrolled && <span style={{fontSize:'0.72rem', background:'var(--border-color)', color:'var(--text-secondary)', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>già iscritto</span>}
                                                 {!isEnrolled && abbonamentoId && !lastPaymentMap[socio.id] && passepartoutMap[socio.id] && (
                                                     <span style={{fontSize:'0.72rem', background:'var(--warning-container)', color:'var(--on-warning-container)', border:'1px solid var(--warning)', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>jolly</span>
@@ -265,9 +267,16 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                             </td>
                                         )}
                                         <td style={{width: '17%'}}>
-                                            <span className={`badge-rm ${getCertStatus(socio.scadenza_certificato) === 'ISCRITTO' ? 'badge-success' : 'badge-danger'}`}>
-                                                {getCertStatus(socio.scadenza_certificato) === 'ISCRITTO' ? 'ISCRITTO' : 'NON ISCRITTO'}
-                                            </span>
+                                            {(() => {
+                                                const label = getIscrizioneLabel(socio);
+                                                const badgeClass = {
+                                                    'SOCIO': 'badge-info',
+                                                    'ISCRITTO': 'badge-success',
+                                                    'SCADUTO': 'badge-warning',
+                                                    'NO': 'badge-danger',
+                                                }[label] || 'badge-danger';
+                                                return <span className={`badge-rm ${badgeClass}`}>{label === 'NO' ? 'NON ISCRITTO' : label}</span>;
+                                            })()}
                                         </td>
                                         <td style={{textAlign: 'right'}}>
                                             <div style={{display:'flex', gap:'5px', justifyContent:'flex-end'}}>

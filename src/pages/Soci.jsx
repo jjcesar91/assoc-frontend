@@ -9,7 +9,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { useAlert } from '../components/AlertModal';
-import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
+import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 
 const TAG_PALETTE = [
     { bg: 'var(--info-container)', text: 'var(--primary)' }, { bg: 'var(--primary-container)', text: 'var(--primary)' },
@@ -213,12 +213,17 @@ const Soci = ({ onLogout }) => {
         iscritto: '',
         certMedico: '',
         pagamenti: '',
-        lista: ''
+        lista: '',
+        etichetta: ''
     });
+    const [showMoreFilters, setShowMoreFilters] = useState(false);
 
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
+
+    // Elenco unico delle etichette presenti tra i soci, per popolare il filtro
+    const etichetteOptions = [...new Set(soci.flatMap(s => parseEtichette(s.etichette)))].sort((a, b) => a.localeCompare(b, 'it'));
 
     const getCertStatus = (dataPresentazione) => {
         if (!dataPresentazione) return 'MISSING';
@@ -341,13 +346,17 @@ const Soci = ({ onLogout }) => {
             const status = getCertStatus(socio.scadenza_certificato);
             if (status !== filters.certMedico) return false;
         }
-        
+
+        if (filters.etichetta !== '') {
+            if (!parseEtichette(socio.etichette).includes(filters.etichetta)) return false;
+        }
+
         return true;
     });
 
     useEffect(() => {
         // Reset UI state e ricarica dati al cambio società
-        setFilters({ cognome: '', nome: '', iscritto: '', certMedico: '', pagamenti: '', lista: '' });
+        setFilters({ cognome: '', nome: '', iscritto: '', certMedico: '', pagamenti: '', lista: '', etichetta: '' });
         setShowModal(false);
         setShowEditProfileModal(false);
         setShowComunicazioneModal(false);
@@ -975,68 +984,16 @@ const Soci = ({ onLogout }) => {
                             />
                         </div>
 
-                        {/* Iscritto */}
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '100px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Iscritto</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.iscritto}
-                                onChange={(e) => handleFilterChange('iscritto', e.target.value)}
-                            >
-                                <option value="">TUTTI</option>
-                                <option value="1">SI</option>
-                                <option value="0">NO</option>
-                            </select>
-                        </div>
-
-                        {/* Cert. medico */}
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Cert. medico</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.certMedico}
-                                onChange={(e) => handleFilterChange('certMedico', e.target.value)}
-                            >
-                                <option value="">TUTTI</option>
-                                <option value="MISSING">MANCANTE</option>
-                                <option value="2">VALIDO</option>
-                                <option value="1">IN SCADENZA</option>
-                                <option value="0">SCADUTO</option>
-                            </select>
-                        </div>
-
-                        {/* Pagamenti */}
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Pagamenti</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.pagamenti}
-                                onChange={(e) => handleFilterChange('pagamenti', e.target.value)}
-                            >
-                                <option value="">TUTTI</option>
-                                <option value="0">REGOLARI</option>
-                                <option value="1">NON REGOLARI</option>
-                            </select>
-                        </div>
-
-                        {/* Liste */}
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Liste</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.lista}
-                                onChange={(e) => handleFilterChange('lista', e.target.value)}
-                            >
-                                <option value="">TUTTI</option>
-                                <option value="4614">Aerobica</option>
-                                <option value="4356">THAI BOXE</option>
-                                <option value="4257">U13</option>
-                            </select>
-                        </div>
+                        {/* Toggle filtri a scomparsa */}
+                        <button
+                            type="button"
+                            className="btn-outlined"
+                            style={{height: '35px', display:'flex', alignItems:'center', gap:'6px', fontSize:'0.9rem', padding: '0 12px'}}
+                            onClick={() => setShowMoreFilters(v => !v)}
+                            aria-expanded={showMoreFilters}
+                        >
+                            <Filter size={14}/> Filtri {showMoreFilters ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                        </button>
 
                          {/* Accesso tornello (Hidden as per request) */}
                          <div style={{display:'none', flexDirection:'column', borderRight: '1px solid black', paddingRight: '15px'}}>
@@ -1049,9 +1006,9 @@ const Soci = ({ onLogout }) => {
                         </div>
                         
                         {/* Ricerca Avanzata Button */}
-                         <button 
-                            className="btn-contained" 
-                            style={{backgroundColor:'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                         <button
+                            className="btn-contained"
+                            style={{backgroundColor:'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px', marginLeft: 'auto'}}
                             onClick={() => setShowAdvancedSearch(true)}
                          >
                             <Search size={14}/> Ricerca avanzata
@@ -1110,6 +1067,92 @@ const Soci = ({ onLogout }) => {
                         </button>
 
                     </div>
+
+                    {/* Filtri a scomparsa */}
+                    {showMoreFilters && (
+                        <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '16px'}}>
+
+                            {/* Iscritto */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Iscritto</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.iscritto}
+                                    onChange={(e) => handleFilterChange('iscritto', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="1">SI</option>
+                                    <option value="0">NO</option>
+                                </select>
+                            </div>
+
+                            {/* Cert. medico */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Cert. medico</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.certMedico}
+                                    onChange={(e) => handleFilterChange('certMedico', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="MISSING">MANCANTE</option>
+                                    <option value="2">VALIDO</option>
+                                    <option value="1">IN SCADENZA</option>
+                                    <option value="0">SCADUTO</option>
+                                </select>
+                            </div>
+
+                            {/* Pagamenti */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Pagamenti</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.pagamenti}
+                                    onChange={(e) => handleFilterChange('pagamenti', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="0">REGOLARI</option>
+                                    <option value="1">NON REGOLARI</option>
+                                </select>
+                            </div>
+
+                            {/* Liste */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Liste</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.lista}
+                                    onChange={(e) => handleFilterChange('lista', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="4614">Aerobica</option>
+                                    <option value="4356">THAI BOXE</option>
+                                    <option value="4257">U13</option>
+                                </select>
+                            </div>
+
+                            {/* Etichette */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Etichette</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.etichetta}
+                                    onChange={(e) => handleFilterChange('etichetta', e.target.value)}
+                                >
+                                    <option value="">TUTTE</option>
+                                    {etichetteOptions.map(et => (
+                                        <option key={et} value={et}>{et}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                        </div>
+                    )}
                 </div>
 
                 {/* Data Table */}
@@ -1125,7 +1168,7 @@ const Soci = ({ onLogout }) => {
                                     <th>Tesserato</th>
                                     <th>Certificato Medico</th>
                                     <th>Contatti</th>
-                                    <th>Etichette</th>
+                                    <th style={{width: '1%', whiteSpace: 'nowrap'}}>Etichette</th>
                                     <th style={{textAlign:'right'}}>Azioni</th>
                                 </tr>
                             </thead>
@@ -1209,8 +1252,8 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{fontSize: '0.875rem'}}>{socio.telefono}</div>
                                         </td>
-                                        <td>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                        <td style={{ width: '1%', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
                                                 {parseEtichette(socio.etichette).map((tag, i) => {
                                                     const ts = getTagStyle(tag);
                                                     return (
