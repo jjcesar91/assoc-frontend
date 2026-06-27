@@ -115,19 +115,19 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px 24px',
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid var(--border-color)',
                     backgroundColor: '#fff',
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <User size={20} style={{ color: '#10b981' }} />
-                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827' }}>
+                        <User size={20} style={{ color: 'var(--success)' }} />
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                             {isEdit ? `Modifica utente – ${utente.username}` : 'Nuovo utente'}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
-                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         <X size={22} />
@@ -149,9 +149,9 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                     value={form.username}
                                     onChange={handleChange}
                                     readOnly={isEdit}
-                                    style={isEdit ? { backgroundColor: '#f3f4f6', color: '#6b7280', cursor: 'default' } : {}}
+                                    style={isEdit ? { backgroundColor: 'var(--surface-1)', color: 'var(--text-secondary)', cursor: 'default' } : {}}
                                 />
-                                {errors.username && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.username}</div>}
+                                {errors.username && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.username}</div>}
                             </div>
 
                             {/* Password – solo in creazione */}
@@ -167,7 +167,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                     onChange={handleChange}
                                     autoComplete="new-password"
                                 />
-                                {errors.password && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.password}</div>}
+                                {errors.password && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.password}</div>}
                             </div>
 
                             <div className="form-group grid-span-6">
@@ -181,7 +181,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                     onChange={handleChange}
                                     autoComplete="new-password"
                                 />
-                                {errors.confirmPassword && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.confirmPassword}</div>}
+                                {errors.confirmPassword && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.confirmPassword}</div>}
                             </div>
 
                             {/* Email – solo in creazione */}
@@ -195,7 +195,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                     value={form.email}
                                     onChange={handleChange}
                                 />
-                                {errors.email && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.email}</div>}
+                                {errors.email && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.email}</div>}
                             </div>
 
                             <div className="form-group grid-span-6">
@@ -208,7 +208,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                     value={form.confirmEmail}
                                     onChange={handleChange}
                                 />
-                                {errors.confirmEmail && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.confirmEmail}</div>}
+                                {errors.confirmEmail && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.confirmEmail}</div>}
                             </div>
                             </>)}
 

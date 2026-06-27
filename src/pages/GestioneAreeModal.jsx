@@ -103,7 +103,7 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                 {/* Header */}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
-                    padding: '16px 20px', background: '#43a047', color: '#fff',
+                    padding: '16px 20px', background: 'var(--success)', color: '#fff',
                     fontWeight: 600, fontSize: '1.1rem', flexShrink: 0,
                 }}>
                     <Flag size={22} />
@@ -111,7 +111,7 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                 </div>
 
                 {/* Toolbar */}
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color, #e0e0e0)', flexShrink: 0 }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color, var(--border-color))', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                             <label style={{ fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-secondary)' }}>Descrizione</label>
@@ -143,7 +143,7 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                             <div key={area.id} style={{
                                 display: 'flex', alignItems: 'center',
                                 padding: '12px 20px',
-                                borderBottom: '1px solid var(--border-color, #e0e0e0)',
+                                borderBottom: '1px solid var(--border-color, var(--border-color))',
                             }}>
                                 <span style={{ flex: 1, fontSize: '0.925rem' }}>{area.descrizione}</span>
                                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -170,7 +170,7 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                 {/* Pagination */}
                 <div style={{
                     padding: '12px 20px',
-                    borderTop: '1px solid var(--border-color, #e0e0e0)',
+                    borderTop: '1px solid var(--border-color, var(--border-color))',
                     display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
                 }}>
                     {[
@@ -181,7 +181,7 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                             {btn.label}
                         </button>
                     ))}
-                    <span style={{ padding: '4px 10px', background: 'var(--primary-color, #1976d2)', color: '#fff', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 600 }}>
+                    <span style={{ padding: '4px 10px', background: 'var(--primary-color, var(--primary))', color: '#fff', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 600 }}>
                         {safePage}
                     </span>
                     {[
@@ -192,16 +192,16 @@ const GestioneAreeModal = ({ isOpen, onClose, struttura }) => {
                             {btn.label}
                         </button>
                     ))}
-                    <span style={{ marginLeft: '12px', fontSize: '0.875rem', color: 'var(--primary-color, #1976d2)', fontWeight: 500 }}>
+                    <span style={{ marginLeft: '12px', fontSize: '0.875rem', color: 'var(--primary-color, var(--primary))', fontWeight: 500 }}>
                         Tot righe: {filtered.length}
                     </span>
                 </div>
 
                 {/* Footer */}
                 <div style={{
-                    background: '#f5f5f5', padding: '14px 20px',
+                    background: 'var(--surface-1)', padding: '14px 20px',
                     display: 'flex', justifyContent: 'flex-end',
-                    borderTop: '1px solid var(--border-color, #e0e0e0)', flexShrink: 0,
+                    borderTop: '1px solid var(--border-color, var(--border-color))', flexShrink: 0,
                 }}>
                     <button className="btn-danger" onClick={onClose}>Chiudi</button>
                 </div>
@@ -221,7 +221,7 @@ const paginBtn = (disabled) => ({
     padding: '4px 8px',
     border: '1px solid #ccc',
     borderRadius: '4px',
-    background: disabled ? '#f5f5f5' : '#fff',
+    background: disabled ? 'var(--surface-1)' : '#fff',
     color: disabled ? '#bbb' : 'var(--text-primary)',
     cursor: disabled ? 'default' : 'pointer',
     fontSize: '0.875rem',

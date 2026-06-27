@@ -75,14 +75,14 @@ const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
                 <div className="comunicazione-body">
                     <div style={{textAlign: 'center', marginBottom: '10px'}}>
                         <label className="field-label" style={{display:'block', marginBottom:'8px'}}>Tipologia comunicazione</label>
-                        <div style={{display:'inline-flex', borderRadius:'6px', overflow:'hidden', border:'1px solid #d1d5db'}}>
+                        <div style={{display:'inline-flex', borderRadius:'6px', overflow:'hidden', border:'1px solid var(--border-color)'}}>
                             <button 
                                 type="button" 
                                 className={`type-btn ${tipo === 'SMS' ? 'active' : ''}`}
                                 onClick={() => setTipo('SMS')}
                                 style={{
-                                    backgroundColor: tipo === 'SMS' ? '#10b981' : 'white', 
-                                    color: tipo === 'SMS' ? 'white' : '#4b5563',
+                                    backgroundColor: tipo === 'SMS' ? 'var(--success)' : 'white', 
+                                    color: tipo === 'SMS' ? 'white' : 'var(--text-secondary)',
                                     border: 'none',
                                     padding: '8px 24px',
                                     fontWeight: '500',
@@ -99,8 +99,8 @@ const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
                                 className={`type-btn ${tipo === 'EMAIL' ? 'active' : ''}`}
                                 onClick={() => setTipo('EMAIL')}
                                 style={{
-                                    backgroundColor: tipo === 'EMAIL' ? '#10b981' : 'white', 
-                                    color: tipo === 'EMAIL' ? 'white' : '#4b5563',
+                                    backgroundColor: tipo === 'EMAIL' ? 'var(--success)' : 'white', 
+                                    color: tipo === 'EMAIL' ? 'white' : 'var(--text-secondary)',
                                     border: 'none',
                                     padding: '8px 24px',
                                     fontWeight: '500',
@@ -108,7 +108,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave }) => {
                                     alignItems: 'center',
                                     gap: '6px',
                                     cursor: 'pointer',
-                                    borderLeft: '1px solid #d1d5db'
+                                    borderLeft: '1px solid var(--border-color)'
                                 }}
                             >
                                 <Mail size={16} /> EMAIL

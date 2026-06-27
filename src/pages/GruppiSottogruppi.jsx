@@ -23,9 +23,9 @@ const computeCodiceSotto = (parentCodice, numero) => {
 };
 
 const TIPO_BADGE_COLORS = {
-    Entrata:        { bg: '#e8f5e9', color: '#2e7d32' },
-    Uscita:         { bg: '#ffebee', color: '#c62828' },
-    'Entrata/Uscita': { bg: '#e3f2fd', color: '#1565c0' },
+    Entrata:        { bg: 'var(--success-container)', color: 'var(--success)' },
+    Uscita:         { bg: 'var(--danger-container)', color: 'var(--danger)' },
+    'Entrata/Uscita': { bg: 'var(--info-container)', color: 'var(--primary-hover)' },
 };
 
 const FORM_EMPTY_GRUPPO = { descrizione: '', tipo: 'Entrata', sezione: '', codice: '' };
@@ -114,7 +114,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
 
     return (
         <>
-            {error && <div style={{ backgroundColor: '#ffebee', color: '#d32f2f', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
+            {error && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
 
             {/* Form */}
             <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch', marginBottom: '20px' }}>
@@ -135,7 +135,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                         </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: '90px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Sezione <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opz.)</span></label>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Sezione <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(opz.)</span></label>
                         <select className="md-select" style={{ padding: '10px 12px' }} value={form.sezione} onChange={e => handleChange('sezione', e.target.value)}>
                             <option value="">—</option>
                             {SEZIONI.map(s => <option key={s} value={s}>{s}</option>)}
@@ -143,7 +143,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: '100px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Codice</label>
-                        <input className="md-input" value={form.codice} readOnly style={{ background: '#f3f4f6', cursor: 'default', fontWeight: '600', letterSpacing: '0.05em' }} placeholder="auto" />
+                        <input className="md-input" value={form.codice} readOnly style={{ background: 'var(--surface-1)', cursor: 'default', fontWeight: '600', letterSpacing: '0.05em' }} placeholder="auto" />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
                         {editingId && <button type="button" className="btn-outlined" onClick={resetForm} style={{ height: '42px' }}>Annulla</button>}
@@ -156,7 +156,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
             </div>
 
             {!form.sezione && (
-                <div style={{ marginBottom: '12px', padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.82rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ marginBottom: '12px', padding: '8px 14px', background: 'var(--warning-container)', border: '1px solid var(--warning-container)', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--on-warning-container)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     ⚠️ Senza sezione/codice il gruppo non apparirà nel Bilancio
                 </div>
             )}
@@ -164,7 +164,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
             {/* Tabella */}
             <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                 <table className="md-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-1)', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <tr>
                             <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Codice</th>
                             <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Descrizione</th>
@@ -184,12 +184,12 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                     <td style={{ padding: '12px 16px' }}>
                                         {g.codice
                                             ? <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{g.codice}</span>
-                                            : <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>— <span style={{ fontSize: '0.72rem', color: '#f59e0b' }}>(no bilancio)</span></span>
+                                            : <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>— <span style={{ fontSize: '0.72rem', color: 'var(--warning)' }}>(no bilancio)</span></span>
                                         }
                                     </td>
                                     <td style={{ padding: '12px 16px', fontWeight: '500', color: 'var(--text-primary)' }}>
                                         {g.descrizione}
-                                        {g.is_default && <Lock size={12} title="Predefinito — non eliminabile" style={{ marginLeft: '6px', color: '#9ca3af', verticalAlign: 'middle' }} />}
+                                        {g.is_default && <Lock size={12} title="Predefinito — non eliminabile" style={{ marginLeft: '6px', color: 'var(--text-tertiary)', verticalAlign: 'middle' }} />}
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>{g.tipo}</span>
@@ -197,7 +197,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                         {!g.is_default && <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>}
                                         {!g.is_default && (
-                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: '#f44336' }}><Trash2 size={18} /></button>
+                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: 'var(--danger)' }}><Trash2 size={18} /></button>
                                         )}
                                     </td>
                                 </tr>
@@ -310,7 +310,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
 
     return (
         <>
-            {error && <div style={{ backgroundColor: '#ffebee', color: '#d32f2f', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
+            {error && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
 
             {/* Form */}
             <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch', marginBottom: '20px' }}>
@@ -334,7 +334,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                         <input className="md-input" placeholder="Es. Quote associative" value={form.descrizione} onChange={e => handleChange('descrizione', e.target.value)} required />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: '90px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Numero <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opz.)</span></label>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Numero <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(opz.)</span></label>
                         <select className="md-select" style={{ padding: '10px 12px' }} value={form.numero} onChange={e => handleChange('numero', e.target.value)}>
                             <option value="">—</option>
                             {NUMERI.map(n => <option key={n} value={n}>{n}</option>)}
@@ -342,7 +342,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: '120px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Codice</label>
-                        <input className="md-input" value={form.codice} readOnly style={{ background: '#f3f4f6', cursor: 'default', fontWeight: '600', letterSpacing: '0.05em' }} placeholder="auto" />
+                        <input className="md-input" value={form.codice} readOnly style={{ background: 'var(--surface-1)', cursor: 'default', fontWeight: '600', letterSpacing: '0.05em' }} placeholder="auto" />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
                         {editingId && <button type="button" className="btn-outlined" onClick={resetForm} style={{ height: '42px' }}>Annulla</button>}
@@ -355,7 +355,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
             </div>
 
             {!form.codice && form.gruppo_id && (
-                <div style={{ marginBottom: '12px', padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.82rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ marginBottom: '12px', padding: '8px 14px', background: 'var(--warning-container)', border: '1px solid var(--warning-container)', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--on-warning-container)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     ⚠️ Senza numero il sottogruppo non apparirà nel Bilancio
                 </div>
             )}
@@ -363,7 +363,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
             {/* Tabella */}
             <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                 <table className="md-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-1)', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <tr>
                             <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Codice</th>
                             <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Descrizione</th>
@@ -384,12 +384,12 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                     <td style={{ padding: '12px 16px' }}>
                                         {g.codice
                                             ? <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{g.codice}</span>
-                                            : <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>— <span style={{ fontSize: '0.72rem', color: '#f59e0b' }}>(no bilancio)</span></span>
+                                            : <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>— <span style={{ fontSize: '0.72rem', color: 'var(--warning)' }}>(no bilancio)</span></span>
                                         }
                                     </td>
                                     <td style={{ padding: '12px 16px', fontWeight: '500', color: 'var(--text-primary)' }}>
                                         {g.descrizione}
-                                        {g.is_default && <Lock size={12} title="Predefinito — non eliminabile" style={{ marginLeft: '6px', color: '#9ca3af', verticalAlign: 'middle' }} />}
+                                        {g.is_default && <Lock size={12} title="Predefinito — non eliminabile" style={{ marginLeft: '6px', color: 'var(--text-tertiary)', verticalAlign: 'middle' }} />}
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '12px', fontSize: '0.82rem', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>{g.tipo}</span>
@@ -398,7 +398,7 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                         {!g.is_default && <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(g)}><Edit2 size={18} /></button>}
                                         {!g.is_default && (
-                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: '#f44336' }}><Trash2 size={18} /></button>
+                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(g.id)} style={{ color: 'var(--danger)' }}><Trash2 size={18} /></button>
                                         )}
                                     </td>
                                 </tr>
@@ -445,10 +445,10 @@ const GruppiSottogruppi = () => {
         padding: '12px 32px',
         border: 'none',
         borderRadius: '8px 8px 0 0',
-        backgroundColor: activeTab === name ? 'var(--primary-color, #1976d2)' : 'transparent',
+        backgroundColor: activeTab === name ? 'var(--primary-color, var(--primary))' : 'transparent',
         cursor: 'pointer',
         fontWeight: '500',
-        color: activeTab === name ? '#fff' : '#4b5563',
+        color: activeTab === name ? '#fff' : 'var(--text-secondary)',
         fontSize: '1rem',
         transition: 'all 0.2s',
     });
@@ -456,20 +456,20 @@ const GruppiSottogruppi = () => {
     return (
         <div className="soci-full-container">
             <div className="main-content">
-                {globalError && <div style={{ backgroundColor: '#ffebee', color: '#d32f2f', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{globalError}</div>}
+                {globalError && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>{globalError}</div>}
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '4px', backgroundColor: '#e5e7eb', padding: '6px 6px 0 6px', borderBottom: '1px solid #d1d5db', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '4px', backgroundColor: 'var(--border-color)', padding: '6px 6px 0 6px', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
                     <button
                         style={tabStyle('gruppi')}
                         onClick={() => setActiveTab('gruppi')}
-                        onMouseEnter={e => { if (activeTab !== 'gruppi') e.currentTarget.style.backgroundColor = '#d1d5db'; }}
+                        onMouseEnter={e => { if (activeTab !== 'gruppi') e.currentTarget.style.backgroundColor = 'var(--border-color)'; }}
                         onMouseLeave={e => { if (activeTab !== 'gruppi') e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >Gruppi</button>
                     <button
                         style={tabStyle('sottogruppi')}
                         onClick={() => setActiveTab('sottogruppi')}
-                        onMouseEnter={e => { if (activeTab !== 'sottogruppi') e.currentTarget.style.backgroundColor = '#d1d5db'; }}
+                        onMouseEnter={e => { if (activeTab !== 'sottogruppi') e.currentTarget.style.backgroundColor = 'var(--border-color)'; }}
                         onMouseLeave={e => { if (activeTab !== 'sottogruppi') e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >Sottogruppi</button>
                 </div>

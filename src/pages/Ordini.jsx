@@ -278,10 +278,10 @@ const Ordini = () => {
         .header-info h2 { margin: 0 0 4px 0; font-size: 16px; }
         .header-info div { font-size: 12px; color: #444; }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-        .info-table th { background: #f9f9f9; border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
+        .info-table th { background: var(--surface-1); border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
         .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
+        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: var(--surface-1); text-align: left; font-size: 12px; }
         .items-table th:nth-child(2) { text-align: center; width: 50px; }
         .items-table th:nth-child(3), .items-table th:last-child { text-align: right; }
         .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
@@ -555,20 +555,20 @@ const Ordini = () => {
                         <div style={{display:'flex', gap:'8px', marginLeft: 'auto'}}>
                             <button
                                 className="btn-contained" 
-                                style={{backgroundColor: '#1abc9c', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                style={{backgroundColor: 'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                             >
                                 <Printer size={14}/> Esporta elenco
                             </button>
                             <button
                                 className="btn-contained"
-                                style={{backgroundColor: '#8e44ad', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                style={{backgroundColor: 'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                                 onClick={() => setShowImportVoci(true)}
                             >
                                 <FileInput size={14}/> Importa ricevute
                             </button>
                             <button
                                 className="btn-contained"
-                                style={{backgroundColor: '#e67e22', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                style={{backgroundColor: 'var(--warning)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                                 onClick={() => setShowImportOdoo(true)}
                             >
                                 <FileInput size={14}/> Importa da Odoo
@@ -619,7 +619,7 @@ const Ordini = () => {
                     <div className="table-responsive">
                         <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent' }}>
                             <thead>
-                                <tr style={{backgroundColor: '#f1c40f', color: '#fff'}}>
+                                <tr style={{backgroundColor: 'var(--warning)', color: '#fff'}}>
                                     <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('data')}>Intestatario - Data - operatore<SortIcon col="data" /></th>
                                     <th style={{padding: '12px', color:'#000', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap'}} onClick={() => handleSort('numero_ricevuta')}>Identificativi documento<SortIcon col="numero_ricevuta" /></th>
                                     <th style={{padding: '12px', color:'#000'}}>Quote</th>
@@ -649,25 +649,25 @@ const Ordini = () => {
                                         
                                         return (
                                             <tr key={p.id} style={{
-                                                backgroundColor: isAnnullato ? '#fceceb' : (isEntrata ? '#fff' : '#fceceb'),
+                                                backgroundColor: isAnnullato ? 'var(--danger-container)' : (isEntrata ? '#fff' : 'var(--danger-container)'),
                                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                borderLeft: `5px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`,
+                                                borderLeft: `5px solid ${isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)')}`,
                                                 opacity: isAnnullato ? 0.75 : 1
                                             }}>
                                                 <td style={{padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
                                                     <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                                                        <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isAnnullato ? '#fdedec' : (isEntrata ? '#e8f8f5' : '#fdedec'), color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'), display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                                        <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isAnnullato ? 'var(--danger-container)' : (isEntrata ? 'var(--primary-container)' : 'var(--danger-container)'), color: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)'), display:'flex', alignItems:'center', justifyContent:'center'}}>
                                                             {renderPaymentIcon(p.modalita_pagamento)}
                                                         </div>
                                                         <div>
-                                                            <div style={{fontWeight:'600', color: isAnnullato ? '#c0392b' : 'var(--text-primary)', textDecoration: isAnnullato ? 'line-through' : 'none'}}>
+                                                            <div style={{fontWeight:'600', color: isAnnullato ? 'var(--danger)' : 'var(--text-primary)', textDecoration: isAnnullato ? 'line-through' : 'none'}}>
                                                                 {p.socio_id ? (
                                                                     <a href={`/soci?apriSocioPath=${p.socio_id}`} target="_blank" rel="noreferrer" style={{color:'inherit', textDecoration:'underline', cursor:'pointer'}} onClick={e => e.stopPropagation()}>{p.intestatario}</a>
                                                                 ) : p.intestatario}
                                                             </div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
                                                                 {p.data_pagamento} {p.createdAt ? `- h ${new Date(p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''} <User size={12}/> {p.utente_nome || 'ADMIN'}
-                                                                {isAnnullato && <span style={{color:'#e74c3c', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
+                                                                {isAnnullato && <span style={{color:'var(--danger)', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -675,8 +675,8 @@ const Ordini = () => {
                                                 <td style={{padding: '12px'}}>
                                                     <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
                                                         <span style={{
-                                                            border: `1px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`, 
-                                                            color: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                                                            border: `1px solid ${isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)')}`, 
+                                                            color: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)'),
                                                             padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
                                                             textDecoration: isAnnullato ? 'line-through' : 'none'
                                                         }}>
@@ -684,7 +684,7 @@ const Ordini = () => {
                                                         </span>
                                                         {p.tipo_documento === 'proforma' && (
                                                             <span style={{
-                                                                border: '1px solid #8e44ad', color: '#8e44ad',
+                                                                border: '1px solid var(--primary)', color: 'var(--primary)',
                                                                 padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
                                                                 display: 'inline-block', width: 'fit-content'
                                                             }}>
@@ -709,8 +709,8 @@ const Ordini = () => {
                                                         ? <div style={{display:'flex', flexWrap:'wrap', gap:'4px'}}>
                                                             {p.etichette.split(',').map((e, i) => (
                                                                 <span key={i} style={{
-                                                                    display:'inline-block', background:'#eff6ff', color:'#1d4ed8',
-                                                                    border:'1px solid #bfdbfe', borderRadius:'4px',
+                                                                    display:'inline-block', background:'var(--info-container)', color:'var(--primary-hover)',
+                                                                    border:'1px solid var(--info-container)', borderRadius:'4px',
                                                                     padding:'2px 8px', fontSize:'0.75rem', fontWeight:600, whiteSpace:'nowrap'
                                                                 }}>
                                                                     {e.trim()}
@@ -722,7 +722,7 @@ const Ordini = () => {
                                                 </td>
                                                 <td style={{padding: '12px', textAlign:'right'}}>
                                                     <span style={{
-                                                        backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#f1948a'),
+                                                        backgroundColor: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger-container)'),
                                                         color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', minWidth: '80px', display: 'inline-block', textAlign: 'right',
                                                         textDecoration: isAnnullato ? 'line-through' : 'none'
                                                     }}>
@@ -732,14 +732,14 @@ const Ordini = () => {
                                                 <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
                                                     <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
                                                         <button 
-                                                            style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}} 
+                                                            style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--warning)', color:'white'}} 
                                                             title="Dettaglio"
                                                             onClick={() => setSelectedPaymentDetail(p)}
                                                         >
                                                             <Folder size={16} />
                                                         </button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
 
                                                     </div>
                                                 </td>
@@ -762,8 +762,8 @@ const Ordini = () => {
                             <span style={{marginLeft:'10px', color:'var(--primary-color)', fontWeight:'bold'}}>Tot righe: {filteredPayments.length}</span>
                         </div>
                         <div style={{display:'flex', gap:'10px'}}>
-                            <span style={{backgroundColor:'#e74c3c', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>€ {totalUscite.toFixed(2).replace('.', ',')}</span>
-                            <span style={{backgroundColor:'#2ecc71', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>€ {totalEntrate.toFixed(2).replace('.', ',')}</span>
+                            <span style={{backgroundColor:'var(--danger)', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>€ {totalUscite.toFixed(2).replace('.', ',')}</span>
+                            <span style={{backgroundColor:'var(--success)', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>€ {totalEntrate.toFixed(2).replace('.', ',')}</span>
                         </div>
                     </div>
                 </div>

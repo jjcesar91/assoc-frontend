@@ -67,19 +67,19 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px 24px',
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid var(--border-color)',
                     backgroundColor: '#fff',
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Building2 size={20} style={{ color: '#10b981' }} />
-                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827' }}>
+                        <Building2 size={20} style={{ color: 'var(--success)' }} />
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                             Nuova società
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
-                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         <X size={22} />
@@ -101,7 +101,7 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                                     value={form.denominazione}
                                     onChange={handleChange}
                                 />
-                                {errors.denominazione && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.denominazione}</div>}
+                                {errors.denominazione && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.denominazione}</div>}
                             </div>
 
                             {/* Tipo associazione */}
@@ -128,7 +128,7 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                                     onChange={handleChange}
                                     style={{ textTransform: 'uppercase' }}
                                 />
-                                {errors.codice_fiscale && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px' }}>{errors.codice_fiscale}</div>}
+                                {errors.codice_fiscale && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.codice_fiscale}</div>}
                             </div>
 
                             {/* Partita IVA */}

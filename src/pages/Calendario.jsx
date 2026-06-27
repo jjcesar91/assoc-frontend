@@ -10,16 +10,16 @@ const GIORNI = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
 
 // Colour map shared with AttivitaConfigurazione
 const COLORE_BG = {
-    'ROSSO': '#e53935', 'VERDE': '#43a047', 'BLU': '#1e88e5',
-    'VERDE CHIARO': '#66bb6a', 'CELESTE': '#26c6da', 'ARANCIO': '#fb8c00',
-    'ARANCIONE': '#fb8c00', 'VIOLA': '#8e24aa', 'GIALLO': '#fdd835',
-    'GRIGIO': '#78909c', 'ROSA': '#e91e63', 'FUCSIA': '#e91e63',
+    'ROSSO': 'var(--danger)', 'VERDE': 'var(--success)', 'BLU': 'var(--primary)',
+    'VERDE CHIARO': 'var(--success)', 'CELESTE': 'var(--primary)', 'ARANCIO': 'var(--warning)',
+    'ARANCIONE': 'var(--warning)', 'VIOLA': 'var(--primary)', 'GIALLO': 'var(--warning)',
+    'GRIGIO': 'var(--text-secondary)', 'ROSA': 'var(--primary)', 'FUCSIA': 'var(--primary)',
 };
 const COLORE_TEXT = { 'GIALLO': '#333' };
 
 const getAttivitaStyle = (colore) => colore
-    ? { backgroundColor: COLORE_BG[colore] || '#9e9e9e', color: COLORE_TEXT[colore] || '#fff' }
-    : { backgroundColor: '#9e9e9e', color: '#fff' };
+    ? { backgroundColor: COLORE_BG[colore] || 'var(--text-tertiary)', color: COLORE_TEXT[colore] || '#fff' }
+    : { backgroundColor: 'var(--text-tertiary)', color: '#fff' };
 
 // Helpers stato scadenze
 const todayTs = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };

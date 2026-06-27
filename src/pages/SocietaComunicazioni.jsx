@@ -126,7 +126,7 @@ const SocietaComunicazioni = () => {
         return <div style={{ padding: '20px' }}>Seleziona una società per visualizzare i dettagli.</div>;
     }
 
-    const inputStyle = { width: '100%', padding: '8px 12px', border: '1px solid #e0e0e0', borderRadius: '4px', outline: 'none', transition: 'border-color 0.3s' };
+    const inputStyle = { width: '100%', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', transition: 'border-color 0.3s' };
     const labelStyle = { display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#555' };
     const sectionHeaderStyle = { fontSize: '1rem', fontWeight: 500, color: '#333', marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '8px' };
 
@@ -139,8 +139,8 @@ const SocietaComunicazioni = () => {
                     padding: '10px', 
                     marginBottom: '20px', 
                     borderRadius: '4px', 
-                    backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
-                    color: message.type === 'success' ? '#2e7d32' : '#c62828'
+                    backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
+                    color: message.type === 'success' ? 'var(--success)' : 'var(--danger)'
                 }}>
                     {message.text}
                 </div>
@@ -190,9 +190,9 @@ const SocietaComunicazioni = () => {
                         gap: '10px',
                         marginBottom: '20px',
                         padding: '12px 16px',
-                        backgroundColor: smtpAbilitato ? '#e8f5e9' : '#f5f5f5',
+                        backgroundColor: smtpAbilitato ? 'var(--success-container)' : 'var(--surface-1)',
                         borderRadius: '6px',
-                        border: `1px solid ${smtpAbilitato ? '#a5d6a7' : '#e0e0e0'}`,
+                        border: `1px solid ${smtpAbilitato ? 'var(--success-container)' : 'var(--border-color)'}`,
                         transition: 'all 0.2s'
                     }}>
                         <input
@@ -200,9 +200,9 @@ const SocietaComunicazioni = () => {
                             id="smtp_abilitato"
                             checked={smtpAbilitato}
                             onChange={handleToggleSmtp}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#2e7d32' }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--success)' }}
                         />
-                        <label htmlFor="smtp_abilitato" style={{ cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500, color: smtpAbilitato ? '#2e7d32' : '#555', userSelect: 'none' }}>
+                        <label htmlFor="smtp_abilitato" style={{ cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500, color: smtpAbilitato ? 'var(--success)' : '#555', userSelect: 'none' }}>
                             Usa SMTP personalizzato (sovrascrive il server di default)
                         </label>
                         {!smtpAbilitato && (
@@ -217,7 +217,7 @@ const SocietaComunicazioni = () => {
                             <div style={{ gridColumn: 'span 2' }}>
                                 <label style={labelStyle}>Host SMTP</label>
                                 <input 
-                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : 'var(--surface-1)' }}
                                     className="md-input"
                                     name="smtp_host"
                                     value={formData.smtp_host}
@@ -230,7 +230,7 @@ const SocietaComunicazioni = () => {
                                 <label style={labelStyle}>Porta SMTP</label>
                                 <input 
                                     type="number"
-                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : 'var(--surface-1)' }}
                                     className="md-input"
                                     name="smtp_port"
                                     value={formData.smtp_port}
@@ -245,7 +245,7 @@ const SocietaComunicazioni = () => {
                             <div>
                                 <label style={labelStyle}>Utente SMTP</label>
                                 <input 
-                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : 'var(--surface-1)' }}
                                     className="md-input"
                                     name="smtp_user"
                                     value={formData.smtp_user}
@@ -258,7 +258,7 @@ const SocietaComunicazioni = () => {
                                 <label style={labelStyle}>Password SMTP</label>
                                 <input 
                                     type="password"
-                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : '#f9f9f9' }}
+                                    style={{ ...inputStyle, backgroundColor: smtpAbilitato ? 'white' : 'var(--surface-1)' }}
                                     className="md-input"
                                     name="smtp_password"
                                     value={formData.smtp_password}
@@ -294,7 +294,7 @@ const SocietaComunicazioni = () => {
                         padding: '10px 20px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#d32f2f', 
+                        backgroundColor: 'var(--danger)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',
@@ -312,7 +312,7 @@ const SocietaComunicazioni = () => {
                         padding: '10px 24px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#2e7d32', 
+                        backgroundColor: 'var(--success)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',

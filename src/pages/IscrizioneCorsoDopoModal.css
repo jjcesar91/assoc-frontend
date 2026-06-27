@@ -10,7 +10,7 @@
 }
 
 .icdm-modal {
-    background-color: #fff;
+    background-color: var(--surface);
     width: 680px;
     max-width: 96vw;
     max-height: 90vh;
@@ -19,17 +19,15 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
-
-/* Header */
-.icdm-header {
-    background-color: #8b5cf6;
-    color: white;
+}.icdm-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 13px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .icdm-title {
@@ -38,12 +36,10 @@
     gap: 9px;
     font-size: 17px;
     font-weight: 600;
-}
-
-.icdm-close-btn {
+}.icdm-close-btn {
     background: none;
     border: none;
-    color: white;
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -51,8 +47,7 @@
     padding: 3px;
     border-radius: 4px;
     transition: opacity 0.15s;
-}
-.icdm-close-btn:hover { opacity: 1; }
+}.icdm-close-btn:hover { opacity: 1; }
 
 /* Body */
 .icdm-body {
@@ -69,12 +64,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #f0f4ff;
-    border: 1px solid #c7d2fe;
+    background-color: var(--info-container);
+    border: 1px solid var(--info-container);
     border-radius: 6px;
     padding: 9px 14px;
     font-size: 14px;
-    color: #3730a3;
+    color: var(--primary);
 }
 
 /* Field group */
@@ -87,29 +82,29 @@
 .icdm-field-group label {
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
 }
 
 .icdm-select {
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color);
     border-radius: 5px;
     padding: 9px 12px;
     font-size: 14px;
-    color: #111827;
-    background-color: #fff;
+    color: var(--text-primary);
+    background-color: var(--surface);
     width: 100%;
     box-sizing: border-box;
 }
 .icdm-select:focus {
-    border-color: #8b5cf6;
+    border-color: var(--primary);
     outline: none;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
 }
 
 /* Corso info */
 .icdm-corso-info {
-    background-color: #fafafa;
-    border: 1px solid #e5e7eb;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 14px 16px;
 }
@@ -129,20 +124,20 @@
 .icdm-info-label {
     font-size: 11px;
     font-weight: 600;
-    color: #9ca3af;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
 .icdm-info-value {
     font-size: 14px;
-    color: #1f2937;
+    color: var(--text-primary);
     font-weight: 500;
 }
 
 .icdm-durata {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-weight: 400;
 }
 
@@ -153,11 +148,11 @@
     gap: 5px;
     font-size: 14px;
     font-weight: 600;
-    color: #059669;
+    color: var(--success);
 }
 
 .icdm-counter.icdm-counter-full {
-    color: #dc2626;
+    color: var(--danger);
 }
 
 /* Alerts */
@@ -165,24 +160,24 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #fff7ed;
-    border: 1px solid #fed7aa;
+    background-color: var(--warning-container);
+    border: 1px solid var(--warning-container);
     border-radius: 6px;
     padding: 10px 14px;
     font-size: 13px;
-    color: #c2410c;
+    color: var(--warning);
 }
 
 .icdm-alert-error {
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #fff1f2;
-    border: 1px solid #fecaca;
+    background-color: var(--danger-container);
+    border: 1px solid var(--danger-container);
     border-radius: 6px;
     padding: 10px 14px;
     font-size: 13px;
-    color: #dc2626;
+    color: var(--danger);
 }
 
 /* Iscritti section */
@@ -195,7 +190,7 @@
 .icdm-iscritti-title {
     font-size: 13px;
     font-weight: 700;
-    color: #374151;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -204,7 +199,7 @@
     padding: 18px 0;
     text-align: center;
     font-size: 13px;
-    color: #9ca3af;
+    color: var(--text-tertiary);
 }
 
 .icdm-table {
@@ -214,15 +209,15 @@
 }
 
 .icdm-table thead tr {
-    background-color: #f3f4f6;
-    border-bottom: 2px solid #e5e7eb;
+    background-color: var(--surface-1);
+    border-bottom: 2px solid var(--border-color);
 }
 
 .icdm-table th {
     padding: 7px 10px;
     text-align: left;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -230,22 +225,22 @@
 
 .icdm-table td {
     padding: 8px 10px;
-    border-bottom: 1px solid #f3f4f6;
-    color: #374151;
+    border-bottom: 1px solid var(--surface-1);
+    color: var(--text-secondary);
 }
 
 .icdm-row-me td {
-    background-color: #f0fdf4;
+    background-color: var(--success-container);
     font-weight: 600;
-    color: #166534;
+    color: var(--on-success-container);
 }
 
 .icdm-badge-me {
     display: inline-block;
     margin-left: 7px;
     padding: 1px 6px;
-    background-color: #dcfce7;
-    color: #15803d;
+    background-color: var(--success-container);
+    color: var(--success);
     border-radius: 10px;
     font-size: 10px;
     font-weight: 700;
@@ -258,13 +253,13 @@
     display: flex;
     align-items: center;
     gap: 9px;
-    background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    background-color: var(--success-container);
+    border: 1px solid var(--success-container);
     border-radius: 6px;
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
-    color: #166534;
+    color: var(--on-success-container);
 }
 
 /* Iscrivi button */
@@ -272,7 +267,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #8b5cf6;
+    background-color: var(--primary);
     color: white;
     border: none;
     border-radius: 6px;
@@ -284,7 +279,7 @@
     align-self: flex-start;
 }
 .icdm-btn-iscrivi:hover:not(:disabled) {
-    background-color: #7c3aed;
+    background-color: var(--primary-hover);
 }
 .icdm-btn-iscrivi:disabled {
     opacity: 0.5;
@@ -293,11 +288,11 @@
 
 /* Footer */
 .icdm-footer {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
     padding: 12px 22px;
     display: flex;
     justify-content: flex-end;
-    background-color: #f9fafb;
+    background-color: var(--surface-1);
     flex-shrink: 0;
 }
 
@@ -306,16 +301,16 @@
     align-items: center;
     gap: 6px;
     background: none;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 8px 18px;
     font-size: 14px;
-    color: #6b7280;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.15s;
 }
 .icdm-btn-skip:hover {
-    border-color: #9ca3af;
-    color: #374151;
-    background-color: #f3f4f6;
+    border-color: var(--text-tertiary);
+    color: var(--text-secondary);
+    background-color: var(--surface-1);
 }

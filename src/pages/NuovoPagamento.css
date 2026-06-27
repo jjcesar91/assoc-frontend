@@ -1,9 +1,9 @@
 .np-container {
     padding: 24px;
-    background-color: #f7f9fc;
+    background-color: var(--bg);
     min-height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #333;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
 }
 
 .np-grid {
@@ -33,11 +33,11 @@
 }
 
 .np-card {
-    background: #ffffff;
+    background: var(--surface);
     border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-1);
     overflow: hidden;
-    border: 1px solid #eef0f3;
+    border: 1px solid var(--border-color);
 }
 
 .np-card-header {
@@ -50,19 +50,17 @@
 }
 
 .np-header-default {
-    background-color: #f8f9fc;
-    border-bottom: 1px solid #eef0f3;
-    color: #111;
-}
-
-.np-header-yellow {
-    background-color: #f4b619;
-    color: #ffffff;
-}
-
-.np-header-green {
-    background-color: #37cc7b;
-    color: #ffffff;
+    background-color: var(--surface-1);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}.np-header-yellow {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}.np-header-green {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .np-card-body {
@@ -89,51 +87,51 @@
 }
 
 .np-btn-yellow {
-    background-color: #f4b619;
+    background-color: var(--warning);
     color: white;
 }
 
 .np-btn-red {
-    background-color: #e74c3c;
+    background-color: var(--danger);
     color: white;
 }
 
 .np-btn-light-green {
-    background-color: #8ce1b2;
+    background-color: var(--success-container);
     color: white;
     cursor: not-allowed;
 }
 
 .np-btn-green {
-    background-color: #37cc7b;
+    background-color: var(--success);
     color: white;
 }
 
 .np-btn-outline-yellow {
     background-color: transparent;
-    border: 1px solid #f4b619;
-    color: #f4b619;
+    border: 1px solid var(--warning);
+    color: var(--warning);
 }
 .np-btn-outline-yellow:hover {
-    background-color: #fef9e8;
+    background-color: var(--warning-container);
 }
 
 /* Inputs specifically white */
 .np-input, .np-select {
-    background-color: #ffffff;
-    color: #333333;
-    border: 1px solid #dcdfe6;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
     padding: 10px 14px;
     border-radius: 4px;
     font-size: 14px;
     outline: none;
 }
 .np-input::placeholder {
-    color: #999;
+    color: var(--text-tertiary);
 }
 .np-input:focus, .np-select:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .np-search-group {
@@ -146,13 +144,13 @@
     border-bottom-right-radius: 0;
 }
 .np-search-group .np-btn-search {
-    background: #f8f9fc;
-    border: 1px solid #dcdfe6;
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
     border-left: none;
     padding: 0 16px;
     border-top-right-radius: 4px;
     border-bottom-right-radius: 4px;
-    color: #666;
+    color: var(--text-secondary);
     cursor: pointer;
 }
 
@@ -167,18 +165,18 @@
     font-weight: 500;
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid #eef0f3;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .np-table td {
     padding: 12px 16px;
     font-size: 14px;
-    border-bottom: 1px solid #f5f6f9;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* Specific green table */
 .np-table-green th {
-    color: #37cc7b;
+    color: var(--success);
 }
 
 .np-table-selectable tr {
@@ -186,11 +184,11 @@
     transition: background 0.2s;
 }
 .np-table-selectable tr:hover {
-    background: #fdfdfd;
+    background: var(--surface-1);
 }
 
 .np-alert-red {
-    color: #e74c3c;
+    color: var(--danger);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -201,7 +199,7 @@
 }
 
 .np-badge-price {
-    background-color: #17b794; /* slightly distinct teal-green for price tags */
+    background-color: var(--success); /* slightly distinct teal-green for price tags */
     color: white;
     padding: 4px 10px;
     border-radius: 12px;
@@ -216,23 +214,23 @@
     gap: 5px;
 }
 .np-page-btn {
-    background: white;
-    border: 1px solid #dcdfe6;
-    color: #1976d2;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    color: var(--primary);
     padding: 6px 10px;
     border-radius: 4px;
     font-size: 13px;
     cursor: pointer;
 }
 .np-page-btn.active {
-    background: #1976d2;
+    background: var(--primary);
     color: white;
-    border-color: #1976d2;
+    border-color: var(--primary);
 }
 
 .np-recent-payment-item {
-    border: 1px solid #fde7ac;
-    background-color: #fffdf6;
+    border: 1px solid var(--warning-container);
+    background-color: var(--surface-1);
     padding: 14px 16px;
     border-radius: 6px;
     display: flex;
@@ -244,22 +242,22 @@
 .np-cart-empty {
     text-align: center;
     padding: 40px;
-    color: #999;
+    color: var(--text-tertiary);
 }
 
 .np-cart-input {
     width: 80px;
     padding: 5px 8px;
-    border: 1px solid #dcdfe6;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 13px;
-    color: #333;
-    background-color: #fff;
+    color: var(--text-primary);
+    background-color: var(--surface);
     outline: none;
     text-align: right;
 }
 .np-cart-input:focus {
-    border-color: #37cc7b;
+    border-color: var(--success);
     box-shadow: 0 0 0 2px rgba(55, 204, 123, 0.15);
 }
 
@@ -271,7 +269,7 @@
     color: white;
 }
 .np-badge-danger {
-    background-color: #e74c3c;
+    background-color: var(--danger);
 }
 
 /* Snackbar */
@@ -294,8 +292,8 @@
     animation: np-snackbar-in 0.28s ease;
 }
 
-.np-snackbar-success { background: #22c55e; }
-.np-snackbar-error   { background: #ef4444; }
+.np-snackbar-success { background: var(--success); }
+.np-snackbar-error   { background: var(--danger); }
 
 @keyframes np-snackbar-in {
     from { opacity: 0; transform: translateX(-50%) translateY(16px); }

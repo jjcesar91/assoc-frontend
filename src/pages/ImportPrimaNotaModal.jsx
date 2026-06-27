@@ -193,25 +193,25 @@ const StepBar = ({ step }) => {
         { n: 5, label: 'Risultato' },
     ];
     return (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', gap: '4px', borderBottom: '1px solid #f0f0f0', background: '#f9fafb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', gap: '4px', borderBottom: '1px solid var(--border-color)', background: 'var(--surface-1)' }}>
             {steps.map((s, idx) => (
                 <React.Fragment key={s.n}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{
                             width: '24px', height: '24px', borderRadius: '50%',
-                            background: step >= s.n ? '#1565c0' : '#e5e7eb',
-                            color: step >= s.n ? '#fff' : '#9ca3af',
+                            background: step >= s.n ? 'var(--primary-hover)' : 'var(--border-color)',
+                            color: step >= s.n ? '#fff' : 'var(--text-tertiary)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontWeight: '700', fontSize: '0.78rem', flexShrink: 0,
                         }}>
                             {step > s.n ? <Check size={12} /> : s.n}
                         </div>
-                        <span style={{ fontSize: '0.83rem', color: step >= s.n ? '#1565c0' : '#9ca3af', fontWeight: step === s.n ? '600' : '400', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.83rem', color: step >= s.n ? 'var(--primary-hover)' : 'var(--text-tertiary)', fontWeight: step === s.n ? '600' : '400', whiteSpace: 'nowrap' }}>
                             {s.label}
                         </span>
                     </div>
                     {idx < steps.length - 1 && (
-                        <ChevronRight size={13} style={{ color: '#d1d5db', flexShrink: 0 }} />
+                        <ChevronRight size={13} style={{ color: 'var(--border-color)', flexShrink: 0 }} />
                     )}
                 </React.Fragment>
             ))}
@@ -669,7 +669,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#1565c0', borderRadius: '12px 12px 0 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-color)', background: 'var(--primary-hover)', borderRadius: '12px 12px 0 0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff' }}>
                         <Upload size={20} />
                         <span style={{ fontWeight: '700', fontSize: '1.05rem' }}>Importa Prima Nota da CSV</span>
@@ -701,20 +701,20 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                 }}
                                 onClick={() => fileInputRef.current?.click()}
                                 style={{
-                                    border: `2px dashed ${dragging ? '#1565c0' : '#d1d5db'}`,
+                                    border: `2px dashed ${dragging ? 'var(--primary-hover)' : 'var(--border-color)'}`,
                                     borderRadius: '12px',
                                     padding: '52px 24px',
                                     textAlign: 'center',
                                     cursor: 'pointer',
-                                    background: dragging ? '#eff6ff' : '#fafafa',
+                                    background: dragging ? 'var(--info-container)' : 'var(--surface-1)',
                                     transition: 'all 0.2s',
                                 }}
                             >
-                                <Upload size={40} style={{ color: '#9ca3af', marginBottom: '12px' }} />
-                                <div style={{ fontWeight: '600', color: '#374151', fontSize: '1rem' }}>
+                                <Upload size={40} style={{ color: 'var(--text-tertiary)', marginBottom: '12px' }} />
+                                <div style={{ fontWeight: '600', color: 'var(--text-secondary)', fontSize: '1rem' }}>
                                     Trascina il file qui o clicca per selezionarlo
                                 </div>
-                                <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '6px' }}>
+                                <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', marginTop: '6px' }}>
                                     Formati supportati: <strong>.csv</strong> (separatore ;) oppure <strong>.xlsx / .xls</strong>
                                 </div>
                                 <input
@@ -727,17 +727,17 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                             </div>
 
                             {parseError && (
-                                <div style={{ marginTop: '12px', padding: '12px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                <div style={{ marginTop: '12px', padding: '12px', background: 'var(--danger-container)', border: '1px solid var(--danger-container)', borderRadius: '8px', color: 'var(--danger)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                                     <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
                                     <span>{parseError}</span>
                                 </div>
                             )}
 
-                            <div style={{ marginTop: '16px', padding: '12px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1d4ed8', fontSize: '0.83rem', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                            <div style={{ marginTop: '16px', padding: '12px 14px', background: 'var(--info-container)', border: '1px solid var(--info-container)', borderRadius: '8px', color: 'var(--primary-hover)', fontSize: '0.83rem', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                                 <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
                                 <div>
                                     Il file deve contenere le colonne (riga di intestazione):<br />
-                                    <code style={{ fontSize: '0.78rem', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px' }}>
+                                    <code style={{ fontSize: '0.78rem', background: 'var(--info-container)', padding: '2px 6px', borderRadius: '4px' }}>
                                         DESCRIZIONE · INTESTATARIO · DESC_OPERAZIONE · DESC_CONTO · IMPORTO · DATA_OPERAZIONE · MODALITA DI PAGAMENTO · FORNITORE · NOTE
                                     </code>
                                     <br /><br />
@@ -771,20 +771,20 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                         return (
                                             <div key={desc} style={{
                                                 display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px',
-                                                background: isCreate ? '#eff6ff' : matched ? '#f0fdf4' : '#fff',
-                                                border: `1px solid ${isCreate ? '#93c5fd' : matched ? '#86efac' : '#e5e7eb'}`,
+                                                background: isCreate ? 'var(--info-container)' : matched ? 'var(--success-container)' : '#fff',
+                                                border: `1px solid ${isCreate ? 'var(--info-container)' : matched ? 'var(--success-container)' : 'var(--border-color)'}`,
                                                 borderRadius: '8px',
                                             }}>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <span style={{ fontWeight: '500', color: '#1f2937', fontSize: '0.9rem' }}>
+                                                    <span style={{ fontWeight: '500', color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                                                         {desc || '(vuoto)'}
                                                     </span>
-                                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginLeft: '8px' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
                                                         {count} {count === 1 ? 'riga' : 'righe'}
                                                     </span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                    {matched && <Check size={15} style={{ color: '#22c55e' }} />}
+                                                    {matched && <Check size={15} style={{ color: 'var(--success)' }} />}
                                                     <select
                                                         className="md-select"
                                                         style={{ fontSize: '0.85rem', padding: '5px 10px', minWidth: '230px' }}
@@ -821,19 +821,19 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px' }}>
                                     <button
-                                        style={{ fontSize: '0.78rem', padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', background: '#f9fafb' }}
+                                        style={{ fontSize: '0.78rem', padding: '4px 10px', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', background: 'var(--surface-1)' }}
                                         onClick={() => setSelectedRows(rows.map((_, i) => i))}
                                     >Seleziona tutto</button>
                                     <button
-                                        style={{ fontSize: '0.78rem', padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', background: '#f9fafb' }}
+                                        style={{ fontSize: '0.78rem', padding: '4px 10px', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', background: 'var(--surface-1)' }}
                                         onClick={() => setSelectedRows([])}
                                     >Deseleziona tutto</button>
                                 </div>
                             </div>
-                            <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                            <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                     <thead>
-                                        <tr style={{ background: '#1565c0', color: '#fff' }}>
+                                        <tr style={{ background: 'var(--primary-hover)', color: '#fff' }}>
                                             <th style={{ padding: '8px 10px', textAlign: 'center', width: '36px' }}></th>
                                             <th style={{ padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Data</th>
                                             <th style={{ padding: '8px 10px', textAlign: 'left' }}>Descrizione</th>
@@ -857,9 +857,9 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
 
                                             return (
                                                 <tr key={i} style={{
-                                                    background: isSelected ? '#fff' : '#f9fafb',
+                                                    background: isSelected ? '#fff' : 'var(--surface-1)',
                                                     opacity: isSelected ? 1 : 0.45,
-                                                    borderBottom: '1px solid #f0f0f0',
+                                                    borderBottom: '1px solid var(--border-color)',
                                                 }}>
                                                     <td style={{ padding: '6px 10px', textAlign: 'center' }}>
                                                         <input
@@ -871,7 +871,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                             }}
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: dateOk ? '#6b7280' : '#dc2626', fontWeight: dateOk ? '400' : '600' }}>
+                                                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: dateOk ? 'var(--text-secondary)' : 'var(--danger)', fontWeight: dateOk ? '400' : '600' }}>
                                                         {row['DATA_OPERAZIONE']}
                                                         {!dateOk && <AlertTriangle size={12} style={{ marginLeft: '4px', verticalAlign: 'middle' }} />}
                                                     </td>
@@ -879,17 +879,17 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                         {row['DESCRIZIONE']}
                                                     </td>
                                                     <td style={{ padding: '6px 10px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={intestatario}>
-                                                        {intestatario || <span style={{ color: '#d1d5db' }}>—</span>}
+                                                        {intestatario || <span style={{ color: 'var(--border-color)' }}>—</span>}
                                                     </td>
-                                                    <td style={{ padding: '6px 10px', color: gruppo ? '#16a34a' : '#9ca3af', fontStyle: gruppo ? 'normal' : 'italic', whiteSpace: 'nowrap' }}>
-                                                        {gruppo ? gruppo.descrizione : <span style={{ color: '#9ca3af' }}>{row['DESC_OPERAZIONE'] || '—'}</span>}
+                                                    <td style={{ padding: '6px 10px', color: gruppo ? 'var(--success)' : 'var(--text-tertiary)', fontStyle: gruppo ? 'normal' : 'italic', whiteSpace: 'nowrap' }}>
+                                                        {gruppo ? gruppo.descrizione : <span style={{ color: 'var(--text-tertiary)' }}>{row['DESC_OPERAZIONE'] || '—'}</span>}
                                                     </td>
                                                     <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row['DESC_CONTO']}</td>
-                                                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '600', color: amtOk ? (isEntrata ? '#16a34a' : '#dc2626') : '#dc2626', whiteSpace: 'nowrap' }}>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '600', color: amtOk ? (isEntrata ? 'var(--success)' : 'var(--danger)') : 'var(--danger)', whiteSpace: 'nowrap' }}>
                                                         {amtOk ? fmtImporto(row['IMPORTO']) : <span title="Importo non valido"><AlertTriangle size={12} /> {row['IMPORTO']}</span>}
                                                     </td>
-                                                    <td style={{ padding: '6px 10px', color: '#6b7280', whiteSpace: 'nowrap' }}>
-                                                        {row['MODALITA DI PAGAMENTO'] || <span style={{ color: '#d1d5db' }}>—</span>}
+                                                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                                        {row['MODALITA DI PAGAMENTO'] || <span style={{ color: 'var(--border-color)' }}>—</span>}
                                                     </td>
                                                 </tr>
                                             );
@@ -920,13 +920,13 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                         const allOk = homonyms.length === 0 && missing.length === 0 && fornitoreConflicts.length === 0;
                         return (
                             <div>
-                                <div style={{ marginBottom: '16px', color: '#374151', fontSize: '0.9rem' }}>
+                                <div style={{ marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                     Verifica delle corrispondenze tra i nomi nel file e i soci registrati.
                                     Il match avviene su <strong>Nome Cognome</strong> o <strong>Cognome Nome</strong> (non distingue maiuscole/minuscole).
                                 </div>
 
                                 {allOk && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', color: '#15803d' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'var(--success-container)', border: '1px solid var(--success-container)', borderRadius: '8px', color: 'var(--success)' }}>
                                         <Check size={20} />
                                         <span style={{ fontWeight: '600' }}>Tutti i soci trovati correttamente. Puoi procedere con l'importazione.</span>
                                     </div>
@@ -934,21 +934,21 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
 
                                 {homonyms.length > 0 && (
                                     <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px 8px 0 0', color: '#92400e', fontWeight: '600', fontSize: '0.875rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--warning-container)', border: '1px solid var(--warning)', borderRadius: '8px 8px 0 0', color: 'var(--on-warning-container)', fontWeight: '600', fontSize: '0.875rem' }}>
                                             <AlertTriangle size={16} />
                                             {homonyms.length === 1 ? '1 omonimia trovata' : `${homonyms.length} omonimie trovate`} — seleziona quale socio associare
                                         </div>
-                                        <div style={{ border: '1px solid #fcd34d', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                                        <div style={{ border: '1px solid var(--warning)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                                             {homonyms.map((issue, idx) => (
                                                 <div key={issue.intestatario} style={{
                                                     display: 'flex', flexDirection: 'column', gap: '8px',
                                                     padding: '12px 14px',
-                                                    borderTop: idx > 0 ? '1px solid #fef3c7' : 'none',
-                                                    background: socioOverrides[issue.intestatario] !== undefined ? '#fffbeb' : '#fff',
+                                                    borderTop: idx > 0 ? '1px solid var(--warning-container)' : 'none',
+                                                    background: socioOverrides[issue.intestatario] !== undefined ? 'var(--warning-container)' : '#fff',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span style={{ fontWeight: '600', color: '#374151' }}>{issue.intestatario}</span>
-                                                        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+                                                        <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>{issue.intestatario}</span>
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                                                             ({issue.matches.length} soci corrispondenti)
                                                         </span>
                                                     </div>
@@ -985,25 +985,25 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
 
                                 {missing.length > 0 && (
                                     <div style={{ marginBottom: fornitoreConflicts.length > 0 ? '16px' : '0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px 8px 0 0', color: '#dc2626', fontWeight: '600', fontSize: '0.875rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--danger-container)', border: '1px solid var(--danger-container)', borderRadius: '8px 8px 0 0', color: 'var(--danger)', fontWeight: '600', fontSize: '0.875rem' }}>
                                             <AlertTriangle size={16} />
                                             {missing.length === 1 ? '1 socio non trovato' : `${missing.length} soci non trovati`} nel database
                                         </div>
-                                        <div style={{ border: '1px solid #fca5a5', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                                        <div style={{ border: '1px solid var(--danger-container)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                                             {missing.map((issue, idx) => (
                                                 <div key={issue.intestatario} style={{
                                                     padding: '9px 14px',
-                                                    borderTop: idx > 0 ? '1px solid #fee2e2' : 'none',
+                                                    borderTop: idx > 0 ? '1px solid var(--danger-container)' : 'none',
                                                     background: '#fff',
                                                     fontSize: '0.875rem',
-                                                    color: '#374151',
+                                                    color: 'var(--text-secondary)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: '8px',
                                                 }}>
-                                                    <X size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
+                                                    <X size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} />
                                                     <span style={{ fontWeight: '500' }}>{issue.intestatario}</span>
-                                                    <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— le righe corrispondenti verranno importate senza collegamento al socio</span>
+                                                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>— le righe corrispondenti verranno importate senza collegamento al socio</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -1012,11 +1012,11 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
 
                                 {fornitoreConflicts.length > 0 && (
                                     <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f0f9ff', border: '1px solid #7dd3fc', borderRadius: '8px 8px 0 0', color: '#0369a1', fontWeight: '600', fontSize: '0.875rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--info-container)', border: '1px solid var(--info-container)', borderRadius: '8px 8px 0 0', color: 'var(--primary)', fontWeight: '600', fontSize: '0.875rem' }}>
                                             <AlertTriangle size={16} />
                                             {fornitoreConflicts.length === 1 ? '1 voce' : `${fornitoreConflicts.length} voci`} nella colonna FORNITORE coincide con il nome di un socio — scegli come trattarla
                                         </div>
-                                        <div style={{ border: '1px solid #7dd3fc', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                                        <div style={{ border: '1px solid var(--info-container)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                                             {fornitoreConflicts.map((conflict, idx) => {
                                                 const ovr = fornitoreAmbiguita[conflict.fornitore];
                                                 const roleChosen = ovr?.role;
@@ -1025,25 +1025,25 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                     <div key={conflict.fornitore} style={{
                                                         display: 'flex', flexDirection: 'column', gap: '8px',
                                                         padding: '12px 14px',
-                                                        borderTop: idx > 0 ? '1px solid #e0f2fe' : 'none',
-                                                        background: roleChosen ? '#f0f9ff' : '#fff',
+                                                        borderTop: idx > 0 ? '1px solid var(--info-container)' : 'none',
+                                                        background: roleChosen ? 'var(--info-container)' : '#fff',
                                                     }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                                            <span style={{ fontWeight: '600', color: '#374151', minWidth: '140px' }}>{conflict.fornitore}</span>
-                                                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+                                                            <span style={{ fontWeight: '600', color: 'var(--text-secondary)', minWidth: '140px' }}>{conflict.fornitore}</span>
+                                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                                                                 corrisponde a {conflict.matchingSoci.length === 1
                                                                     ? `${conflict.matchingSoci[0].cognome} ${conflict.matchingSoci[0].nome}`
                                                                     : `${conflict.matchingSoci.length} soci`
                                                                 }
                                                             </span>
                                                             <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-                                                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.875rem', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', border: `1px solid ${roleChosen === 'fornitore' ? '#1565c0' : '#d1d5db'}`, background: roleChosen === 'fornitore' ? '#eff6ff' : '#fff', color: roleChosen === 'fornitore' ? '#1565c0' : '#374151', fontWeight: roleChosen === 'fornitore' ? '600' : '400' }}>
+                                                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.875rem', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', border: `1px solid ${roleChosen === 'fornitore' ? 'var(--primary-hover)' : 'var(--border-color)'}`, background: roleChosen === 'fornitore' ? 'var(--info-container)' : '#fff', color: roleChosen === 'fornitore' ? 'var(--primary-hover)' : 'var(--text-secondary)', fontWeight: roleChosen === 'fornitore' ? '600' : '400' }}>
                                                                     <input
                                                                         type="radio"
                                                                         name={`forn-role-${conflict.fornitore}`}
                                                                         value="fornitore"
                                                                         checked={roleChosen === 'fornitore'}
-                                                                        style={{ accentColor: '#1565c0' }}
+                                                                        style={{ accentColor: 'var(--primary-hover)' }}
                                                                         onChange={() => setFornitoreAmbiguita(prev => ({
                                                                             ...prev,
                                                                             [conflict.fornitore]: { role: 'fornitore' },
@@ -1051,13 +1051,13 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                                     />
                                                                     Fornitore
                                                                 </label>
-                                                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.875rem', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', border: `1px solid ${roleChosen === 'socio' ? '#16a34a' : '#d1d5db'}`, background: roleChosen === 'socio' ? '#f0fdf4' : '#fff', color: roleChosen === 'socio' ? '#15803d' : '#374151', fontWeight: roleChosen === 'socio' ? '600' : '400' }}>
+                                                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.875rem', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', border: `1px solid ${roleChosen === 'socio' ? 'var(--success)' : 'var(--border-color)'}`, background: roleChosen === 'socio' ? 'var(--success-container)' : '#fff', color: roleChosen === 'socio' ? 'var(--success)' : 'var(--text-secondary)', fontWeight: roleChosen === 'socio' ? '600' : '400' }}>
                                                                     <input
                                                                         type="radio"
                                                                         name={`forn-role-${conflict.fornitore}`}
                                                                         value="socio"
                                                                         checked={roleChosen === 'socio'}
-                                                                        style={{ accentColor: '#16a34a' }}
+                                                                        style={{ accentColor: 'var(--success)' }}
                                                                         onChange={() => setFornitoreAmbiguita(prev => ({
                                                                             ...prev,
                                                                             [conflict.fornitore]: {
@@ -1113,26 +1113,26 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                     <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                         Operazione {importProgress.current} di {importProgress.total}
                                     </p>
-                                    <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '16px' }}>
+                                    <div style={{ height: '8px', borderRadius: '4px', backgroundColor: 'var(--border-color)', overflow: 'hidden', marginBottom: '16px' }}>
                                         <div style={{
                                             height: '100%', borderRadius: '4px',
-                                            backgroundColor: 'var(--primary-color, #1565c0)',
+                                            backgroundColor: 'var(--primary-color, var(--primary-hover))',
                                             width: `${importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%`,
                                             transition: 'width 0.15s ease',
                                         }} />
                                     </div>
                                     <div style={{ display: 'flex', gap: '24px', fontSize: '0.88rem', marginBottom: '16px' }}>
-                                        <span style={{ color: '#2e7d32' }}>✓ Importati: <strong>{importProgress.importati}</strong></span>
-                                        <span style={{ color: '#c62828' }}>✗ Errori: <strong>{importProgress.errori.length}</strong></span>
+                                        <span style={{ color: 'var(--success)' }}>✓ Importati: <strong>{importProgress.importati}</strong></span>
+                                        <span style={{ color: 'var(--danger)' }}>✗ Errori: <strong>{importProgress.errori.length}</strong></span>
                                     </div>
                                     <div ref={importLogRef} style={{
                                         fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
-                                        backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                        backgroundColor: 'var(--text-primary)', color: 'var(--border-color)', borderRadius: '6px',
                                         padding: '10px 12px', height: '200px', overflowY: 'auto',
                                         whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                                     }}>
                                         {(importProgress.logs || []).map((l, i) => (
-                                            <div key={i} style={{ color: l.type === 'OK' ? '#6fcf97' : '#eb5757' }}>
+                                            <div key={i} style={{ color: l.type === 'OK' ? 'var(--success)' : 'var(--danger)' }}>
                                                 {l.type === 'OK' ? '[OK]  ' : '[ERR] '}{l.message}
                                             </div>
                                         ))}
@@ -1141,8 +1141,8 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                             ) : (
                                 <>
                                     <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione completata</h3>
-                                    <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '14px' }}>
-                                        <div style={{ height: '100%', borderRadius: '4px', backgroundColor: '#4caf50', width: '100%' }} />
+                                    <div style={{ height: '8px', borderRadius: '4px', backgroundColor: 'var(--border-color)', overflow: 'hidden', marginBottom: '14px' }}>
+                                        <div style={{ height: '100%', borderRadius: '4px', backgroundColor: 'var(--success)', width: '100%' }} />
                                     </div>
                                     <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Clicca per filtrare i log:</p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
@@ -1150,34 +1150,34 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                             onClick={() => setImportLogFilters(f => ({ ...f, importati: !f.importati }))}
                                             style={{
                                                 display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                                backgroundColor: importLogFilters.importati ? '#f1f8e9' : '#f5f5f5',
+                                                backgroundColor: importLogFilters.importati ? 'var(--success-container)' : 'var(--surface-1)',
                                                 borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                                border: `2px solid ${importLogFilters.importati ? '#66bb6a' : '#e0e0e0'}`,
+                                                border: `2px solid ${importLogFilters.importati ? 'var(--success)' : 'var(--border-color)'}`,
                                                 opacity: importLogFilters.importati ? 1 : 0.5,
                                                 transition: 'all 0.15s',
                                             }}
                                         >
-                                            <span style={{ color: '#2e7d32' }}>✓ Operazioni importate</span>
-                                            <strong style={{ color: '#2e7d32' }}>{importProgress.importati}</strong>
+                                            <span style={{ color: 'var(--success)' }}>✓ Operazioni importate</span>
+                                            <strong style={{ color: 'var(--success)' }}>{importProgress.importati}</strong>
                                         </div>
                                         <div
                                             onClick={() => setImportLogFilters(f => ({ ...f, errori: !f.errori }))}
                                             style={{
                                                 display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                                backgroundColor: importLogFilters.errori ? '#fff3f3' : '#f9f9f9',
+                                                backgroundColor: importLogFilters.errori ? 'var(--danger-container)' : 'var(--surface-1)',
                                                 borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                                border: `2px solid ${importLogFilters.errori ? '#ef9a9a' : '#e0e0e0'}`,
+                                                border: `2px solid ${importLogFilters.errori ? 'var(--danger-container)' : 'var(--border-color)'}`,
                                                 opacity: importLogFilters.errori ? 1 : 0.5,
                                                 transition: 'all 0.15s',
                                             }}
                                         >
-                                            <span style={{ color: '#c62828' }}>✗ Errori</span>
-                                            <strong style={{ color: '#c62828' }}>{importProgress.errori.length}</strong>
+                                            <span style={{ color: 'var(--danger)' }}>✗ Errori</span>
+                                            <strong style={{ color: 'var(--danger)' }}>{importProgress.errori.length}</strong>
                                         </div>
                                     </div>
                                     <div ref={importLogRef} style={{
                                         fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
-                                        backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                        backgroundColor: 'var(--text-primary)', color: 'var(--border-color)', borderRadius: '6px',
                                         padding: '10px 12px', height: '200px', overflowY: 'auto',
                                         whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginBottom: '8px',
                                     }}>
@@ -1187,7 +1187,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                 (l.type === 'ERR' && importLogFilters.errori)
                                             )
                                             .map((l, i) => (
-                                                <div key={i} style={{ color: l.type === 'OK' ? '#6fcf97' : '#eb5757' }}>
+                                                <div key={i} style={{ color: l.type === 'OK' ? 'var(--success)' : 'var(--danger)' }}>
                                                     {l.type === 'OK' ? '[OK]  ' : '[ERR] '}{l.message}
                                                 </div>
                                             ))
@@ -1200,14 +1200,14 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', borderRadius: '0 0 12px 12px' }}>
+                <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-1)', borderRadius: '0 0 12px 12px' }}>
                     <button
                         disabled={step === 5 && !importProgress?.done}
                         onClick={() => {
                             if (step === 5 || step === 1) handleClose();
                             else setStep(s => s - 1);
                         }}
-                        style={{ padding: '8px 18px', border: '1px solid #d1d5db', borderRadius: '8px', cursor: (step === 5 && !importProgress?.done) ? 'not-allowed' : 'pointer', background: '#fff', color: '#374151', fontWeight: '500', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '5px', opacity: (step === 5 && !importProgress?.done) ? 0.4 : 1 }}
+                        style={{ padding: '8px 18px', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: (step === 5 && !importProgress?.done) ? 'not-allowed' : 'pointer', background: '#fff', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '5px', opacity: (step === 5 && !importProgress?.done) ? 0.4 : 1 }}
                     >
                         {step === 5 || step === 1 ? 'Chiudi' : <><ChevronLeft size={15} /> Indietro</>}
                     </button>
@@ -1216,7 +1216,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                         {step === 2 && (
                             <button
                                 onClick={() => setStep(3)}
-                                style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: '#1565c0', color: '#fff', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'var(--primary-hover)', color: '#fff', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '5px' }}
                             >
                                 Anteprima <ChevronRight size={15} />
                             </button>
@@ -1229,7 +1229,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                 style={{
                                     padding: '8px 18px', border: 'none', borderRadius: '8px',
                                     cursor: selectedRows.length === 0 ? 'not-allowed' : 'pointer',
-                                    background: selectedRows.length === 0 ? '#9ca3af' : '#1565c0',
+                                    background: selectedRows.length === 0 ? 'var(--text-tertiary)' : 'var(--primary-hover)',
                                     color: '#fff', fontWeight: '600', fontSize: '0.875rem',
                                     display: 'flex', alignItems: 'center', gap: '5px',
                                 }}
@@ -1259,7 +1259,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                             return (
                                 <>
                                     {(unresolvedHomonyms.length > 0 || unresolvedFornConflicts.length > 0) && (
-                                        <span style={{ fontSize: '0.8rem', color: '#92400e', alignSelf: 'center' }}>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--on-warning-container)', alignSelf: 'center' }}>
                                             {unresolvedHomonyms.length > 0 ? 'Risolvi le omonimie' : 'Risolvi le ambiguità fornitore/socio'} per procedere
                                         </span>
                                     )}
@@ -1269,7 +1269,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                         style={{
                                             padding: '8px 18px', border: 'none', borderRadius: '8px',
                                             cursor: (importing || !canImport) ? 'not-allowed' : 'pointer',
-                                            background: !canImport ? '#9ca3af' : hasMissing ? '#d97706' : '#16a34a',
+                                            background: !canImport ? 'var(--text-tertiary)' : hasMissing ? 'var(--warning)' : 'var(--success)',
                                             color: '#fff', fontWeight: '600', fontSize: '0.875rem',
                                             display: 'flex', alignItems: 'center', gap: '5px',
                                         }}

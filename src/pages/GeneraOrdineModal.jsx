@@ -299,7 +299,7 @@ const GeneraOrdineModal = ({
                         </div>
                         <div className="gpm-field-group" style={{ flex: 2 }}>
                             <label>N. ricevuta</label>
-                            <div className="gpm-input" style={{ color: nextNumeroRicevuta ? '#1a1a2e' : '#aaa', fontStyle: nextNumeroRicevuta ? 'normal' : 'italic', fontWeight: nextNumeroRicevuta ? '600' : 'normal', display: 'flex', alignItems: 'center', background: '#f5f5f5', cursor: 'default' }}>
+                            <div className="gpm-input" style={{ color: nextNumeroRicevuta ? 'var(--text-primary)' : '#aaa', fontStyle: nextNumeroRicevuta ? 'normal' : 'italic', fontWeight: nextNumeroRicevuta ? '600' : 'normal', display: 'flex', alignItems: 'center', background: 'var(--surface-1)', cursor: 'default' }}>
                                 {nextNumeroRicevuta || 'Calcolo in corso…'}
                             </div>
                         </div>
@@ -317,7 +317,7 @@ const GeneraOrdineModal = ({
                                 />
                                 <Calendar 
                                     size={18} 
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }} 
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }} 
                                     onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>
@@ -355,11 +355,11 @@ const GeneraOrdineModal = ({
                     </div>
 
                     {hasSubscription && subscriptionDates && (
-                        <div className="gpm-field-group full-width" style={{ marginTop: '15px', background: '#f0f7ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 16px' }}>
-                            <label style={{ color: '#1d4ed8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="gpm-field-group full-width" style={{ marginTop: '15px', background: 'var(--info-container)', border: '1px solid var(--info-container)', borderRadius: '8px', padding: '12px 16px' }}>
+                            <label style={{ color: 'var(--primary-hover)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Calendar size={15} /> Periodo abbonamento
                             </label>
-                            <div style={{ display: 'flex', gap: '32px', marginTop: '6px', fontSize: '0.95rem', color: '#1e3a5f' }}>
+                            <div style={{ display: 'flex', gap: '32px', marginTop: '6px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                                 <span><strong>Inizio:</strong> {formatDateIT(subscriptionDates.dataInizio)}</span>
                                 <span><strong>Scadenza:</strong> {formatDateIT(subscriptionDates.dataFine)}</span>
                             </div>

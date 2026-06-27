@@ -176,8 +176,8 @@ const SocietaAnagrafica = () => {
                     padding: '10px', 
                     marginBottom: '20px', 
                     borderRadius: '4px', 
-                    backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
-                    color: message.type === 'success' ? '#2e7d32' : '#c62828'
+                    backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
+                    color: message.type === 'success' ? 'var(--success)' : 'var(--danger)'
                 }}>
                     {message.text}
                 </div>
@@ -213,7 +213,7 @@ const SocietaAnagrafica = () => {
                             value={formData.codice_sdi}
                             onChange={handleChange}
                             maxLength={7}
-                            style={{ width: '100%', padding: '8px 12px', ...(errors.codice_sdi ? { borderColor: 'var(--danger-color)', backgroundColor: '#fff5f5' } : {}) }}
+                            style={{ width: '100%', padding: '8px 12px', ...(errors.codice_sdi ? { borderColor: 'var(--danger-color)', backgroundColor: 'var(--danger-container)' } : {}) }}
                         />
                         {errors.codice_sdi && <div style={{ color: 'var(--danger-color)', fontSize: '0.8rem', marginTop: '4px' }}>{errors.codice_sdi}</div>}
                     </div>
@@ -284,15 +284,15 @@ const SocietaAnagrafica = () => {
                                     alignItems: 'center', 
                                     gap: '6px', 
                                     padding: '4px 8px', 
-                                    backgroundColor: '#e3f2fd', 
-                                    color: '#1565c0', 
+                                    backgroundColor: 'var(--info-container)', 
+                                    color: 'var(--primary-hover)', 
                                     borderRadius: '16px', 
                                     fontSize: '0.85rem' 
                                 }}>
                                     <span>{aff.tipo}: <strong>{aff.nome}</strong></span>
                                     <button 
                                         onClick={() => handleRemoveAffiliazione(index)}
-                                        style={{ border: 'none', background: 'transparent', color: '#d32f2f', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        style={{ border: 'none', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                     >
                                         <X size={14} />
                                     </button>
@@ -340,7 +340,7 @@ const SocietaAnagrafica = () => {
                             disabled={!tempAffiliazione.tipo || !tempAffiliazione.nome}
                             style={{ 
                                 padding: '8px 16px', 
-                                backgroundColor: (!tempAffiliazione.tipo || !tempAffiliazione.nome) ? '#ccc' : '#1976d2', 
+                                backgroundColor: (!tempAffiliazione.tipo || !tempAffiliazione.nome) ? '#ccc' : 'var(--primary)', 
                                 color: 'white', 
                                 border: 'none', 
                                 borderRadius: '4px', 
@@ -385,7 +385,7 @@ const SocietaAnagrafica = () => {
                         padding: '10px 20px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#d32f2f', 
+                        backgroundColor: 'var(--danger)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',
@@ -403,7 +403,7 @@ const SocietaAnagrafica = () => {
                         padding: '10px 24px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#2e7d32', 
+                        backgroundColor: 'var(--success)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',

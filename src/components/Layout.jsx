@@ -155,7 +155,7 @@ const Layout = ({ children, onLogout, title }) => {
             {/* Banner impersonazione */}
             {isImpersonating && (
                 <div style={{
-                    backgroundColor: '#e65100',
+                    backgroundColor: 'var(--warning)',
                     color: 'white',
                     padding: '8px 16px',
                     display: 'flex',
@@ -323,7 +323,7 @@ const Layout = ({ children, onLogout, title }) => {
                                             alignItems: 'center',
                                             gap: '8px',
                                             fontSize: '0.9rem',
-                                            color: '#d32f2f'
+                                            color: 'var(--danger)'
                                         }}
                                         className="menu-item-hover"
                                     >
@@ -336,7 +336,7 @@ const Layout = ({ children, onLogout, title }) => {
                 </div>
             </div>
 
-            <div className="content-area" style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: '#f5f5f5' }}>
+            <div className="content-area" style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: 'var(--bg)' }}>
                 {children}
             </div>
 

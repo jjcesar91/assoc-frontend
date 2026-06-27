@@ -12,7 +12,7 @@
 }
 
 .fornitore-modal {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 8px;
     width: 780px;
     max-width: 95%;
@@ -21,17 +21,16 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     display: flex;
     flex-direction: column;
-}
-
-.fornitore-modal-header {
-    background-color: var(--success-color, #4caf50);
-    color: white;
+}.fornitore-modal-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 16px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-radius: 8px 8px 0 0;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .fornitore-modal-header h2 {
@@ -41,22 +40,18 @@
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.fornitore-modal-header .close-btn {
+}.fornitore-modal-header .close-btn {
     background: none;
     border: none;
-    color: white;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 1.4rem;
     line-height: 1;
     padding: 4px 8px;
     border-radius: 4px;
     transition: background 0.2s;
-}
-
-.fornitore-modal-header .close-btn:hover {
-    background: rgba(255,255,255,0.18);
+}.fornitore-modal-header .close-btn:hover {
+    background: var(--surface-2);
 }
 
 .fornitore-modal-body {
@@ -84,7 +79,7 @@
 .fornitore-form-field label {
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--text-secondary, rgba(0,0,0,0.54));
+    color: var(--text-secondary);
     margin-bottom: 6px;
 }
 
@@ -93,8 +88,8 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    border-top: 1px solid var(--border-color, #e0e0e0);
-    background: #fafafa;
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-1);
     border-radius: 0 0 8px 8px;
     flex-shrink: 0;
 }

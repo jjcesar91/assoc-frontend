@@ -4,10 +4,10 @@ import { AlertTriangle, Info, X } from 'lucide-react';
 const AlertContext = createContext(null);
 
 const COLORS = {
-    error:   '#f44336',
-    warning: '#ff9800',
-    info:    '#2196f3',
-    success: '#4caf50',
+    error:   'var(--danger)',
+    warning: 'var(--warning)',
+    info:    'var(--info)',
+    success: 'var(--success)',
 };
 
 export const AlertProvider = ({ children }) => {
@@ -32,14 +32,14 @@ export const AlertProvider = ({ children }) => {
             {children}
             {state.open && (
                 <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+                    position: 'fixed', inset: 0, background: 'rgba(16,24,40,0.45)', backdropFilter: 'blur(2px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 10000,
+                    zIndex: 'var(--z-toast)', padding: 16,
                 }}>
                     <div style={{
-                        background: '#fff', color: '#1f2937', borderRadius: 10,
+                        background: 'var(--surface)', color: 'var(--text-primary)', borderRadius: 'var(--radius-lg)',
                         width: 420, maxWidth: '92vw',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
+                        boxShadow: 'var(--shadow-modal)',
                         overflow: 'hidden',
                     }}>
                         <div style={{
@@ -55,12 +55,12 @@ export const AlertProvider = ({ children }) => {
                                 <X size={20} />
                             </button>
                         </div>
-                        <div style={{ padding: '20px 24px', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                        <div style={{ padding: '20px 24px', fontSize: '0.9375rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                             {state.message}
                         </div>
                         <div style={{
                             padding: '12px 24px', display: 'flex', justifyContent: 'flex-end',
-                            borderTop: '1px solid #f0f0f0',
+                            borderTop: '1px solid var(--border-color)', background: 'var(--surface-1)',
                         }}>
                             <button
                                 onClick={handleClose}

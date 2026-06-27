@@ -142,7 +142,7 @@ const FornitoriContabilita = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{
                                                     width: '40px', height: '40px', borderRadius: '50%',
-                                                    backgroundColor: '#e8f5e9', color: '#388e3c',
+                                                    backgroundColor: 'var(--success-container)', color: 'var(--success)',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     flexShrink: 0,
                                                 }}>

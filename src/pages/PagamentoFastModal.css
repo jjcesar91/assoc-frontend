@@ -13,24 +13,23 @@
 }
 
 .fast-modal-content {
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-2);
     width: 600px;
     max-width: 90%;
-    color: #333;
+    color: var(--text-primary);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-}
-
-.fast-modal-header {
-    background-color: #f1c40f; 
-    color: white;
+}.fast-modal-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .fast-icon-btn {
@@ -66,13 +65,13 @@
 
 .fast-form-group label {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
 .payment-mode-group {
     display: flex;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -83,12 +82,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #fff;
+    background: var(--surface);
     border: none;
-    border-right: 1px solid #ddd;
+    border-right: 1px solid var(--border-color);
     padding: 10px 0;
     font-size: 0.95rem;
-    color: #555;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -98,7 +97,7 @@
 }
 
 .payment-mode-btn.active {
-    background-color: #2ecc71;
+    background-color: var(--success);
     color: #fff;
 }
 
@@ -109,22 +108,22 @@
 .fast-input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.95rem;
-    background-color: #fff;
-    color: #333;
+    background-color: var(--surface);
+    color: var(--text-primary);
     font-family: inherit;
     box-sizing: border-box;
 }
 
 .fast-input:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: var(--primary);
 }
 
 .fast-btn-generate {
-    background: #2ecc71;
+    background: var(--success);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -142,5 +141,5 @@
 }
 
 .fast-btn-generate:hover {
-    background-color: #27ae60;
+    background-color: var(--primary-hover);
 }

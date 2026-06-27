@@ -13,7 +13,7 @@
 }
 
 .adm-modal {
-    background-color: #fff;
+    background-color: var(--surface);
     width: 580px;
     max-width: 95vw;
     border-radius: 8px;
@@ -21,15 +21,14 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
-
-.adm-header {
-    background-color: #e91e8c;
-    color: white;
+}.adm-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 14px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .adm-title {
@@ -38,12 +37,10 @@
     gap: 10px;
     font-size: 18px;
     font-weight: 600;
-}
-
-.adm-close-btn {
+}.adm-close-btn {
     background: none;
     border: none;
-    color: white;
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -52,8 +49,7 @@
     padding: 2px;
     border-radius: 4px;
     transition: opacity 0.15s;
-}
-.adm-close-btn:hover {
+}.adm-close-btn:hover {
     opacity: 1;
 }
 
@@ -78,22 +74,22 @@
     margin-bottom: 6px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
 }
 
 .adm-input {
     width: 100%;
     padding: 8px 36px 8px 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.9rem;
-    color: #374151;
-    background-color: white;
+    color: var(--text-secondary);
+    background-color: var(--surface);
     color-scheme: light;
     box-sizing: border-box;
 }
 .adm-input:focus {
-    border-color: #e91e8c;
+    border-color: var(--primary);
     outline: none;
     box-shadow: 0 0 0 2px rgba(233, 30, 140, 0.2);
 }
@@ -102,18 +98,18 @@
 }
 
 .adm-footer {
-    background-color: #f3f4f6;
+    background-color: var(--surface-1);
     padding: 14px 20px;
     display: flex;
     justify-content: flex-end;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
 }
 
 .adm-confirm-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #10b981;
+    background-color: var(--success);
     color: white;
     border: none;
     border-radius: 6px;
@@ -124,5 +120,5 @@
     transition: background-color 0.15s;
 }
 .adm-confirm-btn:hover {
-    background-color: #059669;
+    background-color: color-mix(in srgb, var(--success) 88%, black);
 }

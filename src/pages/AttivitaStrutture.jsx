@@ -7,21 +7,21 @@ import GestioneAreeModal from './GestioneAreeModal';
 import './AttivitaStrutture.css';
 
 export const COLORI = [
-    { value: 'ROSSO',        label: 'ROSSO',        bg: '#e53935', text: '#fff' },
-    { value: 'VERDE',        label: 'VERDE',        bg: '#43a047', text: '#fff' },
-    { value: 'BLU',          label: 'BLU',          bg: '#1e88e5', text: '#fff' },
-    { value: 'VERDE CHIARO', label: 'VERDE CHIARO', bg: '#66bb6a', text: '#fff' },
-    { value: 'CELESTE',      label: 'CELESTE',      bg: '#26c6da', text: '#fff' },
-    { value: 'ARANCIONE',    label: 'ARANCIONE',    bg: '#fb8c00', text: '#fff' },
-    { value: 'VIOLA',        label: 'VIOLA',        bg: '#8e24aa', text: '#fff' },
-    { value: 'GIALLO',       label: 'GIALLO',       bg: '#fdd835', text: '#333' },
-    { value: 'GRIGIO',       label: 'GRIGIO',       bg: '#78909c', text: '#fff' },
-    { value: 'ROSA',         label: 'ROSA',         bg: '#e91e63', text: '#fff' },
+    { value: 'ROSSO',        label: 'ROSSO',        bg: 'var(--danger)', text: '#fff' },
+    { value: 'VERDE',        label: 'VERDE',        bg: 'var(--success)', text: '#fff' },
+    { value: 'BLU',          label: 'BLU',          bg: 'var(--primary)', text: '#fff' },
+    { value: 'VERDE CHIARO', label: 'VERDE CHIARO', bg: 'var(--success)', text: '#fff' },
+    { value: 'CELESTE',      label: 'CELESTE',      bg: 'var(--primary)', text: '#fff' },
+    { value: 'ARANCIONE',    label: 'ARANCIONE',    bg: 'var(--warning)', text: '#fff' },
+    { value: 'VIOLA',        label: 'VIOLA',        bg: 'var(--primary)', text: '#fff' },
+    { value: 'GIALLO',       label: 'GIALLO',       bg: 'var(--warning)', text: '#333' },
+    { value: 'GRIGIO',       label: 'GRIGIO',       bg: 'var(--text-secondary)', text: '#fff' },
+    { value: 'ROSA',         label: 'ROSA',         bg: 'var(--primary)', text: '#fff' },
 ];
 
 const getColoreStyle = (valore) => {
     const c = COLORI.find(c => c.value === valore);
-    return c ? { backgroundColor: c.bg, color: c.text } : { backgroundColor: '#9e9e9e', color: '#fff' };
+    return c ? { backgroundColor: c.bg, color: c.text } : { backgroundColor: 'var(--text-tertiary)', color: '#fff' };
 };
 
 const AttivitaStrutture = () => {

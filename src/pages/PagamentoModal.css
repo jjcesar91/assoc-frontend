@@ -1,23 +1,9 @@
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 50px;
-    z-index: 1000;
-}
-
 .modal-content {
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-2);
     position: relative;
-    color: #333;
+    color: var(--text-primary);
     overflow: hidden;
     max-height: 90vh;
     display: flex;
@@ -28,16 +14,15 @@
     max-width: 800px;
     width: 90%;
     padding: 0;
-}
-
-.yellow-header {
-    background-color: #f1c40f;
-    color: white;
+}.yellow-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 15px 20px;
     border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .yellow-header h2 {
@@ -45,25 +30,11 @@
     font-size: 1.2rem;
 }
 
-.icon-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 0;
-}
-
-.modal-body {
-    padding: 20px;
-    overflow-y: auto;
-}
-
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #eee;
+    border-bottom: 2px solid var(--border-color);
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
@@ -71,11 +42,11 @@
 .section-header h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .gray-bg {
-    background-color: #f0f0f0;
+    background-color: var(--surface-1);
     padding: 10px 20px;
     margin: 0 -20px; /* stretch to edges */
     border-bottom: none;
@@ -86,7 +57,7 @@
 }
 
 .btn-save {
-    background: #2ecc71;
+    background: var(--success);
     color: white;
     border: none;
     padding: 8px 20px;
@@ -101,42 +72,8 @@
     text-transform: uppercase;
 }
 
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-}
-
 .form-group.full-width {
     grid-column: 1 / -1;
-}
-
-.form-group label {
-    display: block;
-    font-size: 0.85rem;
-    color: #666;
-    margin-bottom: 6px;
-    font-weight: 500;
-}
-
-.form-group input, 
-.form-group select, 
-.form-group textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    background-color: #fff;
-    color: #333;
-    font-family: inherit;
-}
-
-.form-group input:focus, 
-.form-group select:focus, 
-.form-group textarea:focus {
-    outline: none;
-    border-color: #1976d2;
 }
 
 .input-with-badge {
@@ -146,7 +83,7 @@
 }
 
 .badge-valid {
-    background: #2ecc71;
+    background: var(--success);
     color: white;
     padding: 2px 6px;
     border-radius: 4px;
@@ -158,14 +95,14 @@
 .readonly-val {
     padding: 8px 0;
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .quote-row {
     display: flex;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .quote-amount {
@@ -180,7 +117,7 @@
 }
 
 .btn-annulla {
-    background: #e74c3c;
+    background: var(--danger);
     color: white;
     border: none;
     padding: 10px 20px;

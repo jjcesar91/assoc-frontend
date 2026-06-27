@@ -371,7 +371,7 @@ const Modulistica = () => {
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '8px', 
-                        backgroundColor: '#007bff', 
+                        backgroundColor: 'var(--primary)', 
                         color: 'white', 
                         border: 'none', 
                         padding: '8px 16px', 
@@ -405,7 +405,7 @@ const Modulistica = () => {
                                     <td style={{ padding: '12px' }}>
                                         <div style={{ display: 'flex', gap: '10px' }}>
                                             <button 
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#28a745' }} 
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)' }} 
                                                 title="Stampa PDF"
                                                 onClick={() => handlePrintRequest(modulo)}
                                             >
@@ -419,7 +419,7 @@ const Modulistica = () => {
                                                 <Edit size={18} />
                                             </button>
                                             <button 
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d32f2f' }} 
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }} 
                                                 title="Elimina"
                                                 onClick={() => handleDelete(modulo.id)}
                                             >
@@ -473,7 +473,7 @@ const Modulistica = () => {
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>Contenuto</label>
                             
                             {/* Toolbar */}
-                            <div style={{ border: '1px solid #ddd', borderBottom: 'none', padding: '8px', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '4px 4px 0 0', backgroundColor: '#f9f9f9', flexWrap: 'wrap' }}>
+                            <div style={{ border: '1px solid #ddd', borderBottom: 'none', padding: '8px', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '4px 4px 0 0', backgroundColor: 'var(--surface-1)', flexWrap: 'wrap' }}>
                                 <button onClick={() => execCommand('bold')} title="Grassetto" style={{ padding: '4px', cursor: 'pointer', background: 'none', border: '1px solid transparent', borderRadius: '3px', color: '#333' }}><Bold size={18} /></button>
                                 <button onClick={() => execCommand('italic')} title="Corsivo" style={{ padding: '4px', cursor: 'pointer', background: 'none', border: '1px solid transparent', borderRadius: '3px', color: '#333' }}><Italic size={18} /></button>
                                 <button onClick={() => execCommand('underline')} title="Sottolineato" style={{ padding: '4px', cursor: 'pointer', background: 'none', border: '1px solid transparent', borderRadius: '3px', color: '#333' }}><Underline size={18} /></button>
@@ -523,7 +523,7 @@ const Modulistica = () => {
                             <button
                                 onClick={handleSave}
                                 style={{
-                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer'
+                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', cursor: 'pointer'
                                 }}
                             >
                                 Salva
@@ -562,7 +562,7 @@ const Modulistica = () => {
                                 />
                                 <Calendar
                                     size={18}
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }}
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }}
                                     onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>
@@ -580,7 +580,7 @@ const Modulistica = () => {
                             <button
                                 onClick={handleConfirmPrint}
                                 style={{
-                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer'
+                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', cursor: 'pointer'
                                 }}
                             >
                                 Conferma e Stampa

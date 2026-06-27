@@ -457,17 +457,17 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             {showConvertForm && (
                 <div className="dpm-confirm-overlay">
                     <div className="dpm-confirm-modal" style={{ maxWidth: '480px' }}>
-                        <div className="dpm-confirm-header" style={{ background: '#7c3aed' }}>
+                        <div className="dpm-confirm-header" style={{ background: 'var(--primary-hover)' }}>
                             <Check size={20} /><span>Registra Pagamento</span>
                         </div>
                         <div className="dpm-confirm-body">
                             <p>Stai per registrare il pagamento per l'ordine intestato a <strong>{pagamento.intestatario}</strong> e generare la relativa ricevuta.</p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', margin: '16px 0' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: '#374151' }}>Anno ricevuta</label>
+                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Anno ricevuta</label>
                                     <select
                                         className="gpm-select"
-                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
                                         value={convertAnno ?? ''}
                                         onChange={e => setConvertAnno(parseInt(e.target.value, 10))}
                                     >
@@ -477,21 +477,21 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: '#374151' }}>Data ricevuta</label>
+                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Data ricevuta</label>
                                     <input
                                         type="date"
-                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                                         value={convertData}
                                         max={todayStr}
                                         onChange={e => setConvertData(e.target.value)}
                                     />
                                 </div>
                             </div>
-                            <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', padding: '10px 14px', fontSize: '0.9rem', color: '#4c1d95' }}>
+                            <div style={{ background: 'var(--primary-container)', border: '1px solid var(--primary-container)', borderRadius: '6px', padding: '10px 14px', fontSize: '0.9rem', color: 'var(--primary)' }}>
                                 <strong>N. ricevuta assegnato:</strong>{' '}
                                 {convertNextNumero
                                     ? <strong>{convertNextNumero}</strong>
-                                    : <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>calcolo in corso…</span>
+                                    : <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>calcolo in corso…</span>
                                 }
                             </div>
                         </div>
@@ -516,7 +516,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             {showEliminaConferma && (
                 <div className="dpm-confirm-overlay">
                     <div className="dpm-confirm-modal">
-                        <div className="dpm-confirm-header" style={{ background: '#dc2626' }}>
+                        <div className="dpm-confirm-header" style={{ background: 'var(--danger)' }}>
                             <Trash2 size={20} /><span>Conferma eliminazione ordine</span>
                         </div>
                         <div className="dpm-confirm-body">

@@ -66,9 +66,9 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
     };
 
     const statoStyle = (st) => {
-        if (st === 'SCADUTO') return { backgroundColor: '#e74c3c', color: 'white' };
-        if (st === 'IN SCADENZA') return { backgroundColor: '#f39c12', color: 'white' };
-        return { backgroundColor: '#2ecc71', color: 'white' };
+        if (st === 'SCADUTO') return { backgroundColor: 'var(--danger)', color: 'white' };
+        if (st === 'IN SCADENZA') return { backgroundColor: 'var(--warning)', color: 'white' };
+        return { backgroundColor: 'var(--success)', color: 'white' };
     };
 
     const handlePrint = async () => {
@@ -181,10 +181,10 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
         .header-info { text-align: right; } .header-info h2 { margin: 0 0 4px 0; font-size: 16px; }
         .header-info div { font-size: 12px; color: #444; }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-        .info-table th { background: #f9f9f9; border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
+        .info-table th { background: var(--surface-1); border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
         .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
+        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: var(--surface-1); text-align: left; font-size: 12px; }
         .items-table th:last-child { text-align: right; }
         .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
         .items-table td:last-child { text-align: right; }
@@ -375,7 +375,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
                                                 </div>
                                             );
                                         })}
-                                        <div className="dpm-quote-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
+                                        <div className="dpm-quote-row" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
                                             <span>Totale</span>
                                             <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
                                         </div>
@@ -397,14 +397,14 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
                 <div className="dpm-footer" style={{ gap: '10px' }}>
                     <button
                         className="dpm-btn-annulla"
-                        style={{ backgroundColor: '#1abc9c' }}
+                        style={{ backgroundColor: 'var(--primary)' }}
                         onClick={handlePrint}
                     >
                         <Printer size={16} /> Scarica PDF
                     </button>
                     <button
                         className="dpm-btn-annulla"
-                        style={{ backgroundColor: '#95a5a6' }}
+                        style={{ backgroundColor: 'var(--text-secondary)' }}
                         onClick={onClose}
                     >
                         <X size={16} /> Chiudi
@@ -588,9 +588,9 @@ const Scadenziario = () => {
     };
 
     const statoStyle = (stato) => {
-        if (stato === 'SCADUTO') return { backgroundColor: '#e74c3c', color: 'white' };
-        if (stato === 'IN SCADENZA') return { backgroundColor: '#f39c12', color: 'white' };
-        return { backgroundColor: '#2ecc71', color: 'white' };
+        if (stato === 'SCADUTO') return { backgroundColor: 'var(--danger)', color: 'white' };
+        if (stato === 'IN SCADENZA') return { backgroundColor: 'var(--warning)', color: 'white' };
+        return { backgroundColor: 'var(--success)', color: 'white' };
     };
 
     return (
@@ -657,7 +657,7 @@ const Scadenziario = () => {
                     <div className="table-responsive">
                         <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent' }}>
                             <thead>
-                                <tr style={{ backgroundColor: '#f1c40f', color: '#fff' }}>
+                                <tr style={{ backgroundColor: 'var(--warning)', color: '#fff' }}>
                                     <th style={{ padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color: '#000', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }} onClick={() => handleSort('intestatario')}>
                                         Intestatario<SortIcon col="intestatario" />
                                     </th>
@@ -688,8 +688,8 @@ const Scadenziario = () => {
                                     const stato = computeStato(row.scadenzaDate);
                                     const isScaduto = stato === 'SCADUTO';
                                     const isInScadenza = stato === 'IN SCADENZA';
-                                    const rowBg = isScaduto ? '#fceceb' : (isInScadenza ? '#fef9e7' : '#fff');
-                                    const borderColor = isScaduto ? '#e74c3c' : (isInScadenza ? '#f39c12' : '#2ecc71');
+                                    const rowBg = isScaduto ? 'var(--danger-container)' : (isInScadenza ? 'var(--warning-container)' : '#fff');
+                                    const borderColor = isScaduto ? 'var(--danger)' : (isInScadenza ? 'var(--warning)' : 'var(--success)');
 
                                     return (
                                         <tr key={row.key} style={{
@@ -724,7 +724,7 @@ const Scadenziario = () => {
                                             </td>
                                             <td style={{ padding: '12px', textAlign: 'right' }}>
                                                 <span style={{
-                                                    backgroundColor: '#2ecc71', color: 'white',
+                                                    backgroundColor: 'var(--success)', color: 'white',
                                                     padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem'
                                                 }}>
                                                     {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}
@@ -743,7 +743,7 @@ const Scadenziario = () => {
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px' }}>
                                                     <button
                                                         title="Paga"
-                                                        style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#2ecc71', color: 'white' }}
+                                                        style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--success)', color: 'white' }}
                                                         onClick={() => navigate('/nuovo-ordine', {
                                                             state: {
                                                                 socio: {
@@ -761,7 +761,7 @@ const Scadenziario = () => {
                                                     </button>
                                                     <button
                                                         title="Dettaglio"
-                                                        style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#3498db', color: 'white' }}
+                                                        style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--primary)', color: 'white' }}
                                                         onClick={() => setSelectedDettaglio(row)}
                                                     >
                                                         <Eye size={16} />

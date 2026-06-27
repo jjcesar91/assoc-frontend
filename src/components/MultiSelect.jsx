@@ -48,7 +48,7 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                     borderRadius: '8px',
                     padding: '8px 12px',
                     minHeight: '40px',
-                    backgroundColor: isOpen ? 'white' : '#f0f2f5',
+                    backgroundColor: isOpen ? 'white' : 'var(--surface-1)',
                     cursor: 'pointer',
                     display: 'flex',
                     flexWrap: 'wrap',
@@ -57,7 +57,7 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                     justifyContent: 'space-between',
                     position: 'relative',
                     transition: 'all 0.2s ease',
-                    boxShadow: isOpen ? '0 0 0 2px rgba(25, 118, 210, 0.2)' : 'none'
+                    boxShadow: isOpen ? '0 0 0 2px rgba(13, 148, 136, 0.2)' : 'none'
                 }}
             >
                 <div style={{display:'flex', flexWrap:'wrap', gap:'6px', flex:1}}>
@@ -65,8 +65,8 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                     
                     {selectedOptions.map(option => (
                         <span key={option.value} style={{
-                            backgroundColor: '#e3f2fd',
-                            color: '#1565c0',
+                            backgroundColor: 'var(--info-container)',
+                            color: 'var(--primary-hover)',
                             borderRadius: '16px',
                             padding: '4px 10px',
                             display: 'flex',
@@ -81,7 +81,7 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                     ))}
                 </div>
                  
-                 <div style={{display:'flex', alignItems:'center', marginLeft:'8px', color: '#757575'}}>
+                 <div style={{display:'flex', alignItems:'center', marginLeft:'8px', color: 'var(--text-tertiary)'}}>
                      {value.length > 0 ? (
                         <div onClick={handleClear} style={{display:'flex', alignItems:'center', cursor:'pointer', padding:'4px', borderRadius:'50%'}}>
                              <X size={16} />
@@ -117,7 +117,7 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                                     padding: '10px 16px',
                                     cursor: 'pointer',
                                     backgroundColor: 'transparent',
-                                    color: isSelected ? '#1976d2' : '#333',
+                                    color: isSelected ? 'var(--primary)' : '#333',
                                     fontWeight: isSelected ? 500 : 400,
                                     fontSize: '0.9rem',
                                     display: 'flex',
@@ -126,7 +126,7 @@ const MultiSelect = ({ label, options, value = [], onChange }) => {
                                     transition: 'background-color 0.1s'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = isSelected ? 'rgba(25, 118, 210, 0.08)' : '#f5f5f5';
+                                    e.currentTarget.style.backgroundColor = isSelected ? 'rgba(13, 148, 136, 0.08)' : 'var(--surface-1)';
                                 }}
                                 onMouseLeave={(e) => {
                                     e.currentTarget.style.backgroundColor = 'transparent';

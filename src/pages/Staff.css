@@ -1,25 +1,21 @@
-:root {
-  --staff-primary: #388e3c;
-  --staff-header: #388e3c;
-  --staff-teal: #00838f;
-  --staff-cf: #00838f;
-  --staff-compenso: #43a047;
-  --staff-success: #4caf50;
-  --staff-warning: #fb8c00;
-  --text-primary: rgba(0, 0, 0, 0.87);
-  --text-secondary: rgba(0, 0, 0, 0.54);
-  --bg-color: #f5f5f5;
-  --surface-color: #ffffff;
-  --border-color: #e0e0e0;
-}
+/* stili specifici di Staff; base unificata in styles/design-system.css */
 
 .staff-container {
+  /* token specifici della pagina Staff */
+  --staff-primary: var(--success);
+  --staff-header: var(--success);
+  --staff-teal: var(--primary);
+  --staff-cf: var(--primary);
+  --staff-compenso: var(--success);
+  --staff-success: var(--success);
+  --staff-warning: var(--warning);
+
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--bg-color);
-  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  background-color: var(--bg);
+  font-family: var(--font-sans);
   overflow: hidden;
 }
 
@@ -34,10 +30,10 @@
 
 /* Toolbar */
 .staff-toolbar {
-  background: var(--surface-color);
+  background: var(--surface);
   padding: 16px 24px;
-  border-radius: 4px;
-  box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
   display: flex;
   align-items: flex-end;
   gap: 16px;
@@ -72,9 +68,9 @@
 
 /* Table card */
 .staff-table-card {
-  background: var(--surface-color);
-  border-radius: 4px;
-  box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
   overflow: hidden;
 }
 
@@ -133,13 +129,13 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .staff-name {
@@ -174,7 +170,7 @@
 }
 
 .cf-badge:hover { filter: brightness(1.1); }
-.cf-badge.copied { background-color: #43a047; }
+.cf-badge.copied { background-color: var(--success); }
 
 /* Compenso badge */
 .compenso-badge {
@@ -240,52 +236,7 @@
 
 .btn-teal:hover { filter: brightness(1.08); }
 
-.btn-success {
-  background-color: var(--staff-success);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: filter 0.2s;
-}
-
-.btn-success:hover { filter: brightness(1.08); }
-
-.btn-icon {
-  border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: filter 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
-
-.btn-icon:hover { filter: brightness(1.12); }
-
 .btn-icon-warning {
   background-color: var(--staff-warning);
   color: #fff;
-}
-
-.form-input {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 7px 10px;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus {
-  border-color: var(--staff-primary);
 }

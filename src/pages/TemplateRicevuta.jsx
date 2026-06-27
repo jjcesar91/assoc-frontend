@@ -61,8 +61,8 @@ const TemplateRicevuta = () => {
                     padding: '10px',
                     marginBottom: '20px',
                     borderRadius: '4px',
-                    backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
-                    color: message.type === 'success' ? '#2e7d32' : '#c62828'
+                    backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
+                    color: message.type === 'success' ? 'var(--success)' : 'var(--danger)'
                 }}>
                     {message.text}
                 </div>
@@ -99,7 +99,7 @@ const TemplateRicevuta = () => {
                         padding: '10px 20px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#d32f2f',
+                        backgroundColor: 'var(--danger)',
                         color: 'white',
                         cursor: 'pointer',
                         fontSize: '0.95rem',
@@ -117,7 +117,7 @@ const TemplateRicevuta = () => {
                         padding: '10px 24px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#2e7d32',
+                        backgroundColor: 'var(--success)',
                         color: 'white',
                         cursor: 'pointer',
                         fontSize: '0.95rem',

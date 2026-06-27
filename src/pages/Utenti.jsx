@@ -29,7 +29,7 @@ const ToggleSwitch = ({ checked, onChange }) => (
         onClick={onChange}
         style={{
             width: '44px', height: '24px', borderRadius: '12px',
-            backgroundColor: checked ? '#4caf50' : '#e57373',
+            backgroundColor: checked ? 'var(--success)' : 'var(--danger)',
             position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s',
             display: 'inline-block', flexShrink: 0,
         }}
@@ -171,7 +171,7 @@ const Utenti = () => {
     };
 
     const handleImpersonate = async (utente) => {
-        const ok = await confirm(`Vuoi accedere come "${utente.username}"? La tua sessione admin verrà salvata.`, 'Impersona utente', { confirmLabel: 'Impersona', confirmColor: '#1976d2' });
+        const ok = await confirm(`Vuoi accedere come "${utente.username}"? La tua sessione admin verrà salvata.`, 'Impersona utente', { confirmLabel: 'Impersona', confirmColor: 'var(--primary)' });
         if (!ok) return;
         const token = localStorage.getItem('token');
         try {
@@ -352,7 +352,7 @@ const Utenti = () => {
                                             <button
                                                 className="btn-icon-small"
                                                 title="Funzionalità"
-                                                style={{ backgroundColor: '#7b1fa2', color: '#fff', borderRadius: '4px', padding: '5px 8px' }}
+                                                style={{ backgroundColor: 'var(--primary)', color: '#fff', borderRadius: '4px', padding: '5px 8px' }}
                                                 onClick={() => { setFunzionalitaTarget(u); setShowFunzionalitaModal(true); }}
                                             >
                                                 <LayoutGrid size={16} />
@@ -361,7 +361,7 @@ const Utenti = () => {
                                             <button
                                                 className="btn-icon-small"
                                                 title="Impersona"
-                                                style={{ backgroundColor: '#1976d2', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                style={{ backgroundColor: 'var(--primary)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
                                                 onClick={() => handleImpersonate(u)}
                                             >
                                                 <UserCheck size={16} />
@@ -369,7 +369,7 @@ const Utenti = () => {
                                             <button
                                                 className="btn-icon-small"
                                                 title="Modifica"
-                                                style={{ backgroundColor: '#ffc107', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                style={{ backgroundColor: 'var(--warning)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
                                                 onClick={() => { setSelectedUtente(u); setShowModal(true); }}
                                             >
                                                 <Edit size={16} />
@@ -377,7 +377,7 @@ const Utenti = () => {
                                             <button
                                                 className="btn-icon-small"
                                                 title="Reimposta password"
-                                                style={{ backgroundColor: '#9e9e9e', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                style={{ backgroundColor: 'var(--text-tertiary)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
                                                 onClick={() => handleOpenResetPwd(u)}
                                             >
                                                 <Key size={16} />
@@ -385,7 +385,7 @@ const Utenti = () => {
                                             <button
                                                 className="btn-icon-small"
                                                 title="Elimina utente"
-                                                style={{ backgroundColor: '#e53935', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                style={{ backgroundColor: 'var(--danger)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
                                                 onClick={() => handleDelete(u)}
                                             >
                                                 <Trash2 size={16} />
@@ -441,18 +441,18 @@ const Utenti = () => {
                         {/* Header */}
                         <div style={{
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '16px 24px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#fff',
+                            padding: '16px 24px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#fff',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Key size={20} style={{ color: '#10b981' }} />
-                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827' }}>
+                                <Key size={20} style={{ color: 'var(--success)' }} />
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                                     Reimposta password – {resetTarget?.username}
                                 </h2>
                             </div>
                             <button
                                 onClick={() => setShowResetPwdModal(false)}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
-                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                                 onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                                 <X size={22} />
@@ -474,7 +474,7 @@ const Utenti = () => {
                                         autoComplete="new-password"
                                     />
                                     {pwdError.newPwd && (
-                                        <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.newPwd}</div>
+                                        <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.newPwd}</div>
                                     )}
                                 </div>
                                 <div className="form-group grid-span-12">
@@ -490,7 +490,7 @@ const Utenti = () => {
                                         autoComplete="new-password"
                                     />
                                     {pwdError.confirmPwd && (
-                                        <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.confirmPwd}</div>
+                                        <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '4px' }}>{pwdError.confirmPwd}</div>
                                     )}
                                 </div>
                             </div>

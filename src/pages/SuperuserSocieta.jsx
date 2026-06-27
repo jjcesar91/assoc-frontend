@@ -126,7 +126,7 @@ const SuperuserSocieta = () => {
                         <div className="actions-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button
                                 className="btn-contained"
-                                style={{ backgroundColor: '#6366f1' }}
+                                style={{ backgroundColor: 'var(--primary)' }}
                                 onClick={handleGeneraCasuale}
                                 title="Crea una società con dati casuali per test"
                             >
@@ -176,7 +176,7 @@ const SuperuserSocieta = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{
                                                     width: '40px', height: '40px', borderRadius: '50%',
-                                                    backgroundColor: '#e8eaf6', color: '#3f51b5',
+                                                    backgroundColor: 'var(--info-container)', color: 'var(--primary)',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     flexShrink: 0,
                                                 }}>

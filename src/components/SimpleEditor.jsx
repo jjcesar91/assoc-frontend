@@ -59,7 +59,7 @@ const SimpleEditor = ({ value, onChange, style }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#4b5563'
+                color: 'var(--text-secondary)'
             }}
         >
             <Icon size={16} />
@@ -68,7 +68,7 @@ const SimpleEditor = ({ value, onChange, style }) => {
 
     return (
         <div className="simple-editor-container" style={{
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--border-color)',
             borderRadius: '6px',
             overflow: 'hidden',
             display: 'flex',
@@ -80,24 +80,24 @@ const SimpleEditor = ({ value, onChange, style }) => {
                 display: 'flex',
                 gap: '4px',
                 padding: '8px',
-                borderBottom: '1px solid #e5e7eb',
-                background: '#f9fafb',
+                borderBottom: '1px solid var(--border-color)',
+                background: 'var(--surface-1)',
                 flexWrap: 'wrap'
             }}>
                 <ToolbarButton icon={Bold} command="bold" title="Grassetto" />
                 <ToolbarButton icon={Italic} command="italic" title="Corsivo" />
                 <ToolbarButton icon={Underline} command="underline" title="Sottolineato" />
-                <div style={{width: '1px', background: '#e5e7eb', margin: '0 4px'}}></div>
+                <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
                 <ToolbarButton icon={List} command="insertUnorderedList" title="Elenco puntato" />
                 <ToolbarButton icon={ListOrdered} command="insertOrderedList" title="Elenco numerato" />
-                <div style={{width: '1px', background: '#e5e7eb', margin: '0 4px'}}></div>
+                <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
                 {/* <ToolbarButton icon={Link} command="createLink" arg={prompt('URL link:')} title="Link (non implementato completamente)" /> */}
                 <button 
                   onMouseDown={(e) => {
                       e.preventDefault();
                       execCommand('removeFormat');
                   }}
-                  style={{border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'#6b7280'}}
+                  style={{border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'var(--text-secondary)'}}
                 >
                     Clear
                 </button>
@@ -120,8 +120,8 @@ const SimpleEditor = ({ value, onChange, style }) => {
             />
             <style jsx>{`
                 .toolbar-btn:hover {
-                    background-color: #e5e7eb !important;
-                    color: #111827 !important;
+                    background-color: var(--border-color) !important;
+                    color: var(--text-primary) !important;
                 }
             `}</style>
         </div>

@@ -104,8 +104,8 @@ function parseFile(text) {
 }
 
 const STATO_BADGE = {
-    'Da fatturare': { label: 'PROFORMA', color: '#7c3aed', bg: '#f3e8ff', border: '#a855f7' },
-    'Interamente fatturato': { label: 'PAGATO', color: '#15803d', bg: '#dcfce7', border: '#22c55e' },
+    'Da fatturare': { label: 'PROFORMA', color: 'var(--primary-hover)', bg: 'var(--primary-container)', border: 'var(--primary)' },
+    'Interamente fatturato': { label: 'PAGATO', color: 'var(--success)', bg: 'var(--success-container)', border: 'var(--success)' },
 };
 
 const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
@@ -206,7 +206,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
 
                 {/* Errore parsing */}
                 {parseError && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b91c1c', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px 16px', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-danger-container)', backgroundColor: 'var(--danger-container)', border: '1px solid var(--danger-container)', borderRadius: '8px', padding: '12px 16px', fontSize: '0.9rem' }}>
                         <AlertTriangle size={18} /> {parseError}
                     </div>
                 )}
@@ -214,15 +214,15 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 {/* Risultato import */}
                 {result && (
                     result.success
-                        ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '8px', padding: '12px 16px', fontSize: '0.95rem', fontWeight: 600 }}>
+                        ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', backgroundColor: 'var(--success-container)', border: '1px solid var(--success-container)', borderRadius: '8px', padding: '12px 16px', fontSize: '0.95rem', fontWeight: 600 }}>
                             <Check size={20} /> {result.count} ordini importati con successo.
                         </div>
-                        : <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px 16px', fontSize: '0.9rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b91c1c', fontWeight: 600, marginBottom: result.conflitti?.length ? '8px' : 0 }}>
+                        : <div style={{ backgroundColor: 'var(--danger-container)', border: '1px solid var(--danger-container)', borderRadius: '8px', padding: '12px 16px', fontSize: '0.9rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-danger-container)', fontWeight: 600, marginBottom: result.conflitti?.length ? '8px' : 0 }}>
                                 <AlertTriangle size={18} /> {result.error}
                             </div>
                             {result.conflitti?.length > 0 && (
-                                <div style={{ color: '#991b1b', fontSize: '0.85rem' }}>
+                                <div style={{ color: 'var(--on-danger-container)', fontSize: '0.85rem' }}>
                                     Ricevute in conflitto: {result.conflitti.join(', ')}
                                 </div>
                             )}
@@ -237,9 +237,9 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                             <thead>
-                                <tr style={{ backgroundColor: '#f8fafc', position: 'sticky', top: 0 }}>
+                                <tr style={{ backgroundColor: 'var(--surface-1)', position: 'sticky', top: 0 }}>
                                     {['Rif. ordine', 'N. ricevuta', 'Cliente', 'Stato', 'Importo', 'Data ordine', 'Etichette', 'Addetto'].map(h => (
-                                        <th key={h} style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap', fontWeight: 700 }}>{h}</th>
+                                        <th key={h} style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap', fontWeight: 700 }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -248,9 +248,9 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                                     const numStr = row.riferimento_ordine.replace(/^[Ss]+0*/, '');
                                     const statoCfg = STATO_BADGE[row.stato_fattura] || STATO_BADGE['Da fatturare'];
                                     return (
-                                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                        <tr key={i} style={{ borderBottom: '1px solid var(--surface-1)', backgroundColor: i % 2 === 0 ? '#fff' : 'var(--surface-1)' }}>
                                             <td style={{ padding: '7px 10px', fontWeight: 600 }}>{row.riferimento_ordine}</td>
-                                            <td style={{ padding: '7px 10px', color: '#6366f1', fontWeight: 600 }}>{numStr}/ANNO</td>
+                                            <td style={{ padding: '7px 10px', color: 'var(--primary)', fontWeight: 600 }}>{numStr}/ANNO</td>
                                             <td style={{ padding: '7px 10px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.cliente}>{row.cliente}</td>
                                             <td style={{ padding: '7px 10px' }}>
                                                 <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.78rem', background: statoCfg.bg, color: statoCfg.color, border: `1px solid ${statoCfg.border}` }}>
@@ -262,11 +262,11 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                                             <td style={{ padding: '7px 10px' }}>
                                                 {row.etichette
                                                     ? row.etichette.split(',').map((e, j) => (
-                                                        <span key={j} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 6px', fontSize: '0.75rem', marginRight: '4px' }}>
+                                                        <span key={j} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'var(--info-container)', color: 'var(--primary-hover)', border: '1px solid var(--info-container)', borderRadius: '4px', padding: '1px 6px', fontSize: '0.75rem', marginRight: '4px' }}>
                                                             <Tag size={10} />{e.trim()}
                                                         </span>
                                                     ))
-                                                    : <span style={{ color: '#9ca3af' }}>—</span>
+                                                    : <span style={{ color: 'var(--text-tertiary)' }}>—</span>
                                                 }
                                             </td>
                                             <td style={{ padding: '7px 10px', color: '#555' }}>{row.addetto_vendite || '—'}</td>
@@ -279,10 +279,10 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 )}
 
                 {/* Footer azioni */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                     <button
                         onClick={handleClose}
-                        style={{ padding: '8px 20px', borderRadius: '6px', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', fontSize: '0.9rem' }}
+                        style={{ padding: '8px 20px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'white', cursor: 'pointer', fontSize: '0.9rem' }}
                     >
                         {result?.success ? 'Chiudi' : 'Annulla'}
                     </button>
@@ -290,7 +290,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                         <button
                             onClick={handleImport}
                             disabled={loading}
-                            style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', background: loading ? '#93c5fd' : '#2563eb', color: 'white', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
+                            style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', background: loading ? 'var(--info-container)' : 'var(--primary)', color: 'white', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
                         >
                             {loading ? 'Importazione...' : `Importa ${preview.rows.length} ordini`}
                         </button>

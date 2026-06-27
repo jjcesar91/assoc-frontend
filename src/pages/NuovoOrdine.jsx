@@ -362,12 +362,12 @@ const NuovoOrdine = () => {
                     }}>
                         <div style={{
                             width: '60px', height: '60px', borderRadius: '50%',
-                            backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            backgroundColor: 'var(--success-container)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                            <Check size={32} strokeWidth={2.5} color="#059669" />
+                            <Check size={32} strokeWidth={2.5} color="var(--success)" />
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{lastPaymentType === 'proforma' ? 'Proforma creata' : 'Ordine registrato'}</div>
-                        <div style={{ fontSize: '13px', color: '#6b7280' }}>Reindirizzamento in corso...</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{lastPaymentType === 'proforma' ? 'Proforma creata' : 'Ordine registrato'}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Reindirizzamento in corso...</div>
                     </div>
                 </div>
             )}
@@ -392,15 +392,15 @@ const NuovoOrdine = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
                                 width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
-                                backgroundColor: '#fff3cd', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                backgroundColor: 'var(--warning-container)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
-                                <AlertTriangle size={24} color="#d97706" strokeWidth={2}/>
+                                <AlertTriangle size={24} color="var(--warning)" strokeWidth={2}/>
                             </div>
-                            <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>
+                            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>
                                 Abbonamento non consentito
                             </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
+                        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
                             Solo i soci <strong>iscritti</strong> o <strong>tesserati</strong> possono avere un abbonamento attivo.
                             <br/><br/>
                             Il socio selezionato non risulta iscritto né tesserato per l'anno corrente. Verifica la sua posizione nella scheda socio prima di procedere.
@@ -489,7 +489,7 @@ const NuovoOrdine = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        <div style={{ color: '#3498db' }}>
+                                        <div style={{ color: 'var(--primary)' }}>
                                             <User size={64} strokeWidth={1.2}/>
                                         </div>
                                     </div>
@@ -559,7 +559,7 @@ const NuovoOrdine = () => {
                                     <button className="np-page-btn">&gt;</button>
                                     <button className="np-page-btn">&gt;&gt;</button>
                                 </div>
-                                <span style={{ fontSize: '13px', color: '#1976d2', fontWeight: 600 }}>Tot righe: {filteredProducts.length}</span>
+                                <span style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>Tot righe: {filteredProducts.length}</span>
                             </div>
                             </>
                             )}
@@ -613,9 +613,9 @@ const NuovoOrdine = () => {
 
                         </div>
                         <div className="np-card-body">
-                            <div style={{ border: '1px solid #eef0f3', borderRadius: '4px', marginBottom: '20px', overflow: 'hidden' }}>
+                            <div style={{ border: '1px solid var(--surface-1)', borderRadius: '4px', marginBottom: '20px', overflow: 'hidden' }}>
                                 <table className="np-table np-table-green">
-                                    <thead style={{ backgroundColor: '#fcfcfc' }}>
+                                    <thead style={{ backgroundColor: 'var(--surface-1)' }}>
                                         <tr>
                                             <th>Prodotto</th>
                                             <th>Importo unitario</th>
@@ -635,13 +635,13 @@ const NuovoOrdine = () => {
                                         ) : (
                                             cart.map((item, i) => (
                                                 <tr key={i}>
-                                                    <td style={{ fontWeight: 500, fontSize: '14px', color: '#333', borderRight: '1px solid #eef0f3' }}>
+                                                    <td style={{ fontWeight: 500, fontSize: '14px', color: '#333', borderRight: '1px solid var(--surface-1)' }}>
                                                         {item.description || item.name} 
-                                                        <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', background: 'none', color: '#e74c3c', cursor: 'pointer', float: 'right' }}>
+                                                        <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', float: 'right' }}>
                                                             <X size={16}/>
                                                         </button>
                                                     </td>
-                                                    <td style={{ borderRight: '1px solid #eef0f3', padding: '8px 12px' }}>
+                                                    <td style={{ borderRight: '1px solid var(--surface-1)', padding: '8px 12px' }}>
                                                         <input
                                                             type="text"
                                                             inputMode="decimal"
@@ -650,7 +650,7 @@ const NuovoOrdine = () => {
                                                             className="np-cart-input"
                                                         />
                                                     </td>
-                                                    <td style={{ borderRight: '1px solid #eef0f3', padding: '8px 12px' }}>
+                                                    <td style={{ borderRight: '1px solid var(--surface-1)', padding: '8px 12px' }}>
                                                         <input
                                                             type="text"
                                                             inputMode="numeric"

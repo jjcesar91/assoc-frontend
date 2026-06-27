@@ -12,7 +12,7 @@
 }
 
 .rate-modal {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 8px;
     width: 800px;
     max-width: 90%;
@@ -20,16 +20,15 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.rate-modal-header {
-    background-color: var(--primary-color, #1976d2);
-    color: white;
+}.rate-modal-header {
+    background: var(--surface);
+    color: var(--text-primary);
     padding: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .rate-modal-header h2 {
@@ -38,12 +37,10 @@
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.close-btn {
+}.close-btn {
     background: transparent;
     border: none;
-    color: white;
+    color: var(--text-secondary);
     font-size: 1.2rem;
     cursor: pointer;
 }
@@ -65,11 +62,11 @@
     margin: 0;
     font-size: 1.25rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--text-secondary);
 }
 
 .btn-add-rata {
-    background-color: var(--success-color, #4caf50);
+    background-color: var(--success);
     color: white;
     border: none;
     padding: 6px 16px;
@@ -108,7 +105,7 @@
     flex: 1;
     padding: 10px 12px;
     border: 1px solid transparent;
-    background-color: #f0f2f5;
+    background-color: var(--surface-1);
     border-radius: 8px;
     font-size: 0.95rem;
     outline: none;
@@ -118,17 +115,17 @@
 }
 
 .rate-input:hover {
-    background-color: #e4e6eb;
+    background-color: var(--border-color);
 }
 
 .rate-input:focus {
-    background-color: #ffffff;
-    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    background-color: var(--surface);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
     border-color: transparent;
 }
 
 .btn-delete-rata {
-    background-color: var(--danger-color, #f44336);
+    background-color: var(--danger);
     color: white;
     border: none;
     width: 40px;
@@ -161,13 +158,13 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 24px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
 }
 
 .totale-label {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
 }
 
 .totale-badge {
@@ -179,17 +176,17 @@
 }
 
 .totale-badge.matching {
-    background-color: var(--success-color, #4caf50);
+    background-color: var(--success);
 }
 
 .totale-badge.mismatching {
-    background-color: var(--danger-color, #f44336);
+    background-color: var(--danger);
 }
 
 .rate-modal-actions {
     padding: 16px 24px;
-    background-color: #f9fafb;
-    border-top: 1px solid #e5e7eb;
+    background-color: var(--surface-1);
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     border-radius: 0 0 8px 8px;
@@ -197,7 +194,7 @@
 }
 
 .btn-annulla {
-    background-color: var(--danger-color, #f44336);
+    background-color: var(--danger);
     color: white;
     border: none;
     padding: 6px 16px;
@@ -220,7 +217,7 @@
 }
 
 .btn-salva {
-    background-color: var(--success-color, #4caf50);
+    background-color: var(--success);
     color: white;
     border: none;
     padding: 6px 16px;

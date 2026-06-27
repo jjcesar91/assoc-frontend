@@ -250,19 +250,19 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px 24px',
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid var(--border-color)',
                     backgroundColor: '#fff'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Shirt size={20} style={{ color: '#10b981' }} />
-                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827' }}>
+                        <Shirt size={20} style={{ color: 'var(--success)' }} />
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                             {form.cognome || form.nome ? `Staff ${form.cognome} ${form.nome}`.trim() : 'Nuovo Staff'}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
-                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         <X size={22} />
@@ -272,9 +272,9 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                 {/* Warning CF */}
                 {warningMessage && (
                     <div style={{
-                        backgroundColor: '#fee2e2',
-                        border: '1px solid #ef4444',
-                        color: '#b91c1c',
+                        backgroundColor: 'var(--danger-container)',
+                        border: '1px solid var(--danger)',
+                        color: 'var(--on-danger-container)',
                         padding: '12px',
                         margin: '16px 24px 0',
                         borderRadius: '6px',
@@ -336,8 +336,8 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                                         style={{
                                             textTransform: 'uppercase',
                                             transition: 'all 0.5s ease',
-                                            borderColor: highlightCF ? '#22c55e' : undefined,
-                                            backgroundColor: highlightCF ? '#dcfce7' : undefined,
+                                            borderColor: highlightCF ? 'var(--success)' : undefined,
+                                            backgroundColor: highlightCF ? 'var(--success-container)' : undefined,
                                             boxShadow: highlightCF ? '0 0 0 2px rgba(34, 197, 94, 0.2)' : undefined
                                         }}
                                     />

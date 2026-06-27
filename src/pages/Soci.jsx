@@ -12,12 +12,12 @@ import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit } from 'lucide-react';
 
 const TAG_PALETTE = [
-    { bg: '#dbeafe', text: '#1e40af' }, { bg: '#ede9fe', text: '#5b21b6' },
-    { bg: '#dcfce7', text: '#166534' }, { bg: '#ffedd5', text: '#9a3412' },
-    { bg: '#fce7f3', text: '#9d174d' }, { bg: '#ccfbf1', text: '#134e4a' },
-    { bg: '#fef9c3', text: '#713f12' }, { bg: '#fae8ff', text: '#86198f' },
-    { bg: '#ecfdf5', text: '#065f46' }, { bg: '#fee2e2', text: '#991b1b' },
-    { bg: '#fff7ed', text: '#c2410c' }, { bg: '#f0fdf4', text: '#15803d' },
+    { bg: 'var(--info-container)', text: 'var(--primary)' }, { bg: 'var(--primary-container)', text: 'var(--primary)' },
+    { bg: 'var(--success-container)', text: 'var(--on-success-container)' }, { bg: 'var(--warning-container)', text: 'var(--on-warning-container)' },
+    { bg: 'var(--primary-container)', text: 'var(--primary)' }, { bg: '#ccfbf1', text: '#134e4a' },
+    { bg: 'var(--warning-container)', text: 'var(--on-warning-container)' }, { bg: 'var(--primary-container)', text: 'var(--primary)' },
+    { bg: 'var(--success-container)', text: 'var(--on-success-container)' }, { bg: 'var(--danger-container)', text: 'var(--on-danger-container)' },
+    { bg: 'var(--warning-container)', text: 'var(--warning)' }, { bg: 'var(--success-container)', text: 'var(--success)' },
 ];
 const getTagStyle = (tag) => {
     let h = 0;
@@ -1051,7 +1051,7 @@ const Soci = ({ onLogout }) => {
                         {/* Ricerca Avanzata Button */}
                          <button 
                             className="btn-contained" 
-                            style={{backgroundColor:'#17a2b8', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                            style={{backgroundColor:'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                             onClick={() => setShowAdvancedSearch(true)}
                          >
                             <Search size={14}/> Ricerca avanzata
@@ -1075,7 +1075,7 @@ const Soci = ({ onLogout }) => {
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '240px',
                                     padding: '8px 0', display:'flex', flexDirection:'column'
                                 }}>
-                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Azioni sui soci filtrati</div> */}
+                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'var(--surface-1)'}}>Azioni sui soci filtrati</div> */}
                                     {/* <button className="dropdown-item-custom"><Mail size={16}/> Invia comunicazione</button> */}
                                     {/* <button className="dropdown-item-custom"><QrCode size={16}/> Stampa tessere</button> */}
                                     <button className="dropdown-item-custom" onClick={exportToExcel}><FileDown size={16}/> Esporta Excel</button>
@@ -1087,8 +1087,8 @@ const Soci = ({ onLogout }) => {
                                     {/* <button className="dropdown-item-custom"><Tag size={16}/> Aggiungi a lista</button> */}
                                     {/* <button className="dropdown-item-custom"><X size={16}/> Rimuovi da lista</button> */}
                                     {/* <button className="dropdown-item-custom"><ClipboardList size={16}/> Associa scadenzario</button> */}
-                                    {/* <div style={{height:'1px', backgroundColor:'#e9ecef', margin:'4px 0'}}></div> */}
-                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'#f8f9fa'}}>Altre azioni</div> */}
+                                    {/* <div style={{height:'1px', backgroundColor:'var(--border-color)', margin:'4px 0'}}></div> */}
+                                    {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'var(--surface-1)'}}>Altre azioni</div> */}
                                     {/* <button className="dropdown-item-custom"><Tag size={16}/> Gestione liste</button> */}
                                     <button className="dropdown-item-custom" onClick={() => importFileRef.current?.click()}><FileUp size={16}/> Importa Excel</button>
                                     <button className="dropdown-item-custom" onClick={() => importOdooFileRef.current?.click()}><FileUp size={16}/> Importa CSV Odoo</button>
@@ -1135,8 +1135,8 @@ const Soci = ({ onLogout }) => {
                                         <td>
                                             <div style={{
                                                 width:'40px', height:'40px', borderRadius:'50%', 
-                                                backgroundColor: socio.tipo_socio === 'associazione' ? '#f3e8ff' : (socio.sesso === 'F' ? '#fce4ec' : '#e3f2fd'),
-                                                color: socio.tipo_socio === 'associazione' ? '#7c3aed' : (socio.sesso === 'F' ? '#e91e63' : '#1976d2'),
+                                                backgroundColor: socio.tipo_socio === 'associazione' ? 'var(--primary-container)' : (socio.sesso === 'F' ? 'var(--primary-container)' : 'var(--info-container)'),
+                                                color: socio.tipo_socio === 'associazione' ? 'var(--primary-hover)' : (socio.sesso === 'F' ? 'var(--primary)' : 'var(--primary)'),
                                                 display:'flex', alignItems:'center', justifyContent:'center'
                                             }}>
                                                 {socio.tipo_socio === 'associazione' ? <Building2 size={20}/> : <User size={20}/>}
@@ -1298,7 +1298,7 @@ const Soci = ({ onLogout }) => {
                                     Riga {importReport.current} di {importReport.total}
                                 </p>
                                 {/* Progress bar */}
-                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '16px' }}>
+                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: 'var(--border-color)', overflow: 'hidden', marginBottom: '16px' }}>
                                     <div style={{
                                         height: '100%', borderRadius: '4px',
                                         backgroundColor: 'var(--primary-color)',
@@ -1307,21 +1307,21 @@ const Soci = ({ onLogout }) => {
                                     }} />
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', fontSize: '0.88rem', marginBottom: '16px' }}>
-                                    <span style={{ color: '#2e7d32' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
-                                    <span style={{ color: '#f57c00' }}>↻ Aggiornati: <strong>{importReport.aggiornati ?? 0}</strong></span>
+                                    <span style={{ color: 'var(--success)' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
+                                    <span style={{ color: 'var(--warning)' }}>↻ Aggiornati: <strong>{importReport.aggiornati ?? 0}</strong></span>
                                     <span style={{ color: '#888' }}>↷ Saltati: <strong>{importReport.saltati}</strong></span>
-                                    <span style={{ color: '#c62828' }}>✗ Errori: <strong>{importReport.errori.length}</strong></span>
+                                    <span style={{ color: 'var(--danger)' }}>✗ Errori: <strong>{importReport.errori.length}</strong></span>
                                 </div>
                                 {/* Log */}
                                 <div ref={importLogRef} style={{
                                     fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
-                                    backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                    backgroundColor: 'var(--text-primary)', color: 'var(--border-color)', borderRadius: '6px',
                                     padding: '10px 12px', height: '180px', overflowY: 'auto',
                                     whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                                 }}>
                                     {(importReport.logs || []).map((l, i) => (
                                         <div key={i} style={{
-                                            color: l.type === 'OK' ? '#6fcf97' : l.type === 'UPDATE' ? '#ffb74d' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                            color: l.type === 'OK' ? 'var(--success)' : l.type === 'UPDATE' ? 'var(--warning)' : l.type === 'ERR' ? 'var(--danger)' : 'var(--text-tertiary)'
                                         }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'UPDATE' ? '[UPD]  ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
                                     ))}
                                 </div>
@@ -1330,8 +1330,8 @@ const Soci = ({ onLogout }) => {
                             <>
                                 <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione completata</h3>
                                 {/* Progress bar al 100% */}
-                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: '#e0e0e0', overflow: 'hidden', marginBottom: '14px' }}>
-                                    <div style={{ height: '100%', borderRadius: '4px', backgroundColor: '#4caf50', width: '100%' }} />
+                                <div style={{ height: '8px', borderRadius: '4px', backgroundColor: 'var(--border-color)', overflow: 'hidden', marginBottom: '14px' }}>
+                                    <div style={{ height: '100%', borderRadius: '4px', backgroundColor: 'var(--success)', width: '100%' }} />
                                 </div>
                                 {/* Badge cliccabili per filtrare i log */}
                                 <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Clicca per filtrare i log e l'esportazione:</p>
@@ -1340,37 +1340,37 @@ const Soci = ({ onLogout }) => {
                                         onClick={() => setImportLogFilters(f => ({ ...f, creati: !f.creati }))}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                            backgroundColor: importLogFilters.creati ? '#f1f8e9' : '#f5f5f5',
+                                            backgroundColor: importLogFilters.creati ? 'var(--success-container)' : 'var(--surface-1)',
                                             borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                            border: `2px solid ${importLogFilters.creati ? '#66bb6a' : '#e0e0e0'}`,
+                                            border: `2px solid ${importLogFilters.creati ? 'var(--success)' : 'var(--border-color)'}`,
                                             opacity: importLogFilters.creati ? 1 : 0.5,
                                             transition: 'all 0.15s',
                                         }}
                                     >
-                                        <span style={{ color: '#2e7d32' }}>✓ Soci creati</span>
-                                        <strong style={{ color: '#2e7d32' }}>{importReport.creati}</strong>
+                                        <span style={{ color: 'var(--success)' }}>✓ Soci creati</span>
+                                        <strong style={{ color: 'var(--success)' }}>{importReport.creati}</strong>
                                     </div>
                                     <div
                                         onClick={() => setImportLogFilters(f => ({ ...f, aggiornati: !f.aggiornati }))}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                            backgroundColor: importLogFilters.aggiornati ? '#fff8e1' : '#f9f9f9',
+                                            backgroundColor: importLogFilters.aggiornati ? 'var(--warning-container)' : 'var(--surface-1)',
                                             borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                            border: `2px solid ${importLogFilters.aggiornati ? '#ffb74d' : '#e0e0e0'}`,
+                                            border: `2px solid ${importLogFilters.aggiornati ? 'var(--warning)' : 'var(--border-color)'}`,
                                             opacity: importLogFilters.aggiornati ? 1 : 0.5,
                                             transition: 'all 0.15s',
                                         }}
                                     >
-                                        <span style={{ color: '#e65100' }}>↻ Soci aggiornati</span>
-                                        <strong style={{ color: '#e65100' }}>{importReport.aggiornati ?? 0}</strong>
+                                        <span style={{ color: 'var(--warning)' }}>↻ Soci aggiornati</span>
+                                        <strong style={{ color: 'var(--warning)' }}>{importReport.aggiornati ?? 0}</strong>
                                     </div>
                                     <div
                                         onClick={() => setImportLogFilters(f => ({ ...f, saltati: !f.saltati }))}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                            backgroundColor: importLogFilters.saltati ? '#f5f5f5' : '#f9f9f9',
+                                            backgroundColor: importLogFilters.saltati ? 'var(--surface-1)' : 'var(--surface-1)',
                                             borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                            border: `2px solid ${importLogFilters.saltati ? '#bdbdbd' : '#e0e0e0'}`,
+                                            border: `2px solid ${importLogFilters.saltati ? 'var(--border-color)' : 'var(--border-color)'}`,
                                             opacity: importLogFilters.saltati ? 1 : 0.5,
                                             transition: 'all 0.15s',
                                         }}
@@ -1382,21 +1382,21 @@ const Soci = ({ onLogout }) => {
                                         onClick={() => setImportLogFilters(f => ({ ...f, errori: !f.errori }))}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                                            backgroundColor: importLogFilters.errori ? '#fff3f3' : '#f9f9f9',
+                                            backgroundColor: importLogFilters.errori ? 'var(--danger-container)' : 'var(--surface-1)',
                                             borderRadius: '6px', cursor: 'pointer', userSelect: 'none',
-                                            border: `2px solid ${importLogFilters.errori ? '#ef9a9a' : '#e0e0e0'}`,
+                                            border: `2px solid ${importLogFilters.errori ? 'var(--danger-container)' : 'var(--border-color)'}`,
                                             opacity: importLogFilters.errori ? 1 : 0.5,
                                             transition: 'all 0.15s',
                                         }}
                                     >
-                                        <span style={{ color: '#c62828' }}>✗ Errori</span>
-                                        <strong style={{ color: '#c62828' }}>{importReport.errori.length}</strong>
+                                        <span style={{ color: 'var(--danger)' }}>✗ Errori</span>
+                                        <strong style={{ color: 'var(--danger)' }}>{importReport.errori.length}</strong>
                                     </div>
                                 </div>
                                 {/* Log filtrato */}
                                 <div ref={importLogRef} style={{
                                     fontFamily: 'monospace', fontSize: '0.78rem', lineHeight: '1.6',
-                                    backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px',
+                                    backgroundColor: 'var(--text-primary)', color: 'var(--border-color)', borderRadius: '6px',
                                     padding: '10px 12px', height: '180px', overflowY: 'auto',
                                     whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginBottom: '14px',
                                 }}>
@@ -1409,7 +1409,7 @@ const Soci = ({ onLogout }) => {
                                         )
                                         .map((l, i) => (
                                             <div key={i} style={{
-                                                color: l.type === 'OK' ? '#6fcf97' : l.type === 'UPDATE' ? '#ffb74d' : l.type === 'ERR' ? '#eb5757' : '#b0b0b0'
+                                                color: l.type === 'OK' ? 'var(--success)' : l.type === 'UPDATE' ? 'var(--warning)' : l.type === 'ERR' ? 'var(--danger)' : 'var(--text-tertiary)'
                                             }}>{l.type === 'OK' ? '[OK]   ' : l.type === 'UPDATE' ? '[UPD]  ' : l.type === 'ERR' ? '[ERR]  ' : '[SKIP] '}{l.message}</div>
                                         ))
                                     }

@@ -90,10 +90,10 @@ const formatDateIT = (dateStr) => {
 const ScadenzaBadge = ({ stato }) => {
     if (!stato) return null;
     const styles = {
-        SCADUTO: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
-        'IN SCADENZA': { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
-        VALIDO: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-        REGOLARE: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
+        SCADUTO: { bg: 'var(--danger-container)', color: 'var(--on-danger-container)', border: 'var(--danger-container)' },
+        'IN SCADENZA': { bg: 'var(--warning-container)', color: 'var(--on-warning-container)', border: 'var(--warning)' },
+        VALIDO: { bg: 'var(--success-container)', color: 'var(--on-success-container)', border: 'var(--success-container)' },
+        REGOLARE: { bg: 'var(--success-container)', color: 'var(--on-success-container)', border: 'var(--success-container)' },
     };
     const s = styles[stato] || styles.VALIDO;
     return (
@@ -206,12 +206,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     };
 
     const TAG_PALETTE = [
-        { bg: '#dbeafe', text: '#1e40af' }, { bg: '#ede9fe', text: '#5b21b6' },
-        { bg: '#dcfce7', text: '#166534' }, { bg: '#ffedd5', text: '#9a3412' },
-        { bg: '#fce7f3', text: '#9d174d' }, { bg: '#ccfbf1', text: '#134e4a' },
-        { bg: '#fef9c3', text: '#713f12' }, { bg: '#fae8ff', text: '#86198f' },
-        { bg: '#ecfdf5', text: '#065f46' }, { bg: '#fee2e2', text: '#991b1b' },
-        { bg: '#fff7ed', text: '#c2410c' }, { bg: '#f0fdf4', text: '#15803d' },
+        { bg: 'var(--info-container)', text: 'var(--primary)' }, { bg: 'var(--primary-container)', text: 'var(--primary)' },
+        { bg: 'var(--success-container)', text: 'var(--on-success-container)' }, { bg: 'var(--warning-container)', text: 'var(--on-warning-container)' },
+        { bg: 'var(--primary-container)', text: 'var(--primary)' }, { bg: '#ccfbf1', text: '#134e4a' },
+        { bg: 'var(--warning-container)', text: 'var(--on-warning-container)' }, { bg: 'var(--primary-container)', text: 'var(--primary)' },
+        { bg: 'var(--success-container)', text: 'var(--on-success-container)' }, { bg: 'var(--danger-container)', text: 'var(--on-danger-container)' },
+        { bg: 'var(--warning-container)', text: 'var(--warning)' }, { bg: 'var(--success-container)', text: 'var(--success)' },
     ];
     const getTagStyle = (tag) => {
         let h = 0;
@@ -1209,10 +1209,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         .header-info h2 { margin: 0 0 4px 0; font-size: 16px; }
         .header-info div { font-size: 12px; color: #444; }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-        .info-table th { background: #f9f9f9; border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
+        .info-table th { background: var(--surface-1); border: 1px solid #ccc; padding: 5px 8px; font-weight: bold; font-size: 10px; color: #555; text-align: left; }
         .info-table td { border: 1px solid #ccc; padding: 6px 8px; font-weight: bold; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: #f5f5f5; text-align: left; font-size: 12px; }
+        .items-table th { border: 1px solid #ccc; padding: 8px 10px; background: var(--surface-1); text-align: left; font-size: 12px; }
         .items-table th:nth-child(2) { text-align: center; width: 50px; }
         .items-table th:nth-child(3), .items-table th:last-child { text-align: right; }
         .items-table td { border: 1px solid #ccc; padding: 8px 10px; font-size: 12px; }
@@ -1843,13 +1843,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
     }, [storico, socioPagamenti, comunicazioni, socioCorsi]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const storicoTipoConfig = {
-        ordine: { color: '#2563eb', bg: '#eff6ff', label: 'Ordine', icon: <CreditCard size={14}/> },
-        abbonamento: { color: '#7c3aed', bg: '#f5f3ff', label: 'Abbonamento', icon: <BookOpen size={14}/> },
-        iscrizione: { color: '#0d9488', bg: '#f0fdfa', label: 'Iscrizione', icon: <ClipboardList size={14}/> },
-        iscrizione_attivita: { color: '#059669', bg: '#ecfdf5', label: 'Attività', icon: <Activity size={14}/> },
-        comunicazione: { color: '#ea580c', bg: '#fff7ed', label: 'Comunicazione', icon: <Mail size={14}/> },
-        accesso_frontend: { color: '#0891b2', bg: '#ecfeff', label: 'Accesso', icon: <Globe size={14}/> },
-        nota: { color: '#d97706', bg: '#fffbeb', label: 'Nota', icon: <MessageSquare size={14}/> },
+        ordine: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Ordine', icon: <CreditCard size={14}/> },
+        abbonamento: { color: 'var(--primary-hover)', bg: 'var(--primary-container)', label: 'Abbonamento', icon: <BookOpen size={14}/> },
+        iscrizione: { color: '#0d9488', bg: 'var(--primary-container)', label: 'Iscrizione', icon: <ClipboardList size={14}/> },
+        iscrizione_attivita: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Attività', icon: <Activity size={14}/> },
+        comunicazione: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Comunicazione', icon: <Mail size={14}/> },
+        accesso_frontend: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Accesso', icon: <Globe size={14}/> },
+        nota: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Nota', icon: <MessageSquare size={14}/> },
     };
 
     const handleSalvaNota = async () => {
@@ -1922,12 +1922,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
                     padding: '16px 24px', 
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid var(--border-color)',
                     backgroundColor: '#fff'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                         <div>
-                             <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
+                             <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                                 {isEditMode ? (
                                     formData.tipo_socio === 'associazione'
                                         ? (formData.ragione_sociale || 'Associazione')
@@ -1942,9 +1942,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     fontWeight: 'bold', 
                                     padding: '2px 8px', 
                                     borderRadius: '4px',
-                                    backgroundColor: iscrizioneStatus === 'ISCRITTO' ? '#dcfce7' : '#fee2e2',
-                                    color: iscrizioneStatus === 'ISCRITTO' ? '#166534' : '#991b1b',
-                                    border: `1px solid ${iscrizioneStatus === 'ISCRITTO' ? '#22c55e' : '#ef4444'}`,
+                                    backgroundColor: iscrizioneStatus === 'ISCRITTO' ? 'var(--success-container)' : 'var(--danger-container)',
+                                    color: iscrizioneStatus === 'ISCRITTO' ? 'var(--on-success-container)' : 'var(--on-danger-container)',
+                                    border: `1px solid ${iscrizioneStatus === 'ISCRITTO' ? 'var(--success)' : 'var(--danger)'}`,
                                     marginTop: '4px',
                                     display: 'inline-block'
                                 }}>
@@ -2007,14 +2007,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 background: 'transparent',
                                 border: 'none',
                                 cursor: 'pointer',
-                                color: '#6b7280',
+                                color: 'var(--text-secondary)',
                                 padding: '4px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 borderRadius: '4px'
                             }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                             <X size={24}/>
@@ -2037,7 +2037,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </button>
                         ))
                     ) : (
-                        <div style={{padding: '10px 16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563'}}>
+                        <div style={{padding: '10px 16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)'}}>
                             <User size={18}/>
                             <span>Dati Anagrafici</span>
                         </div>
@@ -2047,9 +2047,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 
                 {warningMessage && (
                     <div style={{
-                        backgroundColor: '#fee2e2', 
-                        border: '1px solid #ef4444', 
-                        color: '#b91c1c', 
+                        backgroundColor: 'var(--danger-container)', 
+                        border: '1px solid var(--danger)', 
+                        color: 'var(--on-danger-container)', 
                         padding: '12px', 
                         margin: '16px 24px 0', 
                         borderRadius: '6px',
@@ -2071,14 +2071,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Toggle Persona Fisica / Associazione */}
                             {isEditMode ? (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '7px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
-                                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '7px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--surface-1)' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                         {formData.tipo_socio === 'associazione' ? 'Associazione' : 'Persona Fisica'}
                                     </span>
-                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>(non modificabile)</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>(non modificabile)</span>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '24px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', width: 'fit-content' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '24px', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', width: 'fit-content' }}>
                                     <button
                                         type="button"
                                         onClick={() => setFormData(prev => ({ ...prev, tipo_socio: 'persona_fisica' }))}
@@ -2088,8 +2088,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                             cursor: 'pointer',
                                             fontWeight: 600,
                                             fontSize: '0.875rem',
-                                            backgroundColor: formData.tipo_socio !== 'associazione' ? '#2563eb' : '#f9fafb',
-                                            color: formData.tipo_socio !== 'associazione' ? '#fff' : '#6b7280',
+                                            backgroundColor: formData.tipo_socio !== 'associazione' ? 'var(--primary)' : 'var(--surface-1)',
+                                            color: formData.tipo_socio !== 'associazione' ? '#fff' : 'var(--text-secondary)',
                                             transition: 'all 0.2s',
                                         }}
                                     >
@@ -2101,12 +2101,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         style={{
                                             padding: '8px 20px',
                                             border: 'none',
-                                            borderLeft: '1px solid #e5e7eb',
+                                            borderLeft: '1px solid var(--border-color)',
                                             cursor: 'pointer',
                                             fontWeight: 600,
                                             fontSize: '0.875rem',
-                                            backgroundColor: formData.tipo_socio === 'associazione' ? '#2563eb' : '#f9fafb',
-                                            color: formData.tipo_socio === 'associazione' ? '#fff' : '#6b7280',
+                                            backgroundColor: formData.tipo_socio === 'associazione' ? 'var(--primary)' : 'var(--surface-1)',
+                                            color: formData.tipo_socio === 'associazione' ? '#fff' : 'var(--text-secondary)',
                                             transition: 'all 0.2s',
                                         }}
                                     >
@@ -2168,9 +2168,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                             value={formData.email}
                                             onChange={handleChange}
                                             onBlur={handleEmailBlur}
-                                            style={emailError ? { borderColor: '#ef4444' } : {}}
+                                            style={emailError ? { borderColor: 'var(--danger)' } : {}}
                                         />
-                                        {emailError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '2px' }}>{emailError}</span>}
+                                        {emailError && <span style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '2px' }}>{emailError}</span>}
                                     </div>
                                     <div className="form-group grid-span-6">
                                         <label className="field-label">Telefono</label>
@@ -2260,7 +2260,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         />
                                         <Calendar 
                                             size={18} 
-                                            style={{position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5}} 
+                                            style={{position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5}} 
                                             onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()} 
                                         />
                                     </div>
@@ -2287,8 +2287,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         required 
                                         style={{
                                             transition: 'all 0.5s ease',
-                                            borderColor: highlightCF ? '#22c55e' : undefined,
-                                            backgroundColor: highlightCF ? '#dcfce7' : undefined,
+                                            borderColor: highlightCF ? 'var(--success)' : undefined,
+                                            backgroundColor: highlightCF ? 'var(--success-container)' : undefined,
                                             boxShadow: highlightCF ? '0 0 0 2px rgba(34, 197, 94, 0.2)' : undefined
                                         }}
                                     />
@@ -2303,9 +2303,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         onChange={handleChange} 
                                         onBlur={handleEmailBlur} 
                                         required 
-                                        style={emailError ? { borderColor: '#ef4444' } : {}}
+                                        style={emailError ? { borderColor: 'var(--danger)' } : {}}
                                     />
-                                    {emailError && <span style={{color: '#ef4444', fontSize: '11px', marginTop: '2px'}}>{emailError}</span>}
+                                    {emailError && <span style={{color: 'var(--danger)', fontSize: '11px', marginTop: '2px'}}>{emailError}</span>}
                                 </div>
                                 <div className="form-group grid-span-5">
                                     <label className="field-label">Telefono *</label>
@@ -2334,24 +2334,24 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 {/* Row 4 - Parents (Visible only if Minor) */}
                                 {isMinorenne && (
                                     <>
-                                        <div className="grid-span-12" style={{ marginTop: '16px', marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px', color: '#4b5563', fontWeight: '500' }}>
+                                        <div className="grid-span-12" style={{ marginTop: '16px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', color: 'var(--text-secondary)', fontWeight: '500' }}>
                                             Dati Tutore / Genitore
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Codice fiscale genitore <span style={{color:'#ef4444'}}>*</span></label>
-                                            <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cf_genitore: false})); }} style={genitoreErrors.cf_genitore ? {border: '1.5px solid #ef4444'} : {}} />
+                                            <label className="field-label">Codice fiscale genitore <span style={{color:'var(--danger)'}}>*</span></label>
+                                            <input className="md-input" name="cf_genitore" placeholder="Codice fiscale" value={formData.cf_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cf_genitore: false})); }} style={genitoreErrors.cf_genitore ? {border: '1.5px solid var(--danger)'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Nome genitore <span style={{color:'#ef4444'}}>*</span></label>
-                                            <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, nome_genitore: false})); }} style={genitoreErrors.nome_genitore ? {border: '1.5px solid #ef4444'} : {}} />
+                                            <label className="field-label">Nome genitore <span style={{color:'var(--danger)'}}>*</span></label>
+                                            <input className="md-input" name="nome_genitore" placeholder="Nome genitore" value={formData.nome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, nome_genitore: false})); }} style={genitoreErrors.nome_genitore ? {border: '1.5px solid var(--danger)'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-4">
-                                            <label className="field-label">Cognome genitore <span style={{color:'#ef4444'}}>*</span></label>
-                                            <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cognome_genitore: false})); }} style={genitoreErrors.cognome_genitore ? {border: '1.5px solid #ef4444'} : {}} />
+                                            <label className="field-label">Cognome genitore <span style={{color:'var(--danger)'}}>*</span></label>
+                                            <input className="md-input" name="cognome_genitore" placeholder="Cognome genitore" value={formData.cognome_genitore} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, cognome_genitore: false})); }} style={genitoreErrors.cognome_genitore ? {border: '1.5px solid var(--danger)'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-6">
-                                            <label className="field-label">Recapito 1 genitore <span style={{color:'#ef4444'}}>*</span></label>
-                                            <input className="md-input" name="recapito_2" placeholder="Recapito 1" value={formData.recapito_2} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, recapito_2: false})); }} style={genitoreErrors.recapito_2 ? {border: '1.5px solid #ef4444'} : {}} />
+                                            <label className="field-label">Recapito 1 genitore <span style={{color:'var(--danger)'}}>*</span></label>
+                                            <input className="md-input" name="recapito_2" placeholder="Recapito 1" value={formData.recapito_2} onChange={(e) => { handleChange(e); setGenitoreErrors(prev => ({...prev, recapito_2: false})); }} style={genitoreErrors.recapito_2 ? {border: '1.5px solid var(--danger)'} : {}} />
                                         </div>
                                         <div className="form-group grid-span-6">
                                             <label className="field-label">Recapito 2 genitore</label>
@@ -2378,7 +2378,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         type="date" 
                                         value={currentIscrizioneDate} 
                                         readOnly 
-                                        style={{ backgroundColor: '#f9fafb', color: '#374151' }}
+                                        style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-secondary)' }}
                                     />
                                 </div>
                                 <div className="form-group grid-span-2" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px'}}>
@@ -2388,7 +2388,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         type="date"
                                         value={dataTesseramento}
                                         readOnly
-                                        style={{ backgroundColor: '#f9fafb', color: dataTesseramento ? '#374151' : '#9ca3af' }}
+                                        style={{ backgroundColor: 'var(--surface-1)', color: dataTesseramento ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}
                                     />
                                 </div>
                                 <div className="form-group grid-span-4" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end'}}>
@@ -2415,8 +2415,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 style={{
                                                     width: '100%', 
                                                     paddingRight: '35px',
-                                                    backgroundColor: !haCertificato ? '#f3f4f6' : undefined,
-                                                    color: !haCertificato ? '#9ca3af' : undefined
+                                                    backgroundColor: !haCertificato ? 'var(--surface-1)' : undefined,
+                                                    color: !haCertificato ? 'var(--text-tertiary)' : undefined
                                                 }}
                                             />
                                             <Calendar 
@@ -2424,7 +2424,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 style={{
                                                     position: 'absolute', 
                                                     right: '10px', 
-                                                    color: haCertificato ? '#6b7280' : '#d1d5db',
+                                                    color: haCertificato ? 'var(--text-secondary)' : 'var(--border-color)',
                                                     cursor: haCertificato ? 'pointer' : 'default',
                                                     zIndex: 5
                                                 }}
@@ -2439,12 +2439,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 readOnly
                                                 title="Scadenza certificato (calcolata automaticamente)"
                                                 style={{
-                                                    backgroundColor: '#f3f4f6',
-                                                    color: formData.scadenza_certificato ? '#374151' : '#9ca3af',
+                                                    backgroundColor: 'var(--surface-1)',
+                                                    color: formData.scadenza_certificato ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                                                     cursor: 'default'
                                                 }}
                                             />
-                                            <span style={{fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, marginTop: '4px'}}>Scadenza</span>
+                                            <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '4px'}}>Scadenza</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2453,7 +2453,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 <div className="form-group grid-span-6">
                                     <label className="field-label">Etichette</label>
                                     <div
-                                        style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
+                                        style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid var(--border-color)', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
                                         onClick={() => etichetteInputRef.current?.focus()}
                                     >
                                         {etichetteList.map((tag, i) => {
@@ -2484,7 +2484,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         />
                                     </div>
                                     {etichetteInput.trim() && (
-                                        <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
+                                        <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
                                     )}
                                 </div>
 
@@ -2502,10 +2502,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         isEditMode ? (
                             <div style={{padding: '24px'}}>
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
-                                    <h3 style={{margin: 0, fontSize: '1.2rem', fontWeight: 600, color: '#111827'}}>Comunicazioni</h3>
+                                    <h3 style={{margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)'}}>Comunicazioni</h3>
                                     <button 
                                         className="btn-save-full" 
-                                        style={{width: 'auto', padding: '8px 16px', backgroundColor: '#10b981'}}
+                                        style={{width: 'auto', padding: '8px 16px', backgroundColor: 'var(--success)'}}
                                         onClick={() => setShowComunicazioneModal(true)}
                                     >
                                         <Mail size={18} style={{marginRight: '8px'}}/>
@@ -2515,7 +2515,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 
                                 <div style={{
                                     backgroundColor: '#fff', 
-                                    border: '1px solid #e5e7eb', 
+                                    border: '1px solid var(--border-color)', 
                                     borderRadius: '8px', 
                                     overflow: 'hidden'
                                 }}>
@@ -2525,11 +2525,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 display: 'grid', 
                                                 gridTemplateColumns: '150px 80px 80px 1fr 120px', 
                                                 padding: '12px 16px', 
-                                                background: '#f9fafb', 
-                                                borderBottom: '1px solid #e5e7eb', 
+                                                background: 'var(--surface-1)', 
+                                                borderBottom: '1px solid var(--border-color)', 
                                                 fontWeight: 600, 
                                                 fontSize: '0.85rem', 
-                                                color: '#6b7280',
+                                                color: 'var(--text-secondary)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.025em'
                                             }}>
@@ -2545,19 +2545,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                     display: 'grid', 
                                                     gridTemplateColumns: '150px 80px 80px 1fr 120px', 
                                                     padding: '16px 16px', 
-                                                    borderBottom: '1px solid #f3f4f6', 
+                                                    borderBottom: '1px solid var(--surface-1)', 
                                                     fontSize: '0.9rem', 
                                                     alignItems: 'center',
                                                     backgroundColor: 'white'
                                                 }}>
                                                     <div style={{
-                                                        color: '#111827', 
+                                                        color: 'var(--text-primary)', 
                                                         fontSize: '0.85rem',
                                                         display: 'flex',
                                                         flexDirection: 'column'
                                                     }}>
                                                         <span>{new Date(com.data_invio || com.createdAt).toLocaleDateString()}</span>
-                                                        <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>{new Date(com.data_invio || com.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                        <span style={{color: 'var(--text-tertiary)', fontSize: '0.75rem'}}>{new Date(com.data_invio || com.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                                     </div>
                                                     <div>
                                                         <span style={{
@@ -2565,10 +2565,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             borderRadius: '9999px', 
                                                             fontSize: '0.7rem', 
                                                             fontWeight: 600,
-                                                            backgroundColor: com.tipo === 'EMAIL' ? '#eff6ff' : '#fdf2f8',
-                                                            color: com.tipo === 'EMAIL' ? '#2563eb' : '#db2777',
+                                                            backgroundColor: com.tipo === 'EMAIL' ? 'var(--info-container)' : 'var(--primary-container)',
+                                                            color: com.tipo === 'EMAIL' ? 'var(--primary)' : 'var(--primary-hover)',
                                                             display: 'inline-block',
-                                                            border: `1px solid ${com.tipo === 'EMAIL' ? '#dbeafe' : '#fce7f3'}`
+                                                            border: `1px solid ${com.tipo === 'EMAIL' ? 'var(--info-container)' : 'var(--primary-container)'}`
                                                         }}>
                                                             {com.tipo}
                                                         </span>
@@ -2578,7 +2578,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
-                                                            color: com.isInviato ? '#059669' : '#d97706',
+                                                            color: com.isInviato ? 'var(--success)' : 'var(--warning)',
                                                             fontSize: '0.75rem',
                                                             fontWeight: 500
                                                         }}>
@@ -2590,15 +2590,15 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                         overflow: 'hidden', 
                                                         textOverflow: 'ellipsis', 
                                                         paddingRight: '16px',
-                                                        color: '#374151',
+                                                        color: 'var(--text-secondary)',
                                                         display: 'flex',
                                                         alignItems: 'center'
                                                     }}>
                                                         {com.tipo === 'EMAIL' && com.oggetto ? (
-                                                            <div style={{maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, color: '#111827', marginRight: '6px'}} title={com.oggetto}>{com.oggetto}</div>
+                                                            <div style={{maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, color: 'var(--text-primary)', marginRight: '6px'}} title={com.oggetto}>{com.oggetto}</div>
                                                         ) : null}
                                                         <div style={{
-                                                            color: '#6b7280', 
+                                                            color: 'var(--text-secondary)', 
                                                             fontSize: '0.85rem',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
@@ -2609,7 +2609,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             {com.testo ? com.testo.replace(/<[^>]+>/g, '') : ''}
                                                         </div>
                                                     </div>
-                                                    <div style={{fontSize: '0.85rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                                    <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                                                         {com.mittente_nome || 'Sistema'}
                                                     </div>
                                                 </div>
@@ -2617,8 +2617,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div style={{padding: '60px 20px', textAlign: 'center', color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                                            <div style={{backgroundColor: '#f3f4f6', padding: '16px', borderRadius: '50%', marginBottom: '16px'}}>
+                                        <div style={{padding: '60px 20px', textAlign: 'center', color: 'var(--text-tertiary)', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                                            <div style={{backgroundColor: 'var(--surface-1)', padding: '16px', borderRadius: '50%', marginBottom: '16px'}}>
                                                 <Mail size={32} />
                                             </div>
                                             <p style={{margin: 0, fontWeight: 500}}>Nessuna comunicazione inviata</p>
@@ -2628,7 +2628,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                             </div>
                         ) : (
-                            <div style={{padding: '24px', textAlign: 'center', color: '#6b7280'}}>
+                            <div style={{padding: '24px', textAlign: 'center', color: 'var(--text-secondary)'}}>
                                 Devi prima salvare il socio per inviare comunicazioni.
                             </div>
                         )
@@ -2638,16 +2638,16 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab === 'Storico' && (
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             {/* Header */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 28px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 28px 16px', borderBottom: '1px solid var(--surface-1)' }}>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                        <ClipboardList size={20} color="#6b7280" />
-                                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>Storico attività</h3>
+                                        <ClipboardList size={20} color="var(--text-secondary)" />
+                                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Storico attività</h3>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>Log completo di ordini, abbonamenti, comunicazioni e accessi del socio</p>
+                                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Log completo di ordini, abbonamenti, comunicazioni e accessi del socio</p>
                                 </div>
                                 <button
-                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '7px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem', color: '#374151' }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '7px', border: '1px solid var(--border-color)', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem', color: 'var(--text-secondary)' }}
                                     onClick={() => { setShowNotaForm(true); setNotaTesto(''); setNotaFile(null); }}
                                 >
                                     <PlusCircle size={15} /> Aggiungi nota
@@ -2657,7 +2657,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             {/* Form nuova nota */}
                             {showNotaForm && (
                                 <div style={{ padding: '16px 28px 0' }}>
-                                    <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '16px', backgroundColor: '#fafafa' }}>
+                                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '16px', backgroundColor: 'var(--surface-1)' }}>
                                         <div className="form-group" style={{ marginBottom: '12px' }}>
                                             <label className="field-label">Testo nota *</label>
                                             <textarea
@@ -2672,13 +2672,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         <div className="form-group" style={{ marginBottom: '14px' }}>
                                             <label className="field-label">Allegato</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#374151', cursor: 'pointer', padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', fontWeight: 500 }}>
-                                                    <Paperclip size={14} color="#6b7280" />
+                                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px 12px', border: '1px solid var(--border-color)', borderRadius: '4px', background: '#fff', fontWeight: 500 }}>
+                                                    <Paperclip size={14} color="var(--text-secondary)" />
                                                     {notaFile ? notaFile.name : 'Scegli file…'}
                                                     <input type="file" style={{ display: 'none' }} onChange={e => setNotaFile(e.target.files[0] || null)} />
                                                 </label>
                                                 {notaFile && (
-                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} onClick={() => setNotaFile(null)}>
+                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} onClick={() => setNotaFile(null)}>
                                                         <X size={13} /> Rimuovi
                                                     </button>
                                                 )}
@@ -2705,10 +2705,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             {/* Timeline */}
                             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px' }}>
                                 {storicoLoading ? (
-                                    <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Caricamento…</div>
+                                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)' }}>Caricamento…</div>
                                 ) : storicoTimeline.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ backgroundColor: '#f3f4f6', padding: '16px', borderRadius: '50%' }}>
+                                    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-tertiary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ backgroundColor: 'var(--surface-1)', padding: '16px', borderRadius: '50%' }}>
                                             <ClipboardList size={32} />
                                         </div>
                                         <p style={{ margin: 0, fontWeight: 500 }}>Nessuna attività registrata</p>
@@ -2716,7 +2716,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                                         {storicoTimeline.map((item, idx) => {
-                                            const cfg = storicoTipoConfig[item.tipo] || { color: '#6b7280', bg: '#f9fafb', label: item.tipo, icon: <ClipboardList size={14}/> };
+                                            const cfg = storicoTipoConfig[item.tipo] || { color: 'var(--text-secondary)', bg: 'var(--surface-1)', label: item.tipo, icon: <ClipboardList size={14}/> };
                                             return (
                                                 <div key={item.id} style={{ display: 'flex', gap: '12px', paddingBottom: idx < storicoTimeline.length - 1 ? '0' : '0' }}>
                                                     {/* Timeline line + dot */}
@@ -2725,7 +2725,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                             {cfg.icon}
                                                         </div>
                                                         {idx < storicoTimeline.length - 1 && (
-                                                            <div style={{ width: '2px', flex: 1, backgroundColor: '#e5e7eb', minHeight: '20px', margin: '2px 0' }} />
+                                                            <div style={{ width: '2px', flex: 1, backgroundColor: 'var(--border-color)', minHeight: '20px', margin: '2px 0' }} />
                                                         )}
                                                     </div>
 
@@ -2737,17 +2737,17 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                     {cfg.label}
                                                                 </span>
                                                             </div>
-                                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                                                 {item.data.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                                 {' '}
                                                                 {item.data.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
-                                                        <p style={{ margin: '4px 0 4px', fontSize: '0.88rem', color: '#111827', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                                                        <p style={{ margin: '4px 0 4px', fontSize: '0.88rem', color: 'var(--text-primary)', wordBreak: 'break-word', lineHeight: 1.5 }}>
                                                             {item.azione}
                                                         </p>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                                 <span style={{ fontWeight: 600 }}>
                                                                     {item.owner === 'Sistema' ? '🤖' : '👤'} {item.owner}
                                                                 </span>
@@ -2757,7 +2757,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                     href={`/users/api/soci/${formData.id}/storico/${item.allegato.storiciId}/allegato`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}
+                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}
                                                                 >
                                                                     <Download size={12} /> {item.allegato.nome}
                                                                 </a>
@@ -2776,14 +2776,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab === 'Ordini' && (
                         <div>
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Ordini</h3>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)'}}>Ordini</h3>
                                 <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                                    <span style={{fontSize: '0.85rem', color: '#6b7280'}}>
+                                    <span style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>
                                         {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} ordin{filteredPagamenti.length === 1 ? 'e' : 'i'}
                                     </span>
                                     {isEditMode && formData.id && (
                                         <button
-                                            style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, #2563eb)', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
+                                            style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, var(--primary))', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
                                             onClick={() => navigate('/nuovo-ordine', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
                                         >
                                             <CreditCard size={15} /> Nuovo ordine
@@ -2795,11 +2795,11 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             {scadenzeAlertCount > 0 && (
                                 <div style={{
                                     display: 'flex', alignItems: 'center', gap: '10px',
-                                    backgroundColor: '#fff8e1', border: '1px solid #f59e0b',
+                                    backgroundColor: 'var(--warning-container)', border: '1px solid var(--warning)',
                                     borderRadius: '6px', padding: '9px 14px', marginBottom: '12px',
-                                    fontSize: '0.82rem', color: '#78350f'
+                                    fontSize: '0.82rem', color: 'var(--on-warning-container)'
                                 }}>
-                                    <AlertTriangle size={15} style={{color: '#f59e0b', flexShrink: 0}} />
+                                    <AlertTriangle size={15} style={{color: 'var(--warning)', flexShrink: 0}} />
                                     <span>
                                         <strong>{scadenzeAlertCount}</strong> quota{scadenzeAlertCount > 1 ? '/e' : ''} con scadenza imminente o scaduta —
                                         usa <strong>Rinnova</strong> sulla riga corrispondente per registrare il rinnovo.
@@ -2809,7 +2809,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             {/* Filtri live */}
                             <div style={{display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'12px', alignItems:'flex-end'}}>
                                 <div style={{display:'flex', flexDirection:'column', flex:'2 1 160px', minWidth:'140px'}}>
-                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>Descrizione</label>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'var(--text-secondary)'}}>Descrizione</label>
                                     <input
                                         className="md-input"
                                         placeholder="Cerca in quote..."
@@ -2819,7 +2819,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     />
                                 </div>
                                 <div style={{display:'flex', flexDirection:'column', flex:'1 1 120px', minWidth:'110px'}}>
-                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>Anno / Stagione</label>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'var(--text-secondary)'}}>Anno / Stagione</label>
                                     <select
                                         className="md-select"
                                         style={{padding:'5px 10px', fontSize:'0.85rem'}}
@@ -2833,7 +2833,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     </select>
                                 </div>
                                 <div style={{display:'flex', flexDirection:'column', flex:'1 1 120px', minWidth:'110px'}}>
-                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'#6b7280'}}>N. Ricevuta</label>
+                                    <label style={{fontSize:'0.78rem', marginBottom:'3px', color:'var(--text-secondary)'}}>N. Ricevuta</label>
                                     <input
                                         className="md-input"
                                         placeholder="Es. 42"
@@ -2845,7 +2845,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 {(pagFiltroDescrizione || pagFiltroAnno !== 'TUTTI' || pagFiltroRicevuta) && (
                                     <button
-                                        style={{alignSelf:'flex-end', padding:'5px 12px', fontSize:'0.8rem', border:'1px solid #d1d5db', borderRadius:'4px', background:'#f9fafb', cursor:'pointer', color:'#6b7280'}}
+                                        style={{alignSelf:'flex-end', padding:'5px 12px', fontSize:'0.8rem', border:'1px solid var(--border-color)', borderRadius:'4px', background:'var(--surface-1)', cursor:'pointer', color:'var(--text-secondary)'}}
                                         onClick={() => { setPagFiltroDescrizione(''); setPagFiltroAnno('TUTTI'); setPagFiltroRicevuta(''); }}
                                     >Azzera</button>
                                 )}
@@ -2853,7 +2853,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <div className="table-responsive">
                                 <table className="md-table" style={{ borderCollapse: 'separate', borderSpacing: '0 4px', backgroundColor: 'transparent', width: '100%' }}>
                                     <thead>
-                                        <tr style={{backgroundColor: '#f1c40f', color: '#fff'}}>
+                                        <tr style={{backgroundColor: 'var(--warning)', color: '#fff'}}>
                                             <th style={{padding: '12px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', color:'#000'}}>Intestatario - Data - Operatore</th>
                                             <th style={{padding: '12px', color:'#000'}}>Identificativi documento</th>
                                             <th style={{padding: '12px', color:'#000'}}>Quote</th>
@@ -2882,13 +2882,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 const hasScadAlert = scad && (scad.stato === 'SCADUTO' || scad.stato === 'IN SCADENZA');
                                                 // Bordo e sfondo: la scadenza ha priorità rispetto al segno dell'importo
                                                 const borderColor = scad
-                                                    ? scad.stato === 'SCADUTO' ? '#e74c3c'
-                                                    : scad.stato === 'IN SCADENZA' ? '#f39c12'
-                                                    : '#2ecc71'
-                                                    : isEntrata ? '#2ecc71' : '#e74c3c';
-                                                const rowBg = scad?.stato === 'SCADUTO' ? '#fceceb'
-                                                    : scad?.stato === 'IN SCADENZA' ? '#fef9e7'
-                                                    : isEntrata ? '#fff' : '#fceceb';
+                                                    ? scad.stato === 'SCADUTO' ? 'var(--danger)'
+                                                    : scad.stato === 'IN SCADENZA' ? 'var(--warning)'
+                                                    : 'var(--success)'
+                                                    : isEntrata ? 'var(--success)' : 'var(--danger)';
+                                                const rowBg = scad?.stato === 'SCADUTO' ? 'var(--danger-container)'
+                                                    : scad?.stato === 'IN SCADENZA' ? 'var(--warning-container)'
+                                                    : isEntrata ? '#fff' : 'var(--danger-container)';
                                                 return (
                                                     <tr key={p.id} style={{
                                                         backgroundColor: rowBg,
@@ -2897,7 +2897,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                     }}>
                                                         <td style={{padding: '12px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
                                                             <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                                                                <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isEntrata ? '#e8f8f5' : '#fdedec', color: isEntrata ? '#2ecc71' : '#e74c3c', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                                                <div style={{width:'36px', height:'36px', borderRadius:'50%', backgroundColor: isEntrata ? 'var(--primary-container)' : 'var(--danger-container)', color: isEntrata ? 'var(--success)' : 'var(--danger)', display:'flex', alignItems:'center', justifyContent:'center'}}>
                                                                     {renderPaymentIcon(p.modalita_pagamento)}
                                                                 </div>
                                                                 <div>
@@ -2931,12 +2931,12 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                     <div style={{display:'flex', alignItems:'center', gap:'5px', marginTop:'2px', flexWrap:'wrap'}}>
                                                                         <span style={{
                                                                             fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 7px', borderRadius: '10px',
-                                                                            backgroundColor: scad.stato === 'SCADUTO' ? '#e74c3c' : scad.stato === 'IN SCADENZA' ? '#f39c12' : '#2ecc71',
+                                                                            backgroundColor: scad.stato === 'SCADUTO' ? 'var(--danger)' : scad.stato === 'IN SCADENZA' ? 'var(--warning)' : 'var(--success)',
                                                                             color: 'white', whiteSpace: 'nowrap'
                                                                         }}>
                                                                             {scad.stato}
                                                                         </span>
-                                                                        <span style={{fontSize:'0.72rem', color:'#6b7280', whiteSpace:'nowrap'}}>
+                                                                        <span style={{fontSize:'0.72rem', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
                                                                             scad. {new Date(scad.scadenzaStr).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})}
                                                                         </span>
                                                                     </div>
@@ -2945,7 +2945,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                         </td>
                                                         <td style={{padding: '12px', textAlign:'right'}}>
                                                             <span style={{
-                                                                backgroundColor: isEntrata ? '#2ecc71' : '#f1948a',
+                                                                backgroundColor: isEntrata ? 'var(--success)' : 'var(--danger-container)',
                                                                 color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem', minWidth: '80px', display: 'inline-block', textAlign: 'right'
                                                             }}>
                                                                 {Math.abs(amount).toFixed(2).replace('.', ',')}
@@ -2961,7 +2961,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                             padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px',
                                                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                                                             cursor: 'pointer',
-                                                                            backgroundColor: scad?.stato === 'SCADUTO' ? '#e74c3c' : scad?.stato === 'IN SCADENZA' ? '#f39c12' : '#6b7280',
+                                                                            backgroundColor: scad?.stato === 'SCADUTO' ? 'var(--danger)' : scad?.stato === 'IN SCADENZA' ? 'var(--warning)' : 'var(--text-secondary)',
                                                                             color: 'white'
                                                                         }}
                                                                     >
@@ -2969,14 +2969,14 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                                     </button>
                                                                 )}
                                                                 <button
-                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#f1c40f', color:'white'}}
+                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--warning)', color:'white'}}
                                                                     title="Dettaglio"
                                                                     onClick={() => setSelectedPaymentDetail(p)}
                                                                 >
                                                                     <Folder size={16} />
                                                                 </button>
-                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#1abc9c', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: '#5dade2', color:'white'}} title="Invia email" onClick={() => setShowComunicazioneModal(true)}><Mail size={16} /></button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
+                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Invia email" onClick={() => setShowComunicazioneModal(true)}><Mail size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -2988,8 +2988,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </div>
                             {filteredPagamenti.length > 0 && (
                                 <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', paddingTop:'12px', gap:'10px'}}>
-                                    <span style={{fontSize:'0.85rem', color:'#6b7280'}}>Totale entrate:</span>
-                                    <span style={{backgroundColor:'#2ecc71', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>
+                                    <span style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>Totale entrate:</span>
+                                    <span style={{backgroundColor:'var(--success)', color:'white', padding:'5px 15px', borderRadius:'4px', fontWeight:'bold'}}>
                                         € {filteredPagamenti.filter(p => parseFloat(p.importo) >= 0).reduce((acc, p) => acc + parseFloat(p.importo), 0).toFixed(2).replace('.', ',')}
                                     </span>
                                 </div>
@@ -3000,17 +3000,17 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab === 'Abbonamenti' && (
                         <div style={{padding: '24px'}}>
                             <div style={{marginBottom: '16px'}}>
-                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827'}}>Abbonamenti</h3>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)'}}>Abbonamenti</h3>
                             </div>
                             {abbonamenti.length === 0 ? (
-                                <div style={{textAlign: 'center', padding: '48px', color: '#6b7280', fontSize: '0.95rem'}}>
+                                <div style={{textAlign: 'center', padding: '48px', color: 'var(--text-secondary)', fontSize: '0.95rem'}}>
                                     Nessun abbonamento trovato
                                 </div>
                             ) : (
                                 <div className="table-responsive">
                                     <table className="md-table" style={{borderCollapse: 'separate', borderSpacing: '0 6px', backgroundColor: 'transparent', width: '100%'}}>
                                         <thead>
-                                            <tr style={{backgroundColor: '#f1c40f', color: '#000'}}>
+                                            <tr style={{backgroundColor: 'var(--warning)', color: '#000'}}>
                                                 <th style={{padding: '10px 14px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px'}}>Abbonamento</th>
                                                 <th style={{padding: '10px 14px'}}>Ult. pagamento</th>
                                                 <th style={{padding: '10px 14px'}}>Scadenza</th>
@@ -3019,28 +3019,28 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         </thead>
                                         <tbody>
                                             {abbonamenti.map(abb => {
-                                                const borderColor = abb.stato === 'SCADUTO' ? '#e74c3c'
-                                                    : abb.stato === 'IN SCADENZA' ? '#f39c12'
-                                                    : '#2ecc71';
-                                                const rowBg = abb.stato === 'SCADUTO' ? '#fceceb'
-                                                    : abb.stato === 'IN SCADENZA' ? '#fef9e7'
+                                                const borderColor = abb.stato === 'SCADUTO' ? 'var(--danger)'
+                                                    : abb.stato === 'IN SCADENZA' ? 'var(--warning)'
+                                                    : 'var(--success)';
+                                                const rowBg = abb.stato === 'SCADUTO' ? 'var(--danger-container)'
+                                                    : abb.stato === 'IN SCADENZA' ? 'var(--warning-container)'
                                                     : '#fff';
-                                                const statoBg = abb.stato === 'SCADUTO' ? '#e74c3c'
-                                                    : abb.stato === 'IN SCADENZA' ? '#f39c12'
-                                                    : '#2ecc71';
+                                                const statoBg = abb.stato === 'SCADUTO' ? 'var(--danger)'
+                                                    : abb.stato === 'IN SCADENZA' ? 'var(--warning)'
+                                                    : 'var(--success)';
                                                 return (
                                                     <tr key={abb.productId ?? '__unknown__'} style={{
                                                         backgroundColor: rowBg,
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                                                         borderLeft: `5px solid ${borderColor}`,
                                                     }}>
-                                                        <td style={{padding: '12px 14px', fontWeight: 600, color: '#111827', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
+                                                        <td style={{padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px'}}>
                                                             {abb.productName}
                                                         </td>
-                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: '#374151'}}>
+                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: 'var(--text-secondary)'}}>
                                                             {formatDateIT(abb.latestPayment.data_pagamento)}
                                                         </td>
-                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: '#374151'}}>
+                                                        <td style={{padding: '12px 14px', fontSize: '0.88rem', color: 'var(--text-secondary)'}}>
                                                             {abb.scadenzaDate
                                                                 ? abb.scadenzaDate.toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit', year: 'numeric'})
                                                                 : '-'}
@@ -3074,10 +3074,10 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         <div style={{padding: '24px'}}>
                             {/* Header */}
                             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
-                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Corsi frequentati</h3>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'var(--text-primary)'}}>Corsi frequentati</h3>
                                 <button
                                     className="btn-save-full"
-                                    style={{width:'auto', padding:'8px 16px', backgroundColor:'#10b981', display:'flex', alignItems:'center', gap:'8px'}}
+                                    style={{width:'auto', padding:'8px 16px', backgroundColor:'var(--success)', display:'flex', alignItems:'center', gap:'8px'}}
                                     onClick={() => { fetchTuttiCorsiEProdotti(); setShowAggiungiCorsoModal(true); }}
                                 >
                                     <PlusCircle size={18}/>
@@ -3086,19 +3086,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </div>
 
                             {corsiLoading ? (
-                                <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>Caricamento...</div>
+                                <div style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)'}}>Caricamento...</div>
                             ) : socioCorsi.length === 0 ? (
-                                <div style={{textAlign:'center', padding:'60px 20px', color:'#9ca3af', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px'}}>
-                                    <div style={{backgroundColor:'#f3f4f6', padding:'16px', borderRadius:'50%'}}>
+                                <div style={{textAlign:'center', padding:'60px 20px', color:'var(--text-tertiary)', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px'}}>
+                                    <div style={{backgroundColor:'var(--surface-1)', padding:'16px', borderRadius:'50%'}}>
                                         <BookOpen size={32}/>
                                     </div>
                                     <p style={{margin:0, fontWeight:500}}>Nessun corso associato</p>
                                     <p style={{margin:0, fontSize:'0.9rem'}}>Usa "Aggiungi Corso" per iscrivere il socio a un corso.</p>
                                 </div>
                             ) : (
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'8px', overflow:'hidden'}}>
                                     {/* Table header */}
-                                    <div style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'10px 16px', background:'#f9fafb', borderBottom:'1px solid #e5e7eb', fontWeight:600, fontSize:'0.8rem', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.025em'}}>
+                                    <div style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'10px 16px', background:'var(--surface-1)', borderBottom:'1px solid var(--border-color)', fontWeight:600, fontSize:'0.8rem', color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.025em'}}>
                                         <div>Attività / Corso</div>
                                         <div>Orario</div>
                                         <div>Struttura / Sala</div>
@@ -3114,48 +3114,48 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         const stato = computeStatoPagamentoScadenza(scadDate);
                                         const colore = corso.attivita?.colore;
                                         const coloriBg = {
-                                            'ROSSO':'#e53935','VERDE':'#43a047','BLU':'#1e88e5','VERDE CHIARO':'#66bb6a',
-                                            'CELESTE':'#26c6da','ARANCIONE':'#fb8c00','VIOLA':'#8e24aa','GIALLO':'#fdd835',
-                                            'GRIGIO':'#78909c','ROSA':'#e91e63',
+                                            'ROSSO':'var(--danger)','VERDE':'var(--success)','BLU':'var(--primary)','VERDE CHIARO':'var(--success)',
+                                            'CELESTE':'var(--primary)','ARANCIONE':'var(--warning)','VIOLA':'var(--primary)','GIALLO':'var(--warning)',
+                                            'GRIGIO':'var(--text-secondary)','ROSA':'var(--primary)',
                                         };
-                                        const colBg = coloriBg[colore] || '#9e9e9e';
+                                        const colBg = coloriBg[colore] || 'var(--text-tertiary)';
                                         return (
-                                            <div key={iscrizione.id} style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'14px 16px', borderBottom:'1px solid #f3f4f6', alignItems:'center', fontSize:'0.9rem'}}>
+                                            <div key={iscrizione.id} style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1.5fr 1.5fr 120px', padding:'14px 16px', borderBottom:'1px solid var(--surface-1)', alignItems:'center', fontSize:'0.9rem'}}>
                                                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                                     {colore && (
                                                         <span style={{width:'10px', height:'10px', borderRadius:'50%', backgroundColor:colBg, flexShrink:0, display:'inline-block'}}/>
                                                     )}
                                                     <div>
-                                                        <div style={{fontWeight:600, color:'#111827'}}>{corso.attivita?.descrizione || '-'}</div>
-                                                        {corso.descrizione && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.descrizione}</div>}
+                                                        <div style={{fontWeight:600, color:'var(--text-primary)'}}>{corso.attivita?.descrizione || '-'}</div>
+                                                        {corso.descrizione && <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>{corso.descrizione}</div>}
                                                     </div>
                                                 </div>
-                                                <div style={{color:'#374151'}}>
+                                                <div style={{color:'var(--text-secondary)'}}>
                                                     <div>{GIORNI_SETTIMANA[corso.giorno] || '-'}</div>
-                                                    <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.oraInizio} · {corso.durataMinuti} min</div>
+                                                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>{corso.oraInizio} · {corso.durataMinuti} min</div>
                                                 </div>
-                                                <div style={{color:'#374151'}}>
+                                                <div style={{color:'var(--text-secondary)'}}>
                                                     <div>{corso.struttura?.descrizione || '-'}</div>
-                                                    {corso.area && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{corso.area.descrizione}</div>}
+                                                    {corso.area && <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>{corso.area.descrizione}</div>}
                                                 </div>
-                                                <div style={{color:'#374151'}}>
+                                                <div style={{color:'var(--text-secondary)'}}>
                                                     {corso.staff ? `${corso.staff.nome} ${corso.staff.cognome}` : '-'}
                                                 </div>
                                                 <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                                                    <span style={{color:'#374151', fontSize:'0.85rem'}}>{scadenzaStr ? formatDateIT(scadenzaStr) : '-'}</span>
+                                                    <span style={{color:'var(--text-secondary)', fontSize:'0.85rem'}}>{scadenzaStr ? formatDateIT(scadenzaStr) : '-'}</span>
                                                     <ScadenzaBadge stato={stato}/>
                                                 </div>
                                                 <div style={{display:'flex', gap:'6px', justifyContent:'center'}}>
                                                     <button
                                                         title="Dettaglio corso"
-                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'#3b82f6', color:'white'}}
+                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'var(--primary)', color:'white'}}
                                                         onClick={() => setCorsoDettaglio(corso)}
                                                     >
                                                         <Eye size={14}/>
                                                     </button>
                                                     <button
                                                         title="Disiscrivi"
-                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'#ef4444', color:'white'}}
+                                                        style={{padding:0, border:'none', width:'30px', height:'30px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor:'var(--danger)', color:'white'}}
                                                         onClick={async () => {
                                                             const ok = await confirm({ title:'Disiscrivi dal corso', message:`Vuoi rimuovere il socio dal corso "${corso.attivita?.descrizione || ''}"?`, confirmText:'Disiscrivi', cancelText:'Annulla' });
                                                             if (!ok) return;
@@ -3199,7 +3199,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Sezione: Informazioni aggiuntive */}
                             <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Informazioni aggiuntive</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Informazioni aggiuntive</span>
                             </div>
 
                             <div className="form-group grid-span-6">
@@ -3216,7 +3216,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <div className="form-group grid-span-6">
                                 <label className="field-label">Etichette</label>
                                 <div
-                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid #d1d5db', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
+                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid var(--border-color)', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
                                     onClick={() => etichetteInputRef.current?.focus()}
                                 >
                                     {etichetteList.map((tag, i) => {
@@ -3247,7 +3247,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     />
                                 </div>
                                 {etichetteInput.trim() && (
-                                    <div style={{ fontSize:'0.78rem', color:'#6b7280', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
+                                    <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
                                 )}
                             </div>
 
@@ -3262,7 +3262,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     />
                                     Iscritta al RUNTS
                                 </label>
-                                <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>Registro Unico del Terzo Settore</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '2px' }}>Registro Unico del Terzo Settore</span>
                             </div>
                             <div className="form-group grid-span-6">
                                 <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -3279,7 +3279,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Sezione: Affiliazione */}
                             <div className="form-group grid-span-12" style={{ marginBottom: '4px' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Affiliazione</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Affiliazione</span>
                             </div>
 
                             <div className="form-group grid-span-3">
@@ -3326,7 +3326,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Sezione: Costi tessere */}
                             <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Costi tessere</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Costi tessere</span>
                             </div>
 
                             <div className="form-group grid-span-4">
@@ -3368,7 +3368,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
                             {/* Sezione: Consiglio direttivo */}
                             <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consiglio direttivo</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consiglio direttivo</span>
                             </div>
 
                             <div className="form-group grid-span-4">
@@ -3409,7 +3409,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </div>
 
                             {showAddContattoForm && (
-                                <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fafafa' }}>
+                                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: 'var(--surface-1)' }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px', marginBottom: '12px' }}>
                                         <div className="form-group">
                                             <label className="field-label">Nome *</label>
@@ -3458,7 +3458,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                                     <thead>
-                                        <tr style={{ borderBottom: '2px solid #e0e0e0' }}>
+                                        <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
                                             <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Nome</th>
                                             <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Ruolo</th>
                                             <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: '#555' }}>Telefono</th>
@@ -3469,7 +3469,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     </thead>
                                     <tbody>
                                         {contatti.map(c => (
-                                            <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                            <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                                 <td style={{ padding: '8px' }}>{c.nome}</td>
                                                 <td style={{ padding: '8px', color: '#666' }}>{c.posizione_lavorativa || '—'}</td>
                                                 <td style={{ padding: '8px', color: '#666' }}>{c.telefono || '—'}</td>
@@ -3480,7 +3480,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                         onClick={() => { setEditingContatto(c); setNewContatto({ nome: c.nome, posizione_lavorativa: c.posizione_lavorativa || '', telefono: c.telefono || '', dispositivo_mobile: c.dispositivo_mobile || '', email: c.email || '' }); setShowAddContattoForm(true); }}>
                                                         <RefreshCw size={14}/>
                                                     </button>
-                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53935', padding: '2px 4px' }}
+                                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '2px 4px' }}
                                                         onClick={async () => {
                                                             const token = localStorage.getItem('token');
                                                             const res = await fetch(`/users/api/soci/${formData.id}/contatti/${c.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -3501,34 +3501,34 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                     {activeTab === 'AccessoFrontend' && (
                         <div style={{ padding: '28px 32px', maxWidth: '560px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                                <Globe size={20} color="#10b981" />
-                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+                                <Globe size={20} color="var(--success)" />
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                                     Accesso Area Soci
                                 </h3>
                             </div>
-                            <p style={{ margin: '0 0 24px 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                            <p style={{ margin: '0 0 24px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                 Abilita l'accesso al portale online per questo socio. Una volta abilitato, potrà accedere con email e password per visualizzare abbonamenti, corsi e comunicazioni.
                             </p>
 
                             {/* Status card */}
                             <div style={{
-                                border: `1px solid ${frontendAccess.enabled ? '#6ee7b7' : '#d1d5db'}`,
+                                border: `1px solid ${frontendAccess.enabled ? 'var(--success-container)' : 'var(--border-color)'}`,
                                 borderRadius: '10px',
-                                background: frontendAccess.enabled ? '#f0fdf4' : '#f9fafb',
+                                background: frontendAccess.enabled ? 'var(--success-container)' : 'var(--surface-1)',
                                 padding: '20px 24px',
                                 marginBottom: '20px',
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         {frontendAccess.enabled
-                                            ? <ShieldCheck size={22} color="#10b981" />
-                                            : <ShieldOff size={22} color="#9ca3af" />
+                                            ? <ShieldCheck size={22} color="var(--success)" />
+                                            : <ShieldOff size={22} color="var(--text-tertiary)" />
                                         }
                                         <div>
-                                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: frontendAccess.enabled ? '#065f46' : '#374151' }}>
+                                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: frontendAccess.enabled ? 'var(--on-success-container)' : 'var(--text-secondary)' }}>
                                                 {frontendAccess.enabled ? 'Accesso abilitato' : 'Accesso non abilitato'}
                                             </div>
-                                            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                                 {frontendAccess.enabled ? 'Il socio può accedere al portale online.' : 'Il socio non ha ancora un accesso al portale.'}
                                             </div>
                                         </div>
@@ -3536,7 +3536,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     {frontendAccess.enabled ? (
                                         <button
                                             style={{
-                                                background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5',
+                                                background: 'var(--danger-container)', color: 'var(--on-danger-container)', border: '1px solid var(--danger-container)',
                                                 borderRadius: '6px', padding: '7px 14px', cursor: 'pointer',
                                                 fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                                                 opacity: frontendAccessLoading ? 0.7 : 1,
@@ -3577,7 +3577,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     ) : (
                                         <button
                                             style={{
-                                                background: '#10b981', color: '#fff', border: 'none',
+                                                background: 'var(--success)', color: '#fff', border: 'none',
                                                 borderRadius: '6px', padding: '7px 16px', cursor: 'pointer',
                                                 fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                                                 opacity: frontendAccessLoading ? 0.7 : 1,
@@ -3636,13 +3636,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             {/* Credentials display */}
                             {frontendAccess.enabled && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 18px' }}>
-                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Email di accesso</div>
+                                    <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '14px 18px' }}>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Email di accesso</div>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <span style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{frontendAccess.email}</span>
+                                            <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 500 }}>{frontendAccess.email}</span>
                                             <button
                                                 title="Copia"
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
                                                 onClick={() => { navigator.clipboard.writeText(frontendAccess.email); showSnackbar('Email copiata'); }}
                                             >
                                                 <Copy size={15} />
@@ -3650,23 +3650,23 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                         </div>
                                     </div>
 
-                                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 18px' }}>
-                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Password generata</div>
+                                    <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '14px 18px' }}>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>Password generata</div>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500, letterSpacing: showFrontendPassword ? 'normal' : '0.15em', fontFamily: 'monospace' }}>
+                                            <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 500, letterSpacing: showFrontendPassword ? 'normal' : '0.15em', fontFamily: 'monospace' }}>
                                                 {showFrontendPassword ? (frontendAccess.password_plain || '—') : '••••••••••'}
                                             </span>
                                             <div style={{ display: 'flex', gap: '4px' }}>
                                                 <button
                                                     title={showFrontendPassword ? 'Nascondi' : 'Mostra'}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
                                                     onClick={() => setShowFrontendPassword(v => !v)}
                                                 >
                                                     {showFrontendPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                                 </button>
                                                 <button
                                                     title="Copia password"
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
                                                     onClick={() => { navigator.clipboard.writeText(frontendAccess.password_plain); showSnackbar('Password copiata'); }}
                                                 >
                                                     <Copy size={15} />
@@ -3678,9 +3678,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     {/* Reset password */}
                                     <button
                                         style={{
-                                            background: 'none', border: '1px solid #d1d5db', borderRadius: '7px',
+                                            background: 'none', border: '1px solid var(--border-color)', borderRadius: '7px',
                                             padding: '9px 16px', cursor: 'pointer', fontSize: '0.83rem', fontWeight: 600,
-                                            color: '#374151', display: 'flex', alignItems: 'center', gap: '7px',
+                                            color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '7px',
                                             opacity: frontendAccessLoading ? 0.7 : 1, alignSelf: 'flex-start',
                                         }}
                                         disabled={frontendAccessLoading}
@@ -3763,7 +3763,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 <div className="modal-overlay" style={{zIndex: 2000}}>
                     <div className="modal-card" style={{maxWidth: '400px', width: '90%', padding: '24px'}}>
                         <h3 style={{marginTop: 0}}>Iscrizione senza ricevuta</h3>
-                        <p style={{color: '#6b7280', fontSize: '0.9rem'}}>
+                        <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>
                             Registra l'iscrizione per l'anno {currentRefYear} senza generare movimenti contabili.
                         </p>
                         
@@ -3788,7 +3788,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <button 
                                 className="btn-primary" 
                                 onClick={handleIscrizioneSubmit}
-                                style={{padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
+                                style={{padding: '8px 16px', backgroundColor: 'var(--success)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
                             >
                                 Conferma Iscrizione
                             </button>
@@ -3801,7 +3801,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 <div className="modal-overlay" style={{zIndex: 2000}}>
                     <div className="modal-card" style={{maxWidth: '400px', width: '90%', padding: '24px'}}>
                         <h3 style={{marginTop: 0}}>Accetta come Socio</h3>
-                        <p style={{color: '#6b7280', fontSize: '0.9rem'}}>
+                        <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>
                             Imposta lo stato del socio come "Socio" e registra la data di ammissione nel libro soci.
                         </p>
                         
@@ -3826,7 +3826,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <button 
                                 className="btn-primary" 
                                 onClick={handleAccettaSocioSubmit}
-                                style={{padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
+                                style={{padding: '8px 16px', backgroundColor: 'var(--success)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}
                             >
                                 Conferma
                             </button>
@@ -3881,7 +3881,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 />
                                 <Calendar 
                                     size={18} 
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }} 
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }} 
                                 />
                             </div>
                         </div>
@@ -3898,7 +3898,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             <button
                                 onClick={executePrint}
                                 style={{
-                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer'
+                                    padding: '10px 20px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', cursor: 'pointer'
                                 }}
                             >
                                 Conferma e Stampa
@@ -3922,79 +3922,79 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 <div className="modal-overlay" style={{zIndex: 2100}}>
                     <div className="modal-card" style={{maxWidth:'600px', width:'95%', padding:0, overflow:'hidden'}} onClick={e => e.stopPropagation()}>
                         {/* Header */}
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff'}}>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid var(--border-color)', backgroundColor:'#fff'}}>
                             <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                                <BookOpen size={20} style={{color:'#10b981'}}/>
-                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Dettaglio Corso</h3>
+                                <BookOpen size={20} style={{color:'var(--success)'}}/>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'var(--text-primary)'}}>Dettaglio Corso</h3>
                             </div>
-                            <button style={{background:'none', border:'none', cursor:'pointer', color:'#6b7280'}} onClick={() => setCorsoDettaglio(null)}>
+                            <button style={{background:'none', border:'none', cursor:'pointer', color:'var(--text-secondary)'}} onClick={() => setCorsoDettaglio(null)}>
                                 <X size={20}/>
                             </button>
                         </div>
                         {/* Body */}
-                        <div style={{padding:'20px', display:'flex', flexDirection:'column', gap:'16px', backgroundColor:'#f9fafb'}}>
+                        <div style={{padding:'20px', display:'flex', flexDirection:'column', gap:'16px', backgroundColor:'var(--surface-1)'}}>
                             {/* Attività + descrizione */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Attività</div>
-                                    <div style={{fontWeight:600, color:'#111827'}}>{corsoDettaglio.attivita?.descrizione || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Attività</div>
+                                    <div style={{fontWeight:600, color:'var(--text-primary)'}}>{corsoDettaglio.attivita?.descrizione || '-'}</div>
                                 </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Descrizione</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.descrizione || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Descrizione</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.descrizione || '-'}</div>
                                 </div>
                             </div>
                             {/* Giorno + ora + durata */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px'}}>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Giorno</div>
-                                    <div style={{color:'#374151'}}>{GIORNI_SETTIMANA[corsoDettaglio.giorno] || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Giorno</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{GIORNI_SETTIMANA[corsoDettaglio.giorno] || '-'}</div>
                                 </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Ora inizio</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.oraInizio || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Ora inizio</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.oraInizio || '-'}</div>
                                 </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Durata</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.durataMinuti ? `${corsoDettaglio.durataMinuti} min` : '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Durata</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.durataMinuti ? `${corsoDettaglio.durataMinuti} min` : '-'}</div>
                                 </div>
                             </div>
                             {/* Struttura + Sala */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Struttura</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.struttura?.descrizione || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Struttura</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.struttura?.descrizione || '-'}</div>
                                 </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Sala / Area</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.area?.descrizione || '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Sala / Area</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.area?.descrizione || '-'}</div>
                                 </div>
                             </div>
                             {/* Istruttore + Max soci */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Istruttore</div>
-                                    <div style={{color:'#374151'}}>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Istruttore</div>
+                                    <div style={{color:'var(--text-secondary)'}}>
                                         {corsoDettaglio.staff ? `${corsoDettaglio.staff.nome} ${corsoDettaglio.staff.cognome}` : '-'}
                                     </div>
                                 </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Max partecipanti</div>
-                                    <div style={{color:'#374151'}}>{corsoDettaglio.maxSoci ?? '-'}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Max partecipanti</div>
+                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.maxSoci ?? '-'}</div>
                                 </div>
                             </div>
                             {/* Note */}
                             {corsoDettaglio.note && (
-                                <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Note</div>
-                                    <div style={{color:'#374151', whiteSpace:'pre-wrap'}}>{corsoDettaglio.note}</div>
+                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Note</div>
+                                    <div style={{color:'var(--text-secondary)', whiteSpace:'pre-wrap'}}>{corsoDettaglio.note}</div>
                                 </div>
                             )}
                             {/* Scadenza abbonamento del socio per questo corso */}
-                            <div style={{backgroundColor:'#fff', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'12px'}}>
-                                <div style={{fontSize:'0.75rem', fontWeight:600, color:'#10b981', textTransform:'uppercase', marginBottom:'4px'}}>Scadenza abbonamento (socio)</div>
+                            <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Scadenza abbonamento (socio)</div>
                                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                                    <span style={{color:'#374151'}}>
+                                    <span style={{color:'var(--text-secondary)'}}>
                                         {getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId)
                                             ? formatDateIT(getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId))
                                             : 'Nessun pagamento trovato'}
@@ -4008,9 +4008,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                             </div>
                         </div>
                         {/* Footer */}
-                        <div style={{padding:'12px 20px', borderTop:'1px solid #e5e7eb', backgroundColor:'#fff', display:'flex', justifyContent:'flex-end'}}>
+                        <div style={{padding:'12px 20px', borderTop:'1px solid var(--border-color)', backgroundColor:'#fff', display:'flex', justifyContent:'flex-end'}}>
                             <button
-                                style={{padding:'8px 20px', backgroundColor:'#6b7280', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
+                                style={{padding:'8px 20px', backgroundColor:'var(--text-secondary)', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
                                 onClick={() => setCorsoDettaglio(null)}
                             >
                                 Chiudi
@@ -4025,19 +4025,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                 <div className="modal-overlay" style={{zIndex: 2100}}>
                     <div className="modal-card" style={{maxWidth:'700px', width:'95%', padding:0, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'80vh'}} onClick={e => e.stopPropagation()}>
                         {/* Header */}
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7eb', backgroundColor:'#fff', flexShrink:0}}>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid var(--border-color)', backgroundColor:'#fff', flexShrink:0}}>
                             <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                                <PlusCircle size={20} style={{color:'#10b981'}}/>
-                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'#111827'}}>Aggiungi Corso</h3>
+                                <PlusCircle size={20} style={{color:'var(--success)'}}/>
+                                <h3 style={{margin:0, fontSize:'1.1rem', fontWeight:600, color:'var(--text-primary)'}}>Aggiungi Corso</h3>
                             </div>
-                            <button style={{background:'none', border:'none', cursor:'pointer', color:'#6b7280'}} onClick={() => setShowAggiungiCorsoModal(false)}>
+                            <button style={{background:'none', border:'none', cursor:'pointer', color:'var(--text-secondary)'}} onClick={() => setShowAggiungiCorsoModal(false)}>
                                 <X size={20}/>
                             </button>
                         </div>
 
                         {/* Info passepartout */}
                         {passepartoutScadenza && (
-                            <div style={{margin:'12px 20px 0', padding:'10px 14px', backgroundColor:'#dcfce7', border:'1px solid #86efac', borderRadius:'6px', fontSize:'0.85rem', color:'#166534', display:'flex', alignItems:'center', gap:'8px', flexShrink:0}}>
+                            <div style={{margin:'12px 20px 0', padding:'10px 14px', backgroundColor:'var(--success-container)', border:'1px solid var(--success-container)', borderRadius:'6px', fontSize:'0.85rem', color:'var(--on-success-container)', display:'flex', alignItems:'center', gap:'8px', flexShrink:0}}>
                                 <Check size={16}/>
                                 <span>Abbonamento jolly valido fino al <strong>{formatDateIT(passepartoutScadenza)}</strong> — accesso a tutti i corsi.</span>
                             </div>
@@ -4046,13 +4046,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         {/* Body */}
                         <div style={{overflowY:'auto', flex:1, padding:'16px 20px'}}>
                             {aggiungiCorsoLoading ? (
-                                <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>Caricamento corsi...</div>
+                                <div style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)'}}>Caricamento corsi...</div>
                             ) : (() => {
                                 const iscrittiIds = new Set(socioCorsi.map(i => i.corsoId ?? i.corso?.id));
                                 const disponibili = tuttiCorsi.filter(c => !iscrittiIds.has(c.id));
                                 if (disponibili.length === 0) {
                                     return (
-                                        <div style={{textAlign:'center', padding:'40px', color:'#9ca3af'}}>
+                                        <div style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)'}}>
                                             Nessun corso disponibile da aggiungere.
                                         </div>
                                     );
@@ -4061,30 +4061,30 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     const accessibile = isCorsoAccessibile(corso.abbonamentoId);
                                     const colore = corso.attivita?.colore;
                                     const coloriBg = {
-                                        'ROSSO':'#e53935','VERDE':'#43a047','BLU':'#1e88e5','VERDE CHIARO':'#66bb6a',
-                                        'CELESTE':'#26c6da','ARANCIONE':'#fb8c00','VIOLA':'#8e24aa','GIALLO':'#fdd835',
-                                        'GRIGIO':'#78909c','ROSA':'#e91e63',
+                                        'ROSSO':'var(--danger)','VERDE':'var(--success)','BLU':'var(--primary)','VERDE CHIARO':'var(--success)',
+                                        'CELESTE':'var(--primary)','ARANCIONE':'var(--warning)','VIOLA':'var(--primary)','GIALLO':'var(--warning)',
+                                        'GRIGIO':'var(--text-secondary)','ROSA':'var(--primary)',
                                     };
-                                    const colBg = coloriBg[colore] || '#9e9e9e';
+                                    const colBg = coloriBg[colore] || 'var(--text-tertiary)';
                                     return (
                                         <div key={corso.id} style={{
                                             display:'flex', alignItems:'center', gap:'12px',
-                                            padding:'12px 14px', borderRadius:'6px', border:'1px solid #e5e7eb',
-                                            marginBottom:'8px', backgroundColor: accessibile ? '#fff' : '#f9fafb',
+                                            padding:'12px 14px', borderRadius:'6px', border:'1px solid var(--border-color)',
+                                            marginBottom:'8px', backgroundColor: accessibile ? '#fff' : 'var(--surface-1)',
                                             opacity: accessibile ? 1 : 0.55,
                                         }}>
                                             {colore && (
                                                 <span style={{width:'12px', height:'12px', borderRadius:'50%', backgroundColor:colBg, flexShrink:0}}/>
                                             )}
                                             <div style={{flex:1, minWidth:0}}>
-                                                <div style={{fontWeight:600, color:'#111827', fontSize:'0.9rem'}}>{corso.attivita?.descrizione || 'Corso'}</div>
-                                                <div style={{fontSize:'0.8rem', color:'#6b7280'}}>
+                                                <div style={{fontWeight:600, color:'var(--text-primary)', fontSize:'0.9rem'}}>{corso.attivita?.descrizione || 'Corso'}</div>
+                                                <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
                                                     {GIORNI_SETTIMANA[corso.giorno]} · {corso.oraInizio} · {corso.durataMinuti} min
                                                     {corso.struttura ? ` · ${corso.struttura.descrizione}` : ''}
                                                     {corso.area ? ` / ${corso.area.descrizione}` : ''}
                                                 </div>
                                                 {!accessibile && (
-                                                    <div style={{fontSize:'0.75rem', color:'#ef4444', marginTop:'2px', display:'flex', alignItems:'center', gap:'4px'}}>
+                                                    <div style={{fontSize:'0.75rem', color:'var(--danger)', marginTop:'2px', display:'flex', alignItems:'center', gap:'4px'}}>
                                                         <AlertTriangle size={12}/>
                                                         Abbonamento richiesto non valido o assente
                                                     </div>
@@ -4094,8 +4094,8 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                                 disabled={!accessibile}
                                                 style={{
                                                     padding:'6px 14px', borderRadius:'6px', border:'none', fontWeight:600, fontSize:'0.85rem', cursor: accessibile ? 'pointer' : 'not-allowed',
-                                                    backgroundColor: accessibile ? '#10b981' : '#d1d5db',
-                                                    color: accessibile ? 'white' : '#9ca3af',
+                                                    backgroundColor: accessibile ? 'var(--success)' : 'var(--border-color)',
+                                                    color: accessibile ? 'white' : 'var(--text-tertiary)',
                                                     flexShrink:0,
                                                 }}
                                                 onClick={async () => {
@@ -4131,9 +4131,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                         </div>
 
                         {/* Footer */}
-                        <div style={{padding:'12px 20px', borderTop:'1px solid #e5e7eb', backgroundColor:'#fff', flexShrink:0, display:'flex', justifyContent:'flex-end'}}>
+                        <div style={{padding:'12px 20px', borderTop:'1px solid var(--border-color)', backgroundColor:'#fff', flexShrink:0, display:'flex', justifyContent:'flex-end'}}>
                             <button
-                                style={{padding:'8px 20px', backgroundColor:'#6b7280', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
+                                style={{padding:'8px 20px', backgroundColor:'var(--text-secondary)', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:600}}
                                 onClick={() => setShowAggiungiCorsoModal(false)}
                             >
                                 Chiudi

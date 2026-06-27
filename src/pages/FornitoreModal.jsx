@@ -92,7 +92,7 @@ const FornitoreModal = ({ isOpen, onClose, onSave, fornitore }) => {
     };
 
     const inputStyle = (field) => errors[field]
-        ? { borderColor: 'var(--danger-color)', backgroundColor: '#fff5f5' }
+        ? { borderColor: 'var(--danger-color)', backgroundColor: 'var(--danger-container)' }
         : {};
 
     const handleSubmit = (e) => {

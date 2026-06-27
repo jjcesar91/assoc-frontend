@@ -127,7 +127,7 @@ const Conti = () => {
         <div className="soci-full-container">
             <div className="main-content">
                 
-                {error && <div style={{ backgroundColor: '#ffebee', color: '#d32f2f', padding: '12px', borderRadius: '4px', marginBottom: '20px' }}>{error}</div>}
+                {error && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '20px' }}>{error}</div>}
                 
                 {/* Form Nuovo/Modifica Conto */}
                 <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch', marginBottom: '24px'}}>
@@ -181,7 +181,7 @@ const Conti = () => {
                 {/* Elenco Conti */}
                 <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                     <table className="md-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                        <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-1)', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                             <tr>
                                 <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Descrizione</th>
                                 <th style={{ padding: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}>Modalità</th>
@@ -200,7 +200,7 @@ const Conti = () => {
                                             <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{c.descrizione}</div>
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: c.modalita_pagamento ? '#e3f2fd' : '#f3f4f6', color: c.modalita_pagamento ? '#1976d2' : '#9ca3af', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: c.modalita_pagamento ? 'var(--info-container)' : 'var(--surface-1)', color: c.modalita_pagamento ? 'var(--primary)' : 'var(--text-tertiary)', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
                                                 {renderPaymentIcon(c.modalita_pagamento)}
                                                 {c.modalita_pagamento || '—'}
                                             </div>
@@ -209,7 +209,7 @@ const Conti = () => {
                                             <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(c)}>
                                                 <Edit2 size={18} />
                                             </button>
-                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(c.id)} style={{ color: '#f44336' }}>
+                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(c.id)} style={{ color: 'var(--danger)' }}>
                                                 <Trash2 size={18} />
                                             </button>
                                         </td>

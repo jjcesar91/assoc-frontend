@@ -167,9 +167,9 @@ const AnnoContabile = () => {
                     padding: '12px 16px',
                     marginBottom: '20px',
                     borderRadius: '4px',
-                    backgroundColor: '#fff3e0',
-                    color: '#e65100',
-                    border: '1px solid #ffb74d',
+                    backgroundColor: 'var(--warning-container)',
+                    color: 'var(--warning)',
+                    border: '1px solid var(--warning)',
                     fontSize: '0.9rem'
                 }}>
                     <strong>Modifica non consentita.</strong> Sono già presenti ricevute associate a questa società: la configurazione dell'anno associativo non può essere modificata per garantire la coerenza della numerazione delle ricevute.
@@ -181,8 +181,8 @@ const AnnoContabile = () => {
                     padding: '10px', 
                     marginBottom: '20px', 
                     borderRadius: '4px', 
-                    backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
-                    color: message.type === 'success' ? '#2e7d32' : '#c62828'
+                    backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
+                    color: message.type === 'success' ? 'var(--success)' : 'var(--danger)'
                 }}>
                     {message.text}
                 </div>
@@ -198,7 +198,7 @@ const AnnoContabile = () => {
                             value={formData.tipo_anno_associativo} 
                             onChange={handleTypeChange}
                             disabled={hasRicevute}
-                            style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
+                            style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? 'var(--surface-1)' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                         >
                             <option value="solare">Anno Solare (01/01 - 31/12)</option>
                             <option value="associativo">Anno Sportivo (01/09 - 31/08)</option>
@@ -222,7 +222,7 @@ const AnnoContabile = () => {
                                     value={customDay} 
                                     onChange={(e) => handleDatePartChange('day', e.target.value)}
                                     disabled={hasRicevute}
-                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
+                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? 'var(--surface-1)' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                                 >
                                     {days.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
@@ -238,7 +238,7 @@ const AnnoContabile = () => {
                                     value={customMonth} 
                                     onChange={(e) => handleDatePartChange('month', e.target.value)}
                                     disabled={hasRicevute}
-                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? '#f5f5f5' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
+                                    style={{ width: '100%', padding: '8px 12px', appearance: 'none', backgroundColor: hasRicevute ? 'var(--surface-1)' : 'white', cursor: hasRicevute ? 'not-allowed' : 'pointer' }}
                                 >
                                     {months.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                                 </select>
@@ -266,7 +266,7 @@ const AnnoContabile = () => {
                         padding: '10px 20px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#d32f2f', 
+                        backgroundColor: 'var(--danger)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',
@@ -284,7 +284,7 @@ const AnnoContabile = () => {
                         padding: '10px 24px', 
                         borderRadius: '4px', 
                         border: 'none', 
-                        backgroundColor: '#2e7d32', 
+                        backgroundColor: 'var(--success)', 
                         color: 'white', 
                         cursor: 'pointer',
                         fontSize: '0.95rem',

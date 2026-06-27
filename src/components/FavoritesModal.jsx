@@ -40,9 +40,9 @@ const FavoritesModal = ({ isOpen, onClose, favorites, onToggleFavorite }) => {
                             {/* Riga voce principale */}
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
-                                padding: '8px 4px', borderBottom: '1px solid #f0f0f0',
+                                padding: '8px 4px', borderBottom: '1px solid var(--border-color)',
                             }}>
-                                <item.Icon size={18} style={{ color: 'var(--primary-color, #1976d2)', flexShrink: 0 }} />
+                                <item.Icon size={18} style={{ color: 'var(--primary-color, var(--primary))', flexShrink: 0 }} />
                                 <span style={{ fontWeight: 500, fontSize: '0.95rem', flex: 1, color: 'var(--text-primary, rgba(0,0,0,0.87))' }}>{item.label}</span>
                                 {/* Stella solo per voci senza sottomenu */}
                                 {!item.children && (
@@ -53,8 +53,8 @@ const FavoritesModal = ({ isOpen, onClose, favorites, onToggleFavorite }) => {
                                     >
                                         <Star
                                             size={18}
-                                            fill={favorites[item.id] ? '#f59e0b' : 'none'}
-                                            stroke={favorites[item.id] ? '#f59e0b' : '#9ca3af'}
+                                            fill={favorites[item.id] ? 'var(--warning)' : 'none'}
+                                            stroke={favorites[item.id] ? 'var(--warning)' : 'var(--text-tertiary)'}
                                         />
                                     </button>
                                 )}
@@ -64,7 +64,7 @@ const FavoritesModal = ({ isOpen, onClose, favorites, onToggleFavorite }) => {
                                 <div key={child.id} style={{
                                     display: 'flex', alignItems: 'center', gap: '10px',
                                     padding: '6px 4px 6px 32px',
-                                    borderBottom: '1px solid #f9f9f9',
+                                    borderBottom: '1px solid var(--surface-1)',
                                 }}>
                                     <span style={{ flex: 1, fontSize: '0.9rem', color: 'var(--text-secondary, rgba(0,0,0,0.54))' }}>{child.label}</span>
                                     <button
@@ -74,8 +74,8 @@ const FavoritesModal = ({ isOpen, onClose, favorites, onToggleFavorite }) => {
                                     >
                                         <Star
                                             size={18}
-                                            fill={favorites[child.id] ? '#f59e0b' : 'none'}
-                                            stroke={favorites[child.id] ? '#f59e0b' : '#9ca3af'}
+                                            fill={favorites[child.id] ? 'var(--warning)' : 'none'}
+                                            stroke={favorites[child.id] ? 'var(--warning)' : 'var(--text-tertiary)'}
                                         />
                                     </button>
                                 </div>

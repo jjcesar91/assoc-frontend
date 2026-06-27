@@ -4,14 +4,14 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background-color: #f5f5f5;
+    background-color: var(--surface-1);
     font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
     overflow: hidden;
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────── */
 .calendario-toolbar {
-    background: #006272;
+    background: var(--primary);
     padding: 8px 16px;
     display: flex;
     align-items: center;
@@ -40,7 +40,7 @@
 }
 
 .calendario-filter-select option {
-    background: #004d5e;
+    background: var(--primary);
     color: #fff;
 }
 
@@ -80,7 +80,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #2ecc71;
+    background: var(--success);
     border: none;
     border-radius: 4px;
     color: #fff;
@@ -91,7 +91,7 @@
     white-space: nowrap;
 }
 .calendario-btn-primary:hover {
-    background: #27ae60;
+    background: var(--success);
 }
 .calendario-btn-primary:disabled {
     opacity: 0.5;
@@ -112,8 +112,8 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #fff;
-    border-bottom: 2px solid #e0e0e0;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border-color);
     min-width: 700px;
 }
 
@@ -127,17 +127,17 @@
     font-weight: 600;
     font-size: 0.8rem;
     letter-spacing: 0.06em;
-    color: #555;
-    border-left: 1px solid #e0e0e0;
+    color: var(--text-secondary);
+    border-left: 1px solid var(--border-color);
 }
 
 /* ── Time row ────────────────────────────────────────────────── */
 .calendario-time-row {
     display: grid;
     grid-template-columns: 64px repeat(7, 1fr);
-    border-top: 2px solid #1976d2;
+    border-top: 2px solid var(--primary);
     min-width: 700px;
-    background: #fff;
+    background: var(--surface);
 }
 
 .calendario-time-badge-col {
@@ -145,12 +145,12 @@
     align-items: flex-start;
     justify-content: center;
     padding: 8px 4px;
-    background: #fff;
-    border-right: 1px solid #e0e0e0;
+    background: var(--surface);
+    border-right: 1px solid var(--border-color);
 }
 
 .calendario-time-badge {
-    background: #1565c0;
+    background: var(--primary);
     color: #fff;
     font-size: 0.78rem;
     font-weight: 700;
@@ -162,7 +162,7 @@
 
 .calendario-day-cell {
     padding: 6px 4px;
-    border-left: 1px solid #e0e0e0;
+    border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -179,14 +179,14 @@
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: #555;
+    color: var(--text-secondary);
     text-transform: uppercase;
     padding: 0 2px 2px;
 }
 
 .corso-card {
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -204,23 +204,23 @@
 .corso-card-tech {
     font-weight: 700;
     font-size: 0.8rem;
-    color: #222;
+    color: var(--text-primary);
 }
 
 .corso-card-struttura {
     font-size: 0.72rem;
-    color: #777;
+    color: var(--text-secondary);
     margin-top: 1px;
 }
 
 .corso-card-attivita {
     font-size: 0.72rem;
-    color: #555;
+    color: var(--text-secondary);
     margin-top: 2px;
 }
 
 .corso-card-footer {
-    background: #4a4a4a;
+    background: var(--text-secondary);
     display: flex;
     align-items: center;
     padding: 4px 8px;
@@ -238,11 +238,11 @@
 }
 
 .corso-card-warning {
-    color: #ffd54f;
+    color: var(--warning);
 }
 
 .corso-card-expired {
-    color: #ff5252;
+    color: var(--danger);
 }
 
 .corso-card-actions {
@@ -266,7 +266,7 @@
     background: rgba(255,255,255,0.3);
 }
 .corso-icon-btn-danger:hover {
-    background: rgba(244, 67, 54, 0.7);
+    background: color-mix(in srgb, var(--danger) 70%, transparent);
 }
 
 /* ── Empty / loading states ──────────────────────────────────── */
@@ -274,14 +274,14 @@
 .calendario-empty {
     padding: 48px 24px;
     text-align: center;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.95rem;
 }
 
 .calendario-link-btn {
     background: none;
     border: none;
-    color: #1976d2;
+    color: var(--primary);
     cursor: pointer;
     font-size: inherit;
     text-decoration: underline;

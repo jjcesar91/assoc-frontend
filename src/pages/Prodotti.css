@@ -1,131 +1,41 @@
-:root {
-  --primary-color: #1976d2;
-  --secondary-color: #f50057;
-  --success-color: #4caf50;
-  --warning-color: #ff9800;
-  --danger-color: #f44336;
-  --text-primary: rgba(0, 0, 0, 0.87);
-  --text-secondary: rgba(0, 0, 0, 0.54);
-  --bg-color: #f5f5f5;
-  --surface-color: #ffffff;
-  --border-color: #e0e0e0;
-}
+/* stili specifici di Prodotti; base unificata in styles/design-system.css */
 
 .prodotti-full-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--bg-color);
+  background-color: var(--bg);
   color: var(--text-primary);
-  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-family: var(--font-sans);
   overflow: hidden;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  padding: 8px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px; 
-}
-
-/* Filters & Toolbar */
-.toolbar-card {
-  background: var(--surface-color);
-  padding: 16px 24px;
-  border-radius: 4px;
-  box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.md-input, .md-select {
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  background-color: #f0f2f5;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.2s ease;
-  box-shadow: none;
-  color-scheme: light;
-  width: 100%;
-}
-
-.md-input:hover, .md-select:hover {
-  background-color: #e4e6eb;
-}
-
-.md-input:focus, .md-select:focus {
-  background-color: #ffffff;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-  border-color: transparent;
 }
 
 /* Data Table Card */
 .table-card {
-  background: var(--surface-color);
+  background: var(--surface);
   border-radius: 4px;
-  box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14);
+  box-shadow: var(--shadow-1);
   overflow: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.md-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.md-table th {
-  padding: 16px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  border-bottom: 2px solid var(--border-color);
-  background-color: #fafafa;
-  position: sticky;
-  top: 0;
-  font-size: 0.875rem;
-}
-
-.md-table td {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-  vertical-align: middle;
-  font-size: 0.875rem;
-}
-
-.md-table tr:hover {
-  background-color: rgba(0, 0, 0, 0.04);
 }
 
 /* Status Toggles/Chips */
 .status-toggle {
     width: 40px;
     height: 20px;
-    background-color: white;
-    border: 2px solid #ef4444; /* Inactive color */
+    background-color: var(--surface);
+    border: 2px solid var(--danger); /* Inactive color */
     border-radius: 12px;
     position: relative;
     box-sizing: border-box;
 }
 
 .status-toggle.active {
-    background-color: #10b981;
-    border-color: #10b981;
+    background-color: var(--success);
+    border-color: var(--success);
 }
 
 .status-toggle::after {
@@ -133,7 +43,7 @@
     position: absolute;
     height: 12px;
     width: 12px;
-    background-color: #ef4444;
+    background-color: var(--danger);
     border-radius: 50%;
     top: 2px;
     left: 2px;
@@ -142,49 +52,11 @@
 
 .status-toggle.active::after {
     left: 22px;
-    background-color: white;
-}
-
-/* Buttons */
-.btn-contained {
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.02857em;
-  padding: 6px 16px;
-  cursor: pointer;
-  box-shadow: 0 3px 1px -2px rgba(0,0,0,0.2), 0 2px 2px 0 rgba(0,0,0,0.14), 0 1px 5px 0 rgba(0,0,0,0.12);
-  transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-contained:hover {
-  box-shadow: 0 2px 4px -1px rgba(0,0,0,0.2), 0 4px 5px 0 rgba(0,0,0,0.14), 0 1px 10px 0 rgba(0,0,0,0.12);
-  filter: brightness(1.1);
-}
-
-.btn-icon-small {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  transition: background-color 0.2s;
-}
-
-.btn-icon-small:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-  color: var(--primary-color);
+    background-color: var(--surface);
 }
 
 .btn-rate {
-    background-color: var(--primary-color);
+    background-color: var(--primary);
     color: white;
     border: none;
     padding: 6px 12px;
@@ -192,7 +64,7 @@
     font-size: 0.8rem;
     cursor: pointer;
     margin-left: 5px;
-    box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-1);
 }
 
 .actions-group {

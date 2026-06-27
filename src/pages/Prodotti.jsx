@@ -185,7 +185,7 @@ const Prodotti = () => {
                                             <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                                                 <div style={{
                                                     width:'40px', height:'40px', borderRadius:'50%', 
-                                                    backgroundColor:'#e8eaf6', color:'#3f51b5',
+                                                    backgroundColor:'var(--info-container)', color:'var(--primary)',
                                                     display:'flex', alignItems:'center', justifyContent:'center'
                                                 }}>
                                                     <ShoppingCart size={20} />

@@ -29,8 +29,8 @@ const getStatus = (dateStr, giorniAvviso) => {
 const StatusBadge = ({ status, label }) => {
     if (status === 'ok') return null;
     const style = status === 'expired'
-        ? { background: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a' }
-        : { background: '#fff8e1', color: '#e65100', border: '1px solid #ffe082' };
+        ? { background: 'var(--danger-container)', color: 'var(--danger)', border: '1px solid var(--danger-container)' }
+        : { background: 'var(--warning-container)', color: 'var(--warning)', border: '1px solid var(--warning-container)' };
     return (
         <span style={{ ...style, borderRadius: 4, fontSize: '0.72rem', padding: '1px 6px', marginLeft: 4, whiteSpace: 'nowrap' }}>
             <AlertTriangle size={11} style={{ verticalAlign: 'middle', marginRight: 2 }} />
@@ -133,10 +133,10 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                     </div>
 
                     {/* Sottotitolo corso */}
-                    <div style={{ padding: '8px 20px', background: '#f5f7fa', borderBottom: '1px solid #e0e0e0', fontSize: '0.85rem', color: '#555' }}>
+                    <div style={{ padding: '8px 20px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: '#555' }}>
                         {corso?.attivita?.descrizione || '—'} — {corso?.struttura?.descrizione || ''} — {corso?.oraInizio}
                         {abbonamento && (
-                            <span style={{ marginLeft: 12, color: '#1976d2', fontWeight: 500 }}>
+                            <span style={{ marginLeft: 12, color: 'var(--primary)', fontWeight: 500 }}>
                                 Abbonamento: {abbonamento.description}
                             </span>
                         )}
@@ -165,7 +165,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                         ) : (
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                                 <thead>
-                                    <tr style={{ background: '#f0f4f8', borderBottom: '2px solid #e0e0e0' }}>
+                                    <tr style={{ background: 'var(--surface-1)', borderBottom: '2px solid var(--border-color)' }}>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600 }}>Socio</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600 }}>Cert. medico</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600 }}>Ult. pagamento</th>
@@ -206,9 +206,9 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
 
                                         const rowBg = (certStatus === 'expired' || abbStatus === 'expired')
-                                            ? '#fff8f8'
+                                            ? 'var(--danger-container)'
                                             : (certStatus === 'warning' || abbStatus === 'warning')
-                                                ? '#fffde7'
+                                                ? 'var(--warning-container)'
                                                 : 'transparent';
 
                                         return (
@@ -241,15 +241,15 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                                             oggi.setHours(0, 0, 0, 0);
                                                             const diff = Math.round((scad - oggi) / 86400000);
                                                             if (diff < 0) {
-                                                                nota = <small style={{ color: '#c62828', display: 'block' }}>scad. da {Math.abs(diff)} gg</small>;
+                                                                nota = <small style={{ color: 'var(--danger)', display: 'block' }}>scad. da {Math.abs(diff)} gg</small>;
                                                             } else if (diff === 0) {
-                                                                nota = <small style={{ color: '#e65100', display: 'block' }}>scade oggi</small>;
+                                                                nota = <small style={{ color: 'var(--warning)', display: 'block' }}>scade oggi</small>;
                                                             } else {
-                                                                nota = <small style={{ color: '#2e7d32', display: 'block' }}>{diff} gg alla scad.</small>;
+                                                                nota = <small style={{ color: 'var(--success)', display: 'block' }}>{diff} gg alla scad.</small>;
                                                             }
                                                         }
                                                         return <>{dateStr}{nota}</>;
-                                                    })() : <span style={{ color: '#e65100', fontSize: '0.8rem' }}>⚠ Non trovato</span>}
+                                                    })() : <span style={{ color: 'var(--warning)', fontSize: '0.8rem' }}>⚠ Non trovato</span>}
                                                 </td>
                                                 <td style={{ padding: '8px 10px', textAlign: 'center', color: '#888', fontSize: '0.82rem' }}>
                                                     {i.dataIscrizione ? new Date(i.dataIscrizione).toLocaleDateString('it-IT') : '—'}
@@ -257,7 +257,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                                 <td style={{ padding: '8px 4px', textAlign: 'center' }}>
                                                     <button
                                                         title="Rimuovi"
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53935', padding: 2 }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: 2 }}
                                                         onClick={() => handleRemove(i.socioId)}
                                                     >
                                                         <Trash2 size={14} />

@@ -96,8 +96,8 @@ const SocietaImpostazioni = () => {
                     padding: '10px',
                     marginBottom: '20px',
                     borderRadius: '4px',
-                    backgroundColor: message.type === 'success' ? '#e8f5e9' : '#ffebee',
-                    color: message.type === 'success' ? '#2e7d32' : '#c62828'
+                    backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
+                    color: message.type === 'success' ? 'var(--success)' : 'var(--danger)'
                 }}>
                     {message.text}
                 </div>
@@ -112,7 +112,7 @@ const SocietaImpostazioni = () => {
                         <div>
                             <span style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', color: '#666' }}>Attuale</span>
                             {currentLogoPath ? (
-                                <div style={{ border: '1px solid #ddd', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+                                <div style={{ border: '1px solid #ddd', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: 'var(--surface-1)' }}>
                                     <img
                                         src={`/users/${currentLogoPath}`}
                                         alt="Logo Società"
@@ -127,7 +127,7 @@ const SocietaImpostazioni = () => {
                         {previewUrl && (
                             <div>
                                 <span style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px', color: '#666' }}>Anteprima Nuovo</span>
-                                <div style={{ border: '1px solid #2e7d32', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+                                <div style={{ border: '1px solid var(--success)', padding: '10px', display: 'inline-block', borderRadius: '4px', backgroundColor: 'var(--surface-1)' }}>
                                     <img src={previewUrl} alt="Preview" style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain' }} />
                                 </div>
                             </div>
@@ -154,9 +154,9 @@ const SocietaImpostazioni = () => {
                             alignItems: 'center',
                             gap: '14px',
                             padding: '12px 18px',
-                            border: `2px solid ${formData.quota_tesseramento_unico ? '#1976d2' : '#ddd'}`,
+                            border: `2px solid ${formData.quota_tesseramento_unico ? 'var(--primary)' : '#ddd'}`,
                             borderRadius: '8px',
-                            backgroundColor: formData.quota_tesseramento_unico ? '#e3f2fd' : '#fafafa',
+                            backgroundColor: formData.quota_tesseramento_unico ? 'var(--info-container)' : 'var(--surface-1)',
                             cursor: 'pointer',
                             userSelect: 'none',
                             transition: 'all 0.15s ease',
@@ -167,7 +167,7 @@ const SocietaImpostazioni = () => {
                             width: '42px',
                             height: '24px',
                             borderRadius: '12px',
-                            backgroundColor: formData.quota_tesseramento_unico ? '#1976d2' : '#ccc',
+                            backgroundColor: formData.quota_tesseramento_unico ? 'var(--primary)' : '#ccc',
                             position: 'relative',
                             flexShrink: 0,
                             transition: 'background-color 0.15s ease'
@@ -185,7 +185,7 @@ const SocietaImpostazioni = () => {
                             }} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: formData.quota_tesseramento_unico ? '#1565c0' : '#333' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: formData.quota_tesseramento_unico ? 'var(--primary-hover)' : '#333' }}>
                                 Quota associativa e Tesseramento Unico
                             </div>
                             <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '2px' }}>
@@ -203,7 +203,7 @@ const SocietaImpostazioni = () => {
                         padding: '10px 20px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#d32f2f',
+                        backgroundColor: 'var(--danger)',
                         color: 'white',
                         cursor: 'pointer',
                         fontSize: '0.95rem',
@@ -221,7 +221,7 @@ const SocietaImpostazioni = () => {
                         padding: '10px 24px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#2e7d32',
+                        backgroundColor: 'var(--success)',
                         color: 'white',
                         cursor: 'pointer',
                         fontSize: '0.95rem',

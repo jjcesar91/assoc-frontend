@@ -167,7 +167,7 @@ const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = f
                     left: dropdownRect.left,
                     width: dropdownRect.width,
                     backgroundColor: 'var(--surface-color, white)',
-                    border: '1px solid var(--border-color, #e0e0e0)',
+                    border: '1px solid var(--border-color, var(--border-color))',
                     borderTop: 'none',
                     borderRadius: '0 0 4px 4px',
                     maxHeight: '200px',
@@ -188,7 +188,7 @@ const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = f
                                 borderBottom: '1px solid var(--border-color, #eee)',
                                 color: 'var(--text-primary, black)'
                             }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-color, #f5f5f5)'}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-color, var(--surface-1))'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         >
                             {comune.nome}

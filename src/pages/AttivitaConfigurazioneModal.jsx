@@ -51,7 +51,7 @@ const AttivitaConfigurazioneModal = ({ isOpen, onClose, onSave, attivita, colori
                                     const c = colori.find(c => c.value === form.colore);
                                     return c
                                         ? { backgroundColor: c.bg, color: c.text }
-                                        : { backgroundColor: '#26c6da', color: '#fff' };
+                                        : { backgroundColor: 'var(--primary)', color: '#fff' };
                                 })()}
                             >
                                 Colore

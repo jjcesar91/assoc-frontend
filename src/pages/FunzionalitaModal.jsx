@@ -97,19 +97,19 @@ const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px 24px',
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid var(--border-color)',
                     backgroundColor: '#fff',
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <LayoutGrid size={20} style={{ color: '#10b981' }} />
-                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#111827' }}>
+                        <LayoutGrid size={20} style={{ color: 'var(--success)' }} />
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                             Funzionalità utente – {username}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
-                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                        onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--surface-1)'}
                         onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         <X size={22} />
@@ -146,7 +146,7 @@ const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             padding: '14px 20px',
-                                            backgroundColor: idx % 2 === 1 ? '#f5f5f5' : '#fff',
+                                            backgroundColor: idx % 2 === 1 ? 'var(--surface-1)' : '#fff',
                                             borderBottom: idx < paginated.length - 1 ? '1px solid var(--border-color)' : 'none',
                                         }}
                                     >
@@ -201,7 +201,7 @@ const ToggleSwitch = ({ checked, onChange }) => (
         onClick={onChange}
         style={{
             width: '44px', height: '24px', borderRadius: '12px',
-            backgroundColor: checked ? '#4caf50' : '#e57373',
+            backgroundColor: checked ? 'var(--success)' : 'var(--danger)',
             position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s',
             display: 'inline-block', flexShrink: 0,
         }}

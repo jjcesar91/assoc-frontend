@@ -4,10 +4,10 @@ import { AlertTriangle, X } from 'lucide-react';
 const ConfirmContext = createContext(null);
 
 export const ConfirmProvider = ({ children }) => {
-    const [state, setState] = useState({ open: false, message: '', title: '', confirmLabel: 'Elimina', confirmColor: '#f44336' });
+    const [state, setState] = useState({ open: false, message: '', title: '', confirmLabel: 'Elimina', confirmColor: 'var(--danger)' });
     const resolveRef = useRef(null);
 
-    const confirm = (message, title = 'Conferma', { confirmLabel = 'Elimina', confirmColor = '#f44336' } = {}) =>
+    const confirm = (message, title = 'Conferma', { confirmLabel = 'Elimina', confirmColor = 'var(--danger)' } = {}) =>
         new Promise((resolve) => {
             resolveRef.current = resolve;
             setState({ open: true, message, title, confirmLabel, confirmColor });
@@ -23,14 +23,14 @@ export const ConfirmProvider = ({ children }) => {
             {children}
             {state.open && (
                 <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+                    position: 'fixed', inset: 0, background: 'rgba(16,24,40,0.45)', backdropFilter: 'blur(2px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 9999,
+                    zIndex: 'var(--z-overlay)', padding: 16,
                 }}>
                     <div style={{
-                        background: '#fff', color: '#1f2937', borderRadius: 10,
-                        width: 400, maxWidth: '92vw',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
+                        background: 'var(--surface)', color: 'var(--text-primary)', borderRadius: 'var(--radius-lg)',
+                        width: 420, maxWidth: '92vw',
+                        boxShadow: 'var(--shadow-modal)',
                         overflow: 'hidden',
                     }}>
                         {/* Header */}
@@ -48,28 +48,24 @@ export const ConfirmProvider = ({ children }) => {
                             </button>
                         </div>
                         {/* Body */}
-                        <div style={{ padding: '20px 24px', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                        <div style={{ padding: '20px 24px', fontSize: '0.9375rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                             {state.message}
                         </div>
                         {/* Footer */}
                         <div style={{
                             padding: '12px 24px', display: 'flex', justifyContent: 'flex-end',
-                            gap: 10, borderTop: '1px solid #f0f0f0',
+                            gap: 10, borderTop: '1px solid var(--border-color)', background: 'var(--surface-1)',
                         }}>
                             <button
                                 onClick={() => handleAnswer(false)}
-                                style={{
-                                    padding: '8px 20px', borderRadius: 6, border: '1px solid #d1d5db',
-                                    background: '#f9fafb', color: '#374151', cursor: 'pointer',
-                                    fontWeight: 500, fontSize: '0.9rem',
-                                }}
+                                className="btn-secondary btn-sm"
                             >
                                 Annulla
                             </button>
                             <button
                                 onClick={() => handleAnswer(true)}
                                 style={{
-                                    padding: '8px 20px', borderRadius: 6, border: 'none',
+                                    padding: '8px 20px', borderRadius: 'var(--radius-sm)', border: 'none',
                                     background: state.confirmColor, color: '#fff', cursor: 'pointer',
                                     fontWeight: 600, fontSize: '0.9rem',
                                 }}

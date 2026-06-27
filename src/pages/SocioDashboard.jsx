@@ -37,10 +37,10 @@ const computeStatoAbbonamento = (dateStr, giorniAvviso) => {
 const StatusBadge = ({ status }) => {
     if (!status) return null;
     const map = {
-        SCADUTO: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', icon: <AlertTriangle size={11} /> },
-        'IN SCADENZA': { bg: '#fef3c7', color: '#92400e', border: '#fcd34d', icon: <Clock size={11} /> },
-        VALIDO: { bg: '#dcfce7', color: '#166534', border: '#86efac', icon: <CheckCircle size={11} /> },
-        REGOLARE: { bg: '#dcfce7', color: '#166534', border: '#86efac', icon: <CheckCircle size={11} /> },
+        SCADUTO: { bg: 'var(--danger-container)', color: 'var(--on-danger-container)', border: 'var(--danger-container)', icon: <AlertTriangle size={11} /> },
+        'IN SCADENZA': { bg: 'var(--warning-container)', color: 'var(--on-warning-container)', border: 'var(--warning)', icon: <Clock size={11} /> },
+        VALIDO: { bg: 'var(--success-container)', color: 'var(--on-success-container)', border: 'var(--success-container)', icon: <CheckCircle size={11} /> },
+        REGOLARE: { bg: 'var(--success-container)', color: 'var(--on-success-container)', border: 'var(--success-container)', icon: <CheckCircle size={11} /> },
     };
     const s = map[status] || map.VALIDO;
     return (
@@ -59,7 +59,7 @@ const CorsoCard = ({ iscrizione }) => {
     const c = iscrizione.corso;
     if (!c) return null;
 
-    const colore = c.attivita?.colore || '#10b981';
+    const colore = c.attivita?.colore || 'var(--success)';
     const attivitaNome = c.attivita?.descrizione || 'Corso';
     const giornoLabel = c.giorno != null ? GIORNI_SETTIMANA[c.giorno] : null;
     const oraFine = computeOraFine(c.oraInizio, c.durataMinuti);
@@ -332,7 +332,7 @@ export default function SocioDashboard({ onLogout }) {
                 <div className="sd-header-inner">
                     <div className="sd-header-brand">
                         <div className="sd-header-logo">
-                            <Activity size={20} color="#10b981" />
+                            <Activity size={20} color="var(--success)" />
                         </div>
                         <span className="sd-header-title">Area Soci</span>
                     </div>

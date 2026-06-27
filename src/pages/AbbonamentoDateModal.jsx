@@ -86,7 +86,7 @@ const AbbonamentoDateModal = ({ isOpen, onClose, onConfirm, duration }) => {
                                 />
                                 <Calendar
                                     size={18}
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }}
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }}
                                     onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>
@@ -103,7 +103,7 @@ const AbbonamentoDateModal = ({ isOpen, onClose, onConfirm, duration }) => {
                                 />
                                 <Calendar
                                     size={18}
-                                    style={{ position: 'absolute', right: '10px', color: '#6b7280', cursor: 'pointer', zIndex: 5 }}
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }}
                                     onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>

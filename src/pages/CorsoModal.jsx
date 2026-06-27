@@ -411,11 +411,11 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
   .subtitle { font-size: 9pt; margin-bottom: 2px; }
   .info-row { font-size: 9pt; margin-bottom: 8px; }
   table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-  th { background: #e8e8e8; border: 1px solid #000; padding: 4px 3px; text-align: left; font-weight: bold; white-space: nowrap; }
+  th { background: var(--border-color); border: 1px solid #000; padding: 4px 3px; text-align: left; font-weight: bold; white-space: nowrap; }
   td { border: 1px solid #000; padding: 3px; vertical-align: middle; }
   .socio-col { min-width: 200px; }
   .day-col { width: ${colW}px; text-align: center; white-space: nowrap; }
-  tr:nth-child(even) { background: #f9f9f9; }
+  tr:nth-child(even) { background: var(--surface-1); }
   @media print { @page { size: A4 landscape; margin: 10mm; } body { font-size: 8pt; } }
 </style></head><body><div class="page">
   <div class="header">
@@ -735,17 +735,17 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                             oggi.setHours(0, 0, 0, 0);
                                                             const diff = Math.round((scad - oggi) / 86400000);
                                                             if (diff < 0) {
-                                                                nota = <small style={{ color: '#c62828', display: 'block' }}>scad. da {Math.abs(diff)} gg</small>;
+                                                                nota = <small style={{ color: 'var(--danger)', display: 'block' }}>scad. da {Math.abs(diff)} gg</small>;
                                                             } else if (diff === 0) {
-                                                                nota = <small style={{ color: '#e65100', display: 'block' }}>scade oggi</small>;
+                                                                nota = <small style={{ color: 'var(--warning)', display: 'block' }}>scade oggi</small>;
                                                             } else {
-                                                                nota = <small style={{ color: '#2e7d32', display: 'block' }}>{diff} gg alla scad.</small>;
+                                                                nota = <small style={{ color: 'var(--success)', display: 'block' }}>{diff} gg alla scad.</small>;
                                                             }
                                                         }
                                                         return <>{dateStr}{nota}</>;
                                                     })() : <span className="cm-abb-missing"><AlertTriangle size={13} /> Non trovato</span>}
                                                 </td>
-                                                <td className="center" style={{ color: '#6b7280', fontSize: '0.83rem' }}>
+                                                <td className="center" style={{ color: 'var(--text-secondary)', fontSize: '0.83rem' }}>
                                                     {i.dataIscrizione ? new Date(i.dataIscrizione).toLocaleDateString('it-IT') : '—'}
                                                 </td>
                                                 <td className="center">
@@ -865,7 +865,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                                         const isExpired = certStatus === 'expired' || abbStatus === 'expired';
                                                         const isWarning = !isExpired && (certStatus === 'warning' || abbStatus === 'warning');
-                                                        const textColor = isExpired ? '#c62828' : isWarning ? '#e65100' : '#1f2937';
+                                                        const textColor = isExpired ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--text-primary)';
                                                         const isPresente = presentiIds.has(i.socioId);
                                                         return (
                                                             <tr key={i.socioId}>

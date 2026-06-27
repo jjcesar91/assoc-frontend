@@ -86,7 +86,7 @@ const FornitoreSelector = ({ fornitori, selected, onSelect, societaId, onFornito
                         className={`nom-selector-item${selected?.id === f.id ? ' nom-selector-item--active' : ''}`}
                         onClick={() => onSelect(f)}
                     >
-                        <Truck size={14} style={{ flexShrink: 0, color: '#e74c3c' }} />
+                        <Truck size={14} style={{ flexShrink: 0, color: 'var(--danger)' }} />
                         <span>{f.denominazione}</span>
                         {f.comune && <span className="nom-selector-sub">{f.comune}</span>}
                     </div>
@@ -574,7 +574,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                                 {intestatarioTipo === 'fornitore' && (
                                     selectedFornitore ? (
                                         <div className="nom-controparte-selected">
-                                            <Truck size={16} style={{ color: '#e74c3c' }} />
+                                            <Truck size={16} style={{ color: 'var(--danger)' }} />
                                             <span>{selectedFornitore.denominazione}</span>
                                             {selectedFornitore.comune && (
                                                 <span className="nom-controparte-cf">{selectedFornitore.comune}</span>
@@ -726,7 +726,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
             {salvaPreferiteOpen && (
                 <div className="nom-overlay" style={{ zIndex: 1500 }}>
                     <div className="nom-modal" style={{ width: '400px', maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
-                        <div className="nom-header" style={{ background: '#f59e0b' }}>
+                        <div className="nom-header" style={{ background: 'var(--warning)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <Star size={18} />
                                 <span>Salva come operazione preferita</span>
@@ -736,7 +736,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                             </button>
                         </div>
                         <div className="nom-body">
-                            <p style={{ margin: '0 0 12px', color: '#374151', fontSize: '0.9rem' }}>
+                            <p style={{ margin: '0 0 12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                 Inserisci un nome per questa operazione preferita:
                             </p>
                             <input

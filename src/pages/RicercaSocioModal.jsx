@@ -141,7 +141,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
     return (
         <div className="rsm-overlay">
             <div className="modal-container ricerva-socio-modal">
-                <div className="modal-header" style={{backgroundColor: '#4fc3f7', color: 'white'}}>
+                <div className="modal-header" style={{backgroundColor: 'var(--info-container)', color: 'white'}}>
                     <h2 className="modal-title">
                         <Search size={20} /> Ricerca socio
                     </h2>
@@ -175,7 +175,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                     </div>
 
                     {abbonamentoId && (
-                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 10 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
                             Elenco soci iscritti all'abbonamento <strong>{abbonamentoNome}</strong>
                             {filteredSoci.length === 0 && ' — nessun socio trovato'}
                         </div>
@@ -197,7 +197,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                     <tr>
                                         <td
                                             colSpan={abbonamentoId ? 5 : 4}
-                                            style={{ padding: '24px 16px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic' }}
+                                            style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-tertiary)', fontStyle: 'italic' }}
                                         >
                                             {abbonamentoId
                                                 ? `Nessun socio risulta associato all'abbonamento "${abbonamentoNome || 'selezionato'}"`
@@ -207,17 +207,17 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                 ) : filteredSoci.map(socio => {
                                     const isEnrolled = enrolledSet.has(socio.id);
                                     return (
-                                    <tr key={socio.id} style={isEnrolled ? { opacity: 0.5, background: '#f3f4f6' } : {}}>
+                                    <tr key={socio.id} style={isEnrolled ? { opacity: 0.5, background: 'var(--surface-1)' } : {}}>
                                         <td style={{width: abbonamentoId ? '35%' : '40%'}}>
-                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? '#9ca3af' : (socio.sesso === 'F' ? '#ff4081' : '#1976d2'), fontWeight: 'bold'}}>
+                                            <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? 'var(--text-tertiary)' : (socio.sesso === 'F' ? 'var(--primary)' : 'var(--primary)'), fontWeight: 'bold'}}>
                                                 <User size={18}/>
                                                 <span
                                                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
                                                     onClick={() => window.open(`/soci?apriSocioPath=${socio.id}`, '_blank')}
                                                 >{socio.cognome} {socio.nome}</span>
-                                                {isEnrolled && <span style={{fontSize:'0.72rem', background:'#e5e7eb', color:'#6b7280', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>già iscritto</span>}
+                                                {isEnrolled && <span style={{fontSize:'0.72rem', background:'var(--border-color)', color:'var(--text-secondary)', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>già iscritto</span>}
                                                 {!isEnrolled && abbonamentoId && !lastPaymentMap[socio.id] && passepartoutMap[socio.id] && (
-                                                    <span style={{fontSize:'0.72rem', background:'#fef3c7', color:'#92400e', border:'1px solid #fcd34d', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>jolly</span>
+                                                    <span style={{fontSize:'0.72rem', background:'var(--warning-container)', color:'var(--on-warning-container)', border:'1px solid var(--warning)', borderRadius:4, padding:'1px 6px', fontWeight:'normal', whiteSpace:'nowrap'}}>jolly</span>
                                                 )}
                                             </div>
                                         </td>
@@ -237,8 +237,8 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                                         oggi.setHours(0,0,0,0);
                                                         const diff = Math.round((scad - oggi) / 86400000);
                                                         let nota = null;
-                                                        if (diff === 0) nota = <small style={{color:'#e65100', display:'block'}}>scade oggi</small>;
-                                                        else nota = <small style={{color:'#2e7d32', display:'block'}}>{diff} gg alla scad.</small>;
+                                                        if (diff === 0) nota = <small style={{color:'var(--warning)', display:'block'}}>scade oggi</small>;
+                                                        else nota = <small style={{color:'var(--success)', display:'block'}}>{diff} gg alla scad.</small>;
                                                         const dateStr = ppEntry.pagamento ? new Date(ppEntry.pagamento).toLocaleDateString('it-IT') : '—';
                                                         return <>{dateStr}{nota}</>;
                                                     }
@@ -253,11 +253,11 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                                         oggi.setHours(0,0,0,0);
                                                         const diff = Math.round((scad - oggi) / 86400000);
                                                         if (diff < 0) {
-                                                            nota = <small style={{color:'#c62828', display:'block'}}>scad. da {Math.abs(diff)} gg</small>;
+                                                            nota = <small style={{color:'var(--danger)', display:'block'}}>scad. da {Math.abs(diff)} gg</small>;
                                                         } else if (diff === 0) {
-                                                            nota = <small style={{color:'#e65100', display:'block'}}>scade oggi</small>;
+                                                            nota = <small style={{color:'var(--warning)', display:'block'}}>scade oggi</small>;
                                                         } else {
-                                                            nota = <small style={{color:'#2e7d32', display:'block'}}>{diff} gg alla scad.</small>;
+                                                            nota = <small style={{color:'var(--success)', display:'block'}}>{diff} gg alla scad.</small>;
                                                         }
                                                     }
                                                     return <>{dateStr}{nota}</>;

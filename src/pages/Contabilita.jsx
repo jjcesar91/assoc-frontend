@@ -61,7 +61,7 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                     alignItems: 'center',
                     gap: '7px',
                     padding: '8px 16px',
-                    backgroundColor: '#f59e0b',
+                    backgroundColor: 'var(--warning)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
@@ -82,16 +82,16 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                     right: 0,
                     top: 'calc(100% + 6px)',
                     background: '#fff',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
                     zIndex: 1100,
                     minWidth: '280px',
                     maxWidth: '360px',
                 }}>
-                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}>
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <Search size={14} style={{ position: 'absolute', left: '8px', color: '#9ca3af', pointerEvents: 'none' }} />
+                            <Search size={14} style={{ position: 'absolute', left: '8px', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
                             <input
                                 autoFocus
                                 className="md-input"
@@ -104,7 +104,7 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                     </div>
                     <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
                         {filtered.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
+                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
                                 {preferite.length === 0 ? 'Nessuna operazione preferita salvata' : 'Nessun risultato'}
                             </div>
                         ) : filtered.map(pref => (
@@ -113,19 +113,19 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                                 style={{
                                     padding: '10px 14px',
                                     cursor: 'pointer',
-                                    borderBottom: '1px solid #f9fafb',
+                                    borderBottom: '1px solid var(--surface-1)',
                                     fontSize: '0.9rem',
-                                    color: '#1f2937',
+                                    color: 'var(--text-primary)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
                                     transition: 'background 0.1s',
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#fef3c7'; }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--warning-container)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = ''; }}
                                 onClick={() => { onSelect(pref.snapshot); setOpen(false); }}
                             >
-                                <Star size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                <Star size={13} style={{ color: 'var(--warning)', flexShrink: 0 }} />
                                 <span style={{ fontWeight: '500', flex: 1 }}>{pref.nome}</span>
                                 <button
                                     title="Elimina preferita"
@@ -135,15 +135,15 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
                                         border: 'none',
                                         cursor: 'pointer',
                                         padding: '2px 4px',
-                                        color: '#9ca3af',
+                                        color: 'var(--text-tertiary)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         borderRadius: '4px',
                                         flexShrink: 0,
                                         transition: 'color 0.15s',
                                     }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
                                 >
                                     <Trash2 size={13} />
                                 </button>
@@ -192,7 +192,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid #f0f0f0', background: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c') }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-color)', background: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)') }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff' }}>
                         <FolderOpen size={20} />
                         <span style={{ fontWeight: '700', fontSize: '1rem' }}>Dettaglio Operazione</span>
@@ -206,7 +206,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
                 <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
                     <span style={{
                         display: 'inline-block',
-                        backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                        backgroundColor: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)'),
                         color: '#fff',
                         padding: '8px 24px',
                         borderRadius: '8px',
@@ -221,29 +221,29 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
                 {/* Campi */}
                 <div style={{ padding: '16px 20px 20px' }}>
                     {rows.map((row, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: i < rows.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
-                            <div style={{ color: '#9ca3af', marginTop: '1px', flexShrink: 0 }}>{row.icon}</div>
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: i < rows.length - 1 ? '1px solid var(--surface-1)' : 'none' }}>
+                            <div style={{ color: 'var(--text-tertiary)', marginTop: '1px', flexShrink: 0 }}>{row.icon}</div>
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{row.label}</div>
-                                <div style={{ fontSize: '0.95rem', color: '#1f2937', fontWeight: '500' }}>{row.value}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{row.label}</div>
+                                <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: '500' }}>{row.value}</div>
                             </div>
                         </div>
                     ))}
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {payment.socio_id ? (
                         <button
                             onClick={() => window.open(`/pagamenti?paymentId=${payment.id}`, '_blank')}
-                            style={{ padding: '8px 16px', background: '#1565c0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#fff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            style={{ padding: '8px 16px', background: 'var(--primary-hover)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#fff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                         >
                             <ExternalLink size={15} /> Vedi pagamento
                         </button>
                     ) : <span />}
                     <button
                         onClick={onClose}
-                        style={{ padding: '8px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}
+                        style={{ padding: '8px 20px', background: 'var(--surface-1)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.9rem' }}
                     >
                         Chiudi
                     </button>
@@ -383,11 +383,11 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             title="Reimposta filtri"
                             style={{
                                 padding: '7px 10px',
-                                border: '1px solid #d1d5db',
+                                border: '1px solid var(--border-color)',
                                 borderRadius: '8px',
-                                background: '#f9fafb',
+                                background: 'var(--surface-1)',
                                 cursor: 'pointer',
-                                color: '#374151',
+                                color: 'var(--text-secondary)',
                                 fontSize: '1rem',
                                 lineHeight: 1,
                             }}
@@ -396,7 +396,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                         </button>
                     </div>
 
-                    <div style={{ width: '1px', background: '#e0e0e0', alignSelf: 'stretch', margin: '0 2px' }} />
+                    <div style={{ width: '1px', background: 'var(--border-color)', alignSelf: 'stretch', margin: '0 2px' }} />
 
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '160px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Descrizione</label>
@@ -461,7 +461,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                 alignItems: 'center',
                                 gap: '7px',
                                 padding: '8px 16px',
-                                backgroundColor: '#1565c0',
+                                backgroundColor: 'var(--primary-hover)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -481,7 +481,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                 alignItems: 'center',
                                 gap: '7px',
                                 padding: '8px 16px',
-                                backgroundColor: '#4caf50',
+                                backgroundColor: 'var(--success)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -507,22 +507,22 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                     >
                         <thead>
                             <tr>
-                                <th style={{ padding: '12px 16px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', backgroundColor: '#4caf50', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600' }}>
+                                <th style={{ padding: '12px 16px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600' }}>
                                     Operazione - tipologia
                                 </th>
-                                <th style={{ padding: '12px 16px', backgroundColor: '#4caf50', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
+                                <th style={{ padding: '12px 16px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
                                     Data
                                 </th>
-                                <th style={{ padding: '12px 16px', textAlign: 'right', backgroundColor: '#4caf50', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
+                                <th style={{ padding: '12px 16px', textAlign: 'right', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
                                     Importo
                                 </th>
-                                <th style={{ padding: '12px 16px', backgroundColor: '#4caf50', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
+                                <th style={{ padding: '12px 16px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
                                     Conto
                                 </th>
-                                <th style={{ padding: '12px 16px', backgroundColor: '#4caf50', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
+                                <th style={{ padding: '12px 16px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
                                     Modalità
                                 </th>
-                                <th style={{ padding: '12px 16px', textAlign: 'right', backgroundColor: '#4caf50', color: '#fff', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                <th style={{ padding: '12px 16px', textAlign: 'right', backgroundColor: 'var(--success)', color: '#fff', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', fontWeight: '600', whiteSpace: 'nowrap' }}>
                                     Azioni
                                 </th>
                             </tr>
@@ -571,16 +571,16 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                     <tr
                                         key={p.id}
                                         style={{
-                                            backgroundColor: isAnnullato ? '#fceceb' : '#fff',
+                                            backgroundColor: isAnnullato ? 'var(--danger-container)' : '#fff',
                                             boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
-                                            borderLeft: `4px solid ${isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c')}`,
+                                            borderLeft: `4px solid ${isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)')}`,
                                             opacity: isAnnullato ? 0.75 : 1,
                                         }}
                                     >
                                         <td style={{ padding: '10px 16px', borderTopLeftRadius: '4px', borderBottomLeftRadius: '4px', maxWidth: '420px' }}>
                                             <div style={{
                                                 fontWeight: '600',
-                                                color: isAnnullato ? '#c0392b' : 'var(--text-primary)',
+                                                color: isAnnullato ? 'var(--danger)' : 'var(--text-primary)',
                                                 textDecoration: isAnnullato ? 'line-through' : 'none',
                                                 fontSize: '0.9rem',
                                             }}>
@@ -604,7 +604,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                         </td>
                                         <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                                             <span style={{
-                                                backgroundColor: isAnnullato ? '#e74c3c' : (isEntrata ? '#2ecc71' : '#e74c3c'),
+                                                backgroundColor: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)'),
                                                 color: 'white',
                                                 padding: '3px 10px',
                                                 borderRadius: '4px',
@@ -627,7 +627,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                         <td style={{ padding: '10px 16px', textAlign: 'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px' }}>
                                                 <button
-                                                    style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#3b82f6', color: 'white' }}
+                                                    style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--primary)', color: 'white' }}
                                                     title="Dettaglio"
                                                     onClick={() => onDettaglio(p)}
                                                 >
@@ -635,7 +635,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                                 </button>
                                                 {p.quote_types === 'operazione_manuale' && (
                                                     <button
-                                                        style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white' }}
+                                                        style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--danger)', color: 'white' }}
                                                         title="Elimina"
                                                         onClick={() => onElimina(p)}
                                                     >
@@ -657,12 +657,12 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <button disabled={safePage === 1} onClick={() => setCurrentPage(1)} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', opacity: safePage === 1 ? 0.4 : 1 }}>&lt;&lt;</button>
                             <button disabled={safePage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === 1 ? 'not-allowed' : 'pointer', opacity: safePage === 1 ? 0.4 : 1 }}>&lt;</button>
-                            <span style={{ background: '#4caf50', color: 'white', padding: '5px 10px', borderRadius: '4px', fontWeight: 'bold', minWidth: '36px', textAlign: 'center' }}>{safePage} / {totalPages}</span>
+                            <span style={{ background: 'var(--success)', color: 'white', padding: '5px 10px', borderRadius: '4px', fontWeight: 'bold', minWidth: '36px', textAlign: 'center' }}>{safePage} / {totalPages}</span>
                             <button disabled={safePage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1 }}>&gt;</button>
                             <button disabled={safePage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1 }}>&gt;&gt;</button>
                             <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Tot righe: <strong>{filtered.length}</strong></span>
                         </div>
-                        <span style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '1rem' }}>
+                        <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1rem' }}>
                             € {totaleAvere.toFixed(2).replace('.', ',')}
                         </span>
                     </div>
@@ -885,12 +885,12 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     const avanzoFinale = grandTotEntrate - grandTotUscite;
 
     // Stili comuni
-    const HEADER_US = { background: '#1565c0', color: '#fff' };
-    const HEADER_EN = { background: '#2e7d32', color: '#fff' };
+    const HEADER_US = { background: 'var(--primary-hover)', color: '#fff' };
+    const HEADER_EN = { background: 'var(--success)', color: '#fff' };
     const cellBase = { padding: '7px 14px', fontSize: '0.87rem', verticalAlign: 'top' };
-    const sectionHead = { fontWeight: '700', fontStyle: 'italic', textDecoration: 'underline', padding: '10px 14px', background: '#f0f4ff' };
-    const totaleRow = { fontWeight: '700', fontStyle: 'italic', borderTop: '2px solid #d0d7e3', background: '#f8f9fa', padding: '8px 14px' };
-    const avanzRow = { fontWeight: '600', fontStyle: 'italic', background: '#fafafa', padding: '6px 14px', fontSize: '0.86rem' };
+    const sectionHead = { fontWeight: '700', fontStyle: 'italic', textDecoration: 'underline', padding: '10px 14px', background: 'var(--info-container)' };
+    const totaleRow = { fontWeight: '700', fontStyle: 'italic', borderTop: '2px solid var(--border-color)', background: 'var(--surface-1)', padding: '8px 14px' };
+    const avanzRow = { fontWeight: '600', fontStyle: 'italic', background: 'var(--surface-1)', padding: '6px 14px', fontSize: '0.86rem' };
 
     if (loading || loadingGruppi) {
         return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>Caricamento...</div>;
@@ -925,7 +925,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                             alignItems: 'center',
                             gap: '7px',
                             padding: '7px 16px',
-                            backgroundColor: generatingPdf ? '#9e9e9e' : '#1565c0',
+                            backgroundColor: generatingPdf ? 'var(--text-tertiary)' : 'var(--primary-hover)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: '8px',
@@ -954,7 +954,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                 </div>
 
                 {/* Tabella principale */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #d0d7e3', borderRadius: '8px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
                     <thead>
                         <tr>
                             <td style={{ ...HEADER_US, fontWeight: '700', fontSize: '1rem', padding: '12px 16px', width: '50%', borderRight: '2px solid #fff' }}>
@@ -982,8 +982,8 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                             return (
                                 <React.Fragment key={sezione}>
                                     {/* Intestazione sezione */}
-                                    <tr style={{ borderTop: '3px solid #d0d7e3' }}>
-                                        <td style={{ ...sectionHead, borderRight: '1px solid #e0e6ef' }}>
+                                    <tr style={{ borderTop: '3px solid var(--border-color)' }}>
+                                        <td style={{ ...sectionHead, borderRight: '1px solid var(--border-color)' }}>
                                             {gu ? `${sezione}) ${gu.descrizione}` : `${sezione}) —`}
                                         </td>
                                         <td style={sectionHead}>
@@ -996,14 +996,14 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                                         const su = rowsUs[i];
                                         const se = rowsEn[i];
                                         return (
-                                            <tr key={i} style={{ borderBottom: '1px solid #f0f4f8' }}>
-                                                <td style={{ ...cellBase, borderRight: '1px solid #e0e6ef' }}>
+                                            <tr key={i} style={{ borderBottom: '1px solid var(--surface-1)' }}>
+                                                <td style={{ ...cellBase, borderRight: '1px solid var(--border-color)' }}>
                                                     {su === undefined ? null : su === null ? (
                                                         <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}> </span>
                                                     ) : (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                                             <span>{su.numero}) {su.descrizione}</span>
-                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[su.id] ? '#c62828' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[su.id] ? 'var(--danger)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                                                 {fmt(totaliPerGruppo[su.id] || 0)}
                                                             </span>
                                                         </div>
@@ -1015,7 +1015,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                                                     ) : (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                                             <span>{se.numero}) {se.descrizione}</span>
-                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[se.id] ? '#2e7d32' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[se.id] ? 'var(--success)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                                                 {fmt(totaliPerGruppo[se.id] || 0)}
                                                             </span>
                                                         </div>
@@ -1027,24 +1027,24 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
 
                                     {/* Totale sezione */}
                                     <tr>
-                                        <td style={{ ...totaleRow, borderRight: '1px solid #e0e6ef' }}>
+                                        <td style={{ ...totaleRow, borderRight: '1px solid var(--border-color)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>Totale</span>
-                                                <span style={{ fontFamily: 'monospace', color: '#c62828' }}>{fmt(totUs)}</span>
+                                                <span style={{ fontFamily: 'monospace', color: 'var(--danger)' }}>{fmt(totUs)}</span>
                                             </div>
                                         </td>
                                         <td style={totaleRow}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>Totale</span>
-                                                <span style={{ fontFamily: 'monospace', color: '#2e7d32' }}>{fmt(totEn)}</span>
+                                                <span style={{ fontFamily: 'monospace', color: 'var(--success)' }}>{fmt(totEn)}</span>
                                             </div>
                                         </td>
                                     </tr>
 
                                     {/* Avanzo/Disavanzo sezione */}
-                                    <tr style={{ background: '#fafafa' }}>
-                                        <td style={{ borderRight: '1px solid #e0e6ef' }} />
-                                        <td style={{ ...avanzRow, color: avanzSez >= 0 ? '#2e7d32' : '#c62828' }}>
+                                    <tr style={{ background: 'var(--surface-1)' }}>
+                                        <td style={{ borderRight: '1px solid var(--border-color)' }} />
+                                        <td style={{ ...avanzRow, color: avanzSez >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>Avanzo/Disavanzo sezione {sezione} (+/-)</span>
                                                 <span style={{ fontFamily: 'monospace' }}>
@@ -1059,24 +1059,24 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
 
                         {/* Totali generali */}
                         <tr style={{ borderTop: '3px solid #555', background: '#fff' }}>
-                            <td style={{ padding: '12px 14px', fontWeight: '700', fontStyle: 'italic', borderRight: '1px solid #e0e6ef', background: '#ffebee' }}>
+                            <td style={{ padding: '12px 14px', fontWeight: '700', fontStyle: 'italic', borderRight: '1px solid var(--border-color)', background: 'var(--danger-container)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Totale USCITE della gestione</span>
-                                    <span style={{ fontFamily: 'monospace', color: '#c62828' }}>{fmt(grandTotUscite)}</span>
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--danger)' }}>{fmt(grandTotUscite)}</span>
                                 </div>
                             </td>
-                            <td style={{ padding: '12px 14px', fontWeight: '700', fontStyle: 'italic', background: '#e8f5e9' }}>
+                            <td style={{ padding: '12px 14px', fontWeight: '700', fontStyle: 'italic', background: 'var(--success-container)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Totale ENTRATE della gestione</span>
-                                    <span style={{ fontFamily: 'monospace', color: '#2e7d32' }}>{fmt(grandTotEntrate)}</span>
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--success)' }}>{fmt(grandTotEntrate)}</span>
                                 </div>
                             </td>
                         </tr>
 
                         {/* A/D d'esercizio prima delle imposte */}
-                        <tr style={{ background: '#f5f5f5' }}>
-                            <td style={{ borderRight: '1px solid #e0e6ef' }} />
-                            <td style={{ padding: '9px 14px', fontWeight: '700', fontStyle: 'italic', color: avanzoFinale >= 0 ? '#2e7d32' : '#c62828' }}>
+                        <tr style={{ background: 'var(--surface-1)' }}>
+                            <td style={{ borderRight: '1px solid var(--border-color)' }} />
+                            <td style={{ padding: '9px 14px', fontWeight: '700', fontStyle: 'italic', color: avanzoFinale >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Avanzo/Disavanzo d'esercizio prima delle imposte (+/-)</span>
                                     <span style={{ fontFamily: 'monospace' }}>
@@ -1088,7 +1088,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
 
                         {/* Imposte */}
                         <tr>
-                            <td style={{ borderRight: '1px solid #e0e6ef' }} />
+                            <td style={{ borderRight: '1px solid var(--border-color)' }} />
                             <td style={{ padding: '7px 14px', color: 'var(--text-secondary)', fontSize: '0.87rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Imposte</span>
@@ -1099,8 +1099,8 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
 
                         {/* AVANZO/DISAVANZO COMPLESSIVO */}
                         <tr style={{ borderTop: '2px solid #555' }}>
-                            <td style={{ borderRight: '1px solid #e0e6ef' }} />
-                            <td style={{ padding: '12px 14px', fontWeight: '700', background: avanzoFinale >= 0 ? '#e8f5e9' : '#ffebee', color: avanzoFinale >= 0 ? '#1b5e20' : '#b71c1c' }}>
+                            <td style={{ borderRight: '1px solid var(--border-color)' }} />
+                            <td style={{ padding: '12px 14px', fontWeight: '700', background: avanzoFinale >= 0 ? 'var(--success-container)' : 'var(--danger-container)', color: avanzoFinale >= 0 ? '#1b5e20' : 'var(--danger)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>AVANZO/DISAVANZO COMPLESSIVO</span>
                                     <span style={{ fontFamily: 'monospace' }}>
@@ -1189,9 +1189,9 @@ const Contabilita = () => {
                     style={{
                         display: 'flex',
                         gap: '4px',
-                        backgroundColor: '#e5e7eb',
+                        backgroundColor: 'var(--border-color)',
                         padding: '6px 6px 0 6px',
-                        borderBottom: '1px solid #d1d5db',
+                        borderBottom: '1px solid var(--border-color)',
                         marginBottom: '16px',
                     }}
                 >
@@ -1201,17 +1201,17 @@ const Contabilita = () => {
                             padding: '12px 32px',
                             border: 'none',
                             borderRadius: '8px 8px 0 0',
-                            backgroundColor: activeTab === 'prima-nota' ? 'var(--primary-color, #1976d2)' : 'transparent',
+                            backgroundColor: activeTab === 'prima-nota' ? 'var(--primary-color, var(--primary))' : 'transparent',
                             cursor: 'pointer',
                             fontWeight: '500',
-                            color: activeTab === 'prima-nota' ? '#fff' : '#4b5563',
+                            color: activeTab === 'prima-nota' ? '#fff' : 'var(--text-secondary)',
                             fontSize: '1rem',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
                             transition: 'all 0.2s',
                         }}
-                        onMouseEnter={e => { if (activeTab !== 'prima-nota') e.currentTarget.style.backgroundColor = '#d1d5db'; }}
+                        onMouseEnter={e => { if (activeTab !== 'prima-nota') e.currentTarget.style.backgroundColor = 'var(--border-color)'; }}
                         onMouseLeave={e => { if (activeTab !== 'prima-nota') e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                         <BookOpen size={17} />
@@ -1224,17 +1224,17 @@ const Contabilita = () => {
                             padding: '12px 32px',
                             border: 'none',
                             borderRadius: '8px 8px 0 0',
-                            backgroundColor: activeTab === 'bilancio' ? 'var(--primary-color, #1976d2)' : 'transparent',
+                            backgroundColor: activeTab === 'bilancio' ? 'var(--primary-color, var(--primary))' : 'transparent',
                             cursor: 'pointer',
                             fontWeight: '500',
-                            color: activeTab === 'bilancio' ? '#fff' : '#4b5563',
+                            color: activeTab === 'bilancio' ? '#fff' : 'var(--text-secondary)',
                             fontSize: '1rem',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
                             transition: 'all 0.2s',
                         }}
-                        onMouseEnter={e => { if (activeTab !== 'bilancio') e.currentTarget.style.backgroundColor = '#d1d5db'; }}
+                        onMouseEnter={e => { if (activeTab !== 'bilancio') e.currentTarget.style.backgroundColor = 'var(--border-color)'; }}
                         onMouseLeave={e => { if (activeTab !== 'bilancio') e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                         <BarChart2 size={17} />
