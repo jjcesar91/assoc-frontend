@@ -98,8 +98,11 @@ const NuovoOrdine = () => {
         const modalita = paymentData?.modalita_pagamento || created?.modalita_pagamento;
         const contoDest = paymentData?.conto_destinazione || created?.conto_destinazione;
 
+        const isBonifico = (modalita || '').toLowerCase() === 'bonifico';
+
         let conti = [];
-        if ((modalita || '').toLowerCase() === 'bonifico') {
+        let linkRicevuta = '';
+        if (isBonifico) {
             try {
                 const token = localStorage.getItem('token');
                 const r = await fetch(`/payments/api/conti?societa_id=${selectedSocietaId}`, {
@@ -107,6 +110,27 @@ const NuovoOrdine = () => {
                 });
                 if (r.ok) conti = await r.json();
             } catch { /* ignore */ }
+
+            // Genera un token (valido 3 giorni) per il caricamento della ricevuta — solo per bonifico.
+            if (created?.id) {
+                try {
+                    const token = localStorage.getItem('token');
+                    const tr = await fetch('/payments/api/ricevuta-tokens', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify({ payment_id: created.id }),
+                    });
+                    if (tr.ok) {
+                        const { token: ricevutaToken } = await tr.json();
+                        if (ricevutaToken) {
+                            linkRicevuta = `${window.location.origin}/carica-ricevuta?token=${ricevutaToken}`;
+                        }
+                    }
+                } catch { /* ignore */ }
+            }
         }
 
         const istruzioni = buildIstruzioniPagamento(conti, contoDest, modalita);
@@ -115,6 +139,7 @@ const NuovoOrdine = () => {
             importo: formatImporto(created?.importo),
             numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
             istruzioni,
+            linkRicevuta,
         });
         const sendData = { socioId, oggetto: config.oggetto, testo };
 

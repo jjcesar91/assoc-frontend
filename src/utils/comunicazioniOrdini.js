@@ -15,6 +15,7 @@ export const STATO_LABELS = {
 
 // Shortcode disponibili nel WYSIWYG (inseribili dai pulsanti della toolbar).
 export const SHORTCODE_ISTRUZIONI = '{{ISTRUZIONI_PAGAMENTO}}';
+export const SHORTCODE_LINK_RICEVUTA = '{{LINK_RICEVUTA}}';
 
 export const SHORTCODE_FIELDS_COMUNI = [
     { label: 'Nome', token: '{{NOME}}', title: 'Inserisci il nome del destinatario' },
@@ -25,6 +26,7 @@ export const SHORTCODE_FIELDS_COMUNI = [
 export const SHORTCODE_FIELDS_PROFORMA = [
     ...SHORTCODE_FIELDS_COMUNI,
     { label: 'Istruzioni pagamento', token: SHORTCODE_ISTRUZIONI, title: 'Inserisce le istruzioni di pagamento del conto (solo per conti Bonifico)' },
+    { label: 'Link ricevuta', token: SHORTCODE_LINK_RICEVUTA, title: 'Inserisce il link per il caricamento della ricevuta (solo per pagamenti con bonifico, valido 3 giorni)' },
 ];
 
 // Testi di default già pronti all'uso.
@@ -35,6 +37,7 @@ export const DEFAULTS = {
             '<p>Gentile {{NOME}},</p>' +
             '<p>abbiamo registrato il tuo ordine per un importo di <strong>{{IMPORTO}}</strong>.</p>' +
             `<p>${SHORTCODE_ISTRUZIONI}</p>` +
+            `<p>Una volta effettuato il pagamento, carica la ricevuta a questo link (valido 3 giorni): ${SHORTCODE_LINK_RICEVUTA}</p>` +
             '<p>Grazie,<br>Lo staff</p>',
     },
     pagamento: {
@@ -68,15 +71,28 @@ export function getComConfig(societa, tipo) {
 /**
  * Sostituisce gli shortcode nel testo HTML.
  * @param {string} html
- * @param {{ nome?: string, importo?: string, numeroOrdine?: string, istruzioni?: string }} ctx
+ * @param {{ nome?: string, importo?: string, numeroOrdine?: string, istruzioni?: string, linkRicevuta?: string }} ctx
  */
 export function applyShortcodes(html, ctx = {}) {
     if (!html) return '';
-    return html
+    let out = html
         .replaceAll('{{NOME}}', ctx.nome || '')
         .replaceAll('{{IMPORTO}}', ctx.importo || '')
         .replaceAll('{{NUMERO_ORDINE}}', ctx.numeroOrdine || '')
         .replaceAll(SHORTCODE_ISTRUZIONI, ctx.istruzioni || '');
+
+    // Link ricevuta: solo per bonifico. Se assente, rimuovo l'eventuale paragrafo che lo contiene.
+    const tokenRe = SHORTCODE_LINK_RICEVUTA.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (ctx.linkRicevuta) {
+        const anchor = `<a href="${ctx.linkRicevuta}">${ctx.linkRicevuta}</a>`;
+        out = out.replaceAll(SHORTCODE_LINK_RICEVUTA, anchor);
+    } else {
+        // rimuove un intero blocco <p>...{{LINK_RICEVUTA}}...</p>, poi eventuali token residui
+        out = out
+            .replace(new RegExp(`<p[^>]*>(?:(?!</p>).)*${tokenRe}(?:(?!</p>).)*</p>`, 'gi'), '')
+            .replaceAll(SHORTCODE_LINK_RICEVUTA, '');
+    }
+    return out;
 }
 
 /** Formatta un importo numerico in stringa "€ 1.234,56". */

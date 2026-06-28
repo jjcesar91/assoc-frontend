@@ -5,6 +5,12 @@ import './ContoBonificoModal.css';
 
 const IBAN_TOKEN = '{{IBAN}}';
 
+// Messaggio di istruzioni predefinito per i conti di tipo bancario (bonifico).
+// Precaricato quando il conto non ha ancora istruzioni; modificabile liberamente nel WYSIWYG.
+export const DEFAULT_ISTRUZIONI_BONIFICO =
+    `<p>Per completare l'ordine effettua un bonifico bancario sul seguente IBAN: ${IBAN_TOKEN}.</p>` +
+    `<p>Ti chiediamo di indicare nella causale il nome e cognome dell'intestatario e il numero dell'ordine, e di caricare la ricevuta tramite il link riportato di seguito.</p>`;
+
 const ContoBonificoModal = ({ isOpen, onClose, onSave, conto }) => {
     const [descrizione, setDescrizione] = useState('');
     const [iban, setIban] = useState('');
@@ -14,7 +20,7 @@ const ContoBonificoModal = ({ isOpen, onClose, onSave, conto }) => {
         if (isOpen) {
             setDescrizione(conto?.descrizione || '');
             setIban(conto?.iban || '');
-            setIstruzioni(conto?.istruzioni_pagamento || '');
+            setIstruzioni(conto?.istruzioni_pagamento || DEFAULT_ISTRUZIONI_BONIFICO);
         }
     }, [isOpen, conto]);
 

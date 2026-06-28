@@ -27,6 +27,7 @@ import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
 import SocioDashboard from './pages/SocioDashboard';
+import CaricaRicevuta from './pages/CaricaRicevuta';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
@@ -130,6 +131,9 @@ function App() {
       <AnnoProvider>
         <Router>
         <Routes>
+          {/* ── Route pubblica: caricamento ricevuta tramite token (nessuna autenticazione) ── */}
+          <Route path="/carica-ricevuta" element={<CaricaRicevuta />} />
+
           {/* Login: se autenticato come socio → dashboard, altrimenti → /soci */}
           <Route path="/login" element={
             !isAuthenticated
