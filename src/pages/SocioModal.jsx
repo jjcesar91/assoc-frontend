@@ -1680,16 +1680,19 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             const response = await fetch('/users/api/soci/check-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     email: formData.email,
-                    excludeId: formData.id || null
+                    excludeId: formData.id || null,
+                    // Il conflitto va segnalato solo tra soci della stessa società.
+                    societaId: selectedSocietaId || null
                 })
             });
-            
+
             if (response.ok) {
                 const result = await response.json();
                 if (result.exists) {
-                    showAlert(`L'email ${formData.email} è già usata da ${result.nome} ${result.cognome}`, 'Email già in uso', 'warning');
+                    // Segnalazione informativa: non blocca il salvataggio del socio.
+                    showAlert(`L'email ${formData.email} è già usata da ${result.nome} ${result.cognome} in questa società. Puoi comunque procedere con il salvataggio.`, 'Email già in uso', 'warning');
                 }
             }
         } catch (e) {
