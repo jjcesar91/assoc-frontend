@@ -276,25 +276,54 @@ export async function buildRicevutaHtml(p, { societa, products, autoPrint = fals
 }
 
 /**
+ * Attende che tutte le immagini (es. logo) del container siano caricate.
+ * html2canvas non aspetta il load delle immagini: senza questa attesa il logo
+ * può risultare mancante nel PDF. Timeout di sicurezza per non bloccare l'invio.
+ * @param {HTMLElement} el
+ * @param {number} timeoutMs
+ */
+function waitForImages(el, timeoutMs = 3000) {
+    const imgs = Array.from(el.querySelectorAll('img'));
+    if (imgs.length === 0) return Promise.resolve();
+    const loaders = imgs.map(img => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise(resolve => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+        });
+    });
+    return Promise.race([
+        Promise.all(loaders),
+        new Promise(resolve => setTimeout(resolve, timeoutMs)),
+    ]);
+}
+
+/**
  * Genera la ricevuta come PDF e ritorna il contenuto in base64 (senza prefisso data URI).
- * Usa html2pdf.js renderizzando il documento in un container fuori schermo.
+ * Usa html2pdf.js renderizzando il documento in un container nascosto ma catturabile.
  * @returns {Promise<string>} base64 del PDF
  */
 export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     const { css, body } = await buildRicevutaDocument(p, { societa, products });
     const html2pdf = (await import('html2pdf.js')).default;
 
+    // Il container va renderizzato in posizione catturabile da html2canvas.
+    // Con top:-9999px html2canvas cattura l'area (0,0) e produce una pagina bianca.
+    // Lo posizioniamo quindi a (0,0) ma dietro l'app (z-index negativo) così non è
+    // visibile all'utente, mentre html2canvas legge direttamente il nodo DOM.
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:#ffffff;';
+    wrapper.style.cssText = 'position:fixed;top:0;left:0;width:794px;background:#ffffff;z-index:-9999;pointer-events:none;';
     wrapper.innerHTML = `<style>${css}</style><div style="padding:20px;">${body}</div>`;
     document.body.appendChild(wrapper);
+
+    await waitForImages(wrapper);
 
     try {
         const dataUri = await html2pdf()
             .set({
                 margin: [10, 10, 10, 10],
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff' },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             })
             .from(wrapper)
