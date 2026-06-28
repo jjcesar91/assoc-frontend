@@ -9,6 +9,11 @@ import GeneraOrdineModal from './GeneraOrdineModal';
 import AbbonamentoDateModal from './AbbonamentoDateModal';
 import DettaglioOrdineModal from './DettaglioOrdineModal';
 import IscrizioneCorsoDopoModal from './IscrizioneCorsoDopoModal';
+import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
+import {
+    getComConfig, applyShortcodes, buildIstruzioniPagamento,
+    sendComunicazioneEmail, formatImporto,
+} from '../utils/comunicazioniOrdini';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
 const getCertStatus = (scadenza) => {
@@ -48,6 +53,92 @@ const NuovoOrdine = () => {
         setSnackbar({ show: true, message, type });
         setTimeout(() => setSnackbar(s => ({ ...s, show: false })), 3000);
     };
+
+    // Comunicazione "creazione proforma" (stato CHIEDI → modal di conferma)
+    const [chiediModal, setChiediModal] = useState(null);
+    const chiediResolveRef = useRef(null);
+    const sendDataRef = useRef(null);
+
+    const askInvioComunicazione = ({ titolo, destinatario, oggetto, testoHtml, sendData }) =>
+        new Promise(resolve => {
+            chiediResolveRef.current = resolve;
+            sendDataRef.current = sendData;
+            setChiediModal({ titolo, destinatario, oggetto, testoHtml, sending: false });
+        });
+
+    const handleChiediConfirm = async () => {
+        setChiediModal(m => (m ? { ...m, sending: true } : m));
+        const res = await sendComunicazioneEmail(sendDataRef.current);
+        if (res.ok) showSnackbar(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
+        else showSnackbar(res.error || 'Errore invio comunicazione', 'error');
+        setChiediModal(null);
+        if (chiediResolveRef.current) { chiediResolveRef.current(); chiediResolveRef.current = null; }
+    };
+
+    const handleChiediClose = () => {
+        setChiediModal(null);
+        if (chiediResolveRef.current) { chiediResolveRef.current(); chiediResolveRef.current = null; }
+    };
+
+    const nomeSocio = (s) => {
+        if (!s) return '';
+        return s.tipo_socio === 'associazione'
+            ? (s.ragione_sociale || '')
+            : [s.nome, s.cognome].filter(Boolean).join(' ');
+    };
+
+    // Gestisce la comunicazione al socio dopo la creazione di una proforma.
+    const handleProformaComunicazione = async (created, paymentData) => {
+        const societa = societaList.find(s => s.id == selectedSocietaId);
+        const config = getComConfig(societa, 'proforma');
+        if (config.stato === 'NON_ATTIVA') return;
+
+        const socioId = created?.socio_id || selectedSocio?.id || null;
+        const email = selectedSocio?.email || null;
+        const modalita = paymentData?.modalita_pagamento || created?.modalita_pagamento;
+        const contoDest = paymentData?.conto_destinazione || created?.conto_destinazione;
+
+        let conti = [];
+        if ((modalita || '').toLowerCase() === 'bonifico') {
+            try {
+                const token = localStorage.getItem('token');
+                const r = await fetch(`/payments/api/conti?societa_id=${selectedSocietaId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
+                if (r.ok) conti = await r.json();
+            } catch { /* ignore */ }
+        }
+
+        const istruzioni = buildIstruzioniPagamento(conti, contoDest, modalita);
+        const testo = applyShortcodes(config.testo, {
+            nome: nomeSocio(selectedSocio) || created?.intestatario || '',
+            importo: formatImporto(created?.importo),
+            numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
+            istruzioni,
+        });
+        const sendData = { socioId, oggetto: config.oggetto, testo };
+
+        if (config.stato === 'AUTOMATICA') {
+            if (!socioId || !email) {
+                showSnackbar('Comunicazione non inviata: il socio non ha un indirizzo email', 'error');
+                return;
+            }
+            const res = await sendComunicazioneEmail(sendData);
+            if (res.ok) showSnackbar(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
+            else showSnackbar(res.error || 'Errore invio comunicazione', 'error');
+            return;
+        }
+
+        // CHIEDI
+        await askInvioComunicazione({
+            titolo: 'Comunicazione creazione ordine',
+            destinatario: email,
+            oggetto: config.oggetto,
+            testoHtml: testo,
+            sendData,
+        });
+    };
+
     const [recentPayments, setRecentPayments] = useState([]);
     const prevSocietaId = useRef(undefined);
     
@@ -306,6 +397,16 @@ const NuovoOrdine = () => {
             if (response.ok) {
                 setIsGeneraModalOpen(false);
 
+                // Comunicazione al socio alla creazione di una proforma
+                if (paymentData.tipo_documento === 'proforma') {
+                    try {
+                        const created = await response.json();
+                        await handleProformaComunicazione(created, paymentData);
+                    } catch (e) {
+                        console.error('Errore gestione comunicazione proforma', e);
+                    }
+                }
+
                 // Se ci sono abbonamenti nel carrello, cerca corsi associati
                 const subscriptionItems = cart.filter(item => item.type === 'subscription');
                 if (subscriptionItems.length > 0 && selectedSocio?.id) {
@@ -446,7 +547,18 @@ const NuovoOrdine = () => {
                 socio={selectedSocio}
                 societaId={selectedSocietaId}
             />
-            
+
+            <ChiediInvioComunicazioneModal
+                isOpen={chiediModal !== null}
+                titolo={chiediModal?.titolo}
+                destinatario={chiediModal?.destinatario}
+                oggetto={chiediModal?.oggetto}
+                testoHtml={chiediModal?.testoHtml}
+                sending={chiediModal?.sending}
+                onConfirm={handleChiediConfirm}
+                onClose={handleChiediClose}
+            />
+
             <div className="np-grid">
                 
                 {/* LEFT COLUMN */}

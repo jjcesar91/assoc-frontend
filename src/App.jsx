@@ -15,6 +15,7 @@ import Prodotti from './pages/Prodotti'
 import Ordini from './pages/Ordini';
 import NuovoOrdine from './pages/NuovoOrdine';
 import Conti from './pages/Conti';
+import OrdiniComunicazioni from './pages/OrdiniComunicazioni';
 import Scadenziario from './pages/Scadenziario';
 import Contabilita from './pages/Contabilita';
 import GruppiSottogruppi from './pages/GruppiSottogruppi';
@@ -201,6 +202,11 @@ function App() {
           <Route path="/ordini/conti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Configurazione Conti">
               <Conti />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/ordini/comunicazioni" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Comunicazioni Ordini">
+              <OrdiniComunicazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/ordini/template" element={isAuthenticated && !isSocio ? (

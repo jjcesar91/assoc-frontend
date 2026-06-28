@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { AlertTriangle, Ban, Calendar, Check, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '../utils/ordineUtils';
+import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
+import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } from '../utils/comunicazioniOrdini';
+import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './DettaglioPagamentoModal.css';
 
 const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -14,6 +17,11 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [convertData, setConvertData] = useState('');
     const [convertNextNumero, setConvertNextNumero] = useState(null);
     const [converting, setConverting] = useState(false);
+
+    // Comunicazione "pagamento registrato" (stato CHIEDI → modal di conferma)
+    const [chiediModal, setChiediModal] = useState(null);
+    const chiediResolveRef = useRef(null);
+    const sendDataRef = useRef(null);
 
     // Etichette
     const [etichette, setEtichette] = useState([]);
@@ -132,12 +140,105 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 const updated = await res.json();
                 setShowConvertForm(false);
                 if (onConvertProforma) onConvertProforma(updated);
+                try {
+                    await handlePagamentoComunicazione(updated);
+                } catch (e) {
+                    console.error('Errore gestione comunicazione pagamento', e);
+                }
             }
         } catch (e) {
             console.error(e);
         } finally {
             setConverting(false);
         }
+    };
+
+    const nomeSocio = (s) => {
+        if (!s) return '';
+        return s.tipo_socio === 'associazione'
+            ? (s.ragione_sociale || '')
+            : [s.nome, s.cognome].filter(Boolean).join(' ');
+    };
+
+    const askInvioComunicazione = ({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sendData }) =>
+        new Promise(resolve => {
+            chiediResolveRef.current = resolve;
+            sendDataRef.current = sendData;
+            setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
+        });
+
+    const handleChiediConfirm = async () => {
+        setChiediModal(m => (m ? { ...m, sending: true } : m));
+        await sendComunicazioneEmail(sendDataRef.current);
+        setChiediModal(null);
+        if (chiediResolveRef.current) { chiediResolveRef.current(); chiediResolveRef.current = null; }
+    };
+
+    const handleChiediClose = () => {
+        setChiediModal(null);
+        if (chiediResolveRef.current) { chiediResolveRef.current(); chiediResolveRef.current = null; }
+    };
+
+    // Comunicazione al socio quando una proforma viene registrata come pagamento.
+    // Allega la ricevuta in PDF.
+    const handlePagamentoComunicazione = async (updated) => {
+        const config = getComConfig(societa, 'pagamento');
+        if (config.stato === 'NON_ATTIVA') return;
+
+        const socioId = updated?.socio_id || pagamento?.socio_id || null;
+
+        // Recupera email e nominativo del socio
+        let email = null;
+        let nome = updated?.intestatario || '';
+        if (socioId) {
+            try {
+                const token = localStorage.getItem('token');
+                const r = await fetch(`/users/api/soci/${socioId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
+                if (r.ok) {
+                    const s = await r.json();
+                    email = s.email || null;
+                    nome = nomeSocio(s) || nome;
+                }
+            } catch { /* ignore */ }
+        }
+
+        const testo = applyShortcodes(config.testo, {
+            nome,
+            importo: formatImporto(updated?.importo),
+            numeroOrdine: updated?.numero_ricevuta || `#${updated?.id || ''}`,
+            istruzioni: '',
+        });
+
+        // Genera la ricevuta PDF da allegare
+        let allegati = [];
+        try {
+            const base64 = await generateRicevutaPdfBase64(updated, { societa, products });
+            if (base64) {
+                allegati = [{ filename: `Ricevuta_${updated?.numero_ricevuta || updated?.id || 'pagamento'}.pdf`, content: base64 }];
+            }
+        } catch (e) {
+            console.error('Errore generazione PDF ricevuta per allegato', e);
+        }
+
+        const sendData = { socioId, oggetto: config.oggetto, testo, allegati };
+
+        if (config.stato === 'AUTOMATICA') {
+            if (!socioId || !email) return; // nessuna email → niente invio automatico
+            await sendComunicazioneEmail(sendData);
+            return;
+        }
+
+        // CHIEDI
+        await askInvioComunicazione({
+            titolo: 'Comunicazione pagamento registrato',
+            destinatario: email,
+            oggetto: config.oggetto,
+            testoHtml: testo,
+            allegatoNome: allegati[0]?.filename,
+            sendData,
+        });
     };
 
     const handleConfermaAnnulla = () => {
@@ -563,6 +664,18 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                     </div>
                 </div>
             )}
+
+            <ChiediInvioComunicazioneModal
+                isOpen={chiediModal !== null}
+                titolo={chiediModal?.titolo}
+                destinatario={chiediModal?.destinatario}
+                oggetto={chiediModal?.oggetto}
+                testoHtml={chiediModal?.testoHtml}
+                allegatoNome={chiediModal?.allegatoNome}
+                sending={chiediModal?.sending}
+                onConfirm={handleChiediConfirm}
+                onClose={handleChiediClose}
+            />
         </div>
     );
 };

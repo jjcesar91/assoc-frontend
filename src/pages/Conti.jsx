@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
 import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
+import ContoBonificoModal from './ContoBonificoModal';
 import './Soci.css';
 
 const API_GATEWAY = '/payments/api';
@@ -16,6 +17,10 @@ const Conti = () => {
     const [descrizione, setDescrizione] = useState('');
     const [modalita, setModalita] = useState('');
     const [editingId, setEditingId] = useState(null);
+
+    // Modal dedicato per i conti di tipo Bonifico
+    const [bonificoModalOpen, setBonificoModalOpen] = useState(false);
+    const [bonificoConto, setBonificoConto] = useState(null);
 
     const [error, setError] = useState(null);
 
@@ -92,9 +97,41 @@ const Conti = () => {
     };
 
     const handleEdit = (conto) => {
+        // I conti di tipo Bonifico si modificano tramite modal dedicato
+        // (descrizione, IBAN e istruzioni di pagamento).
+        if (conto.modalita_pagamento?.toLowerCase() === 'bonifico') {
+            setBonificoConto(conto);
+            setBonificoModalOpen(true);
+            return;
+        }
         setEditingId(conto.id);
         setDescrizione(conto.descrizione);
         setModalita(conto.modalita_pagamento || '');
+    };
+
+    const handleSaveBonifico = async (data) => {
+        if (!bonificoConto) return;
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_GATEWAY}/conti/${bonificoConto.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    societa_id: bonificoConto.societa_id,
+                    modalita_pagamento: bonificoConto.modalita_pagamento,
+                    ...data
+                })
+            });
+            if (!res.ok) throw new Error('Errore nel salvataggio del conto');
+            setBonificoModalOpen(false);
+            setBonificoConto(null);
+            fetchConti();
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -221,6 +258,13 @@ const Conti = () => {
                 </div>
 
             </div>
+
+            <ContoBonificoModal
+                isOpen={bonificoModalOpen}
+                conto={bonificoConto}
+                onClose={() => { setBonificoModalOpen(false); setBonificoConto(null); }}
+                onSave={handleSaveBonifico}
+            />
         </div>
     );
 };

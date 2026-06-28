@@ -63,9 +63,10 @@ export const MENU_STRUCTURE = [
         label: 'Ordini',
         Icon: CreditCard,
         children: [
-            { id: 'ordini-lista',    label: 'Lista ordini',     path: '/ordini' },
-            { id: 'ordini-conti',    label: 'Conti',            path: '/ordini/conti' },
-            { id: 'ordini-template', label: 'Template ricevute', path: '/ordini/template' },
+            { id: 'ordini-lista',         label: 'Lista ordini',      path: '/ordini' },
+            { id: 'ordini-conti',         label: 'Conti',             path: '/ordini/conti' },
+            { id: 'ordini-comunicazioni', label: 'Comunicazioni',     path: '/ordini/comunicazioni' },
+            { id: 'ordini-template',      label: 'Template ricevute', path: '/ordini/template' },
         ],
     },
     { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },

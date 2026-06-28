@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, List, ListOrdered, Link, Type } from 'lucide-react';
+import { Bold, Italic, Underline, List, ListOrdered, Link, Type, Plus } from 'lucide-react';
 
-const SimpleEditor = ({ value, onChange, style }) => {
+const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
     const editorRef = useRef(null);
 
     useEffect(() => {
@@ -39,6 +39,26 @@ const SimpleEditor = ({ value, onChange, style }) => {
                 }
             });
         }
+    };
+
+    const insertField = (token) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        // Assicura che il caret sia dentro l'editor: se la selezione corrente
+        // non è nell'editor, la posiziona alla fine del contenuto.
+        const selection = window.getSelection();
+        const hasSelectionInside =
+            selection.rangeCount > 0 && editor.contains(selection.anchorNode);
+        editor.focus();
+        if (!hasSelectionInside) {
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        document.execCommand('insertText', false, token);
+        handleInput();
     };
 
     const ToolbarButton = ({ icon: Icon, command, arg, title }) => (
@@ -101,6 +121,37 @@ const SimpleEditor = ({ value, onChange, style }) => {
                 >
                     Clear
                 </button>
+                {insertFields.length > 0 && (
+                    <>
+                        <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
+                        {insertFields.map((field) => (
+                            <button
+                                key={field.token}
+                                type="button"
+                                className="toolbar-btn toolbar-field-btn"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // Mantieni il focus/selezione nell'editor
+                                    insertField(field.token);
+                                }}
+                                title={field.title || `Inserisci ${field.label}`}
+                                style={{
+                                    border: '1px solid var(--border-color)',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '12px',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <Plus size={13} /> {field.label}
+                            </button>
+                        ))}
+                    </>
+                )}
             </div>
             
             <div

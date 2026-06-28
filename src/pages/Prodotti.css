@@ -3,12 +3,11 @@
 .prodotti-full-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   background-color: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  overflow: hidden;
 }
 
 /* Data Table Card */
