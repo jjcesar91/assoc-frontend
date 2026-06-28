@@ -5,17 +5,15 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
     const editorRef = useRef(null);
 
     useEffect(() => {
-        if (editorRef.current) {
-            if (value && editorRef.current.innerHTML !== value) {
-                // If content is completely different (e.g. loaded from DB), update it.
-                // But during typing, value updates causing re-render.
-                // We should avoid updating innerHTML if it matches focused state, 
-                // but here we are in a simple modal.
-                // Let's only set it if it's empty in editor but has value in prop (initial load)
-                if (editorRef.current.innerHTML === '' || editorRef.current.innerHTML === '<br>') {
-                    editorRef.current.innerHTML = value;
-                }
-            }
+        const editor = editorRef.current;
+        if (!editor) return;
+        // Sincronizza il DOM con il valore esterno (caricamento da DB, cambio
+        // società, "Ripristina testo predefinito"). Se l'editor ha il focus
+        // l'utente sta scrivendo: in quel caso non sovrascriviamo, altrimenti
+        // perderemmo il contenuto digitato e la posizione del cursore.
+        const incoming = value || '';
+        if (editor.innerHTML !== incoming && document.activeElement !== editor) {
+            editor.innerHTML = incoming;
         }
     }, [value]);
 
