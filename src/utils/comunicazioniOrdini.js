@@ -37,7 +37,6 @@ export const DEFAULTS = {
             '<p>Gentile {{NOME}},</p>' +
             '<p>abbiamo registrato il tuo ordine per un importo di <strong>{{IMPORTO}}</strong>.</p>' +
             `<p>${SHORTCODE_ISTRUZIONI}</p>` +
-            `<p>Una volta effettuato il pagamento, carica la ricevuta a questo link (valido 3 giorni): ${SHORTCODE_LINK_RICEVUTA}</p>` +
             '<p>Grazie,<br>Lo staff</p>',
     },
     pagamento: {
