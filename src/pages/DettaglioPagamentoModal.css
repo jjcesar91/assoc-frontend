@@ -56,6 +56,7 @@
 /* ── Scrollable body ─────────────────────────────────────────────────────── */
 .dpm-body {
     flex: 1;
+    min-height: 0; /* permette al body flex di restringersi e attivare lo scroll entro max-height del modal */
     overflow-y: auto;
     padding: 16px 20px;
     display: flex;
