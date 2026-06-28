@@ -1,0 +1,28 @@
+version: '3.8'
+
+# Compose dedicato al frontend (Vite dev server).
+# Vive nel repo assoc-frontend ed e' avviato dalla sua GitHub Action ad ogni push.
+# Si collega alla rete del gateway API (creata dal compose del backend) per
+# raggiungere il servizio "nginx" tramite VITE_API_TARGET=http://nginx.
+services:
+  frontend:
+    build: ..
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_TARGET=http://nginx
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ..:/app
+      - /app/node_modules
+    networks:
+      - app_network
+
+networks:
+  # Rete condivisa con il backend (gateway nginx + microservizi).
+  # Il nome reale e' iniettato dall'Action via ${APP_NETWORK} (default docker_app_network).
+  app_network:
+    external:
+      name: ${APP_NETWORK:-docker_app_network}

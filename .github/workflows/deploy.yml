@@ -18,4 +18,24 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
+
+            # Builder classico: le immagini includono "ContainerConfig", evitando il
+            # bug di docker-compose v1 "KeyError: 'ContainerConfig'" alla ricreazione.
+            export DOCKER_BUILDKIT=0
+            export COMPOSE_DOCKER_CLI_BUILD=0
+            # Progetto compose isolato (la cartella si chiama "docker" come nel backend).
+            export COMPOSE_PROJECT_NAME=frontend
+            # Rileva la rete del gateway API (fallback al nome standard del backend).
+            export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | head -1 || true)
+            export APP_NETWORK=${APP_NETWORK:-docker_app_network}
+            echo "Rete API condivisa: $APP_NETWORK"
+
             git pull origin master
+
+            cd docker
+            # Build + ricreazione robusta (rm prima di up: evita l'ereditarieta' dei
+            # volumi dal vecchio container, causa del bug ContainerConfig).
+            docker-compose build
+            docker-compose rm -sf || true
+            docker-compose up -d
+            echo "Frontend deploy completed."
