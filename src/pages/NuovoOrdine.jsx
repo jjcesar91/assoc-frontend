@@ -94,7 +94,9 @@ const NuovoOrdine = () => {
         if (config.stato === 'NON_ATTIVA') return;
 
         const socioId = created?.socio_id || selectedSocio?.id || null;
-        const email = selectedSocio?.email || null;
+        // L'email può essere sul socio oppure sull'account utente collegato
+        // (stessa precedenza della scheda socio): consideriamo entrambe.
+        const email = selectedSocio?.email || selectedSocio?.user?.email || null;
         const modalita = paymentData?.modalita_pagamento || created?.modalita_pagamento;
         const contoDest = paymentData?.conto_destinazione || created?.conto_destinazione;
 
