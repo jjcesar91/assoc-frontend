@@ -160,32 +160,8 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
         }
     }
 
-    // Istruzioni di pagamento per i conti di tipo Bonifico:
-    // recupera il conto (per descrizione = conto_destinazione) e sostituisce
-    // il segnaposto {{IBAN}} con l'IBAN configurato sul conto.
-    let bonificoBlock = '';
-    if (p.modalita_pagamento === 'Bonifico') {
-        try {
-            const contiRes = await fetch(`/payments/api/conti?societa_id=${p.societa_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (contiRes.ok) {
-                const conti = await contiRes.json();
-                const conto = conti.find(c => c.descrizione === p.conto_destinazione)
-                    || conti.find(c => c.modalita_pagamento?.toLowerCase() === 'bonifico');
-                if (conto?.istruzioni_pagamento) {
-                    const istruzioni = conto.istruzioni_pagamento.replaceAll('{{IBAN}}', conto.iban || '');
-                    bonificoBlock = `
-    <div class="bonifico-box">
-        <div class="bonifico-title">ISTRUZIONI PER IL PAGAMENTO</div>
-        <div class="bonifico-content">${istruzioni}</div>
-    </div>`;
-                }
-            }
-        } catch (e) {
-            console.error('Errore recupero istruzioni bonifico per stampa:', e);
-        }
-    }
+    // NB: le istruzioni di pagamento (bonifico) NON vanno incluse nella ricevuta.
+    // Restano disponibili nel testo dell'email tramite lo shortcode {{ISTRUZIONI}}.
 
     const body = `
     ${isProforma ? '<div class="proforma-watermark">PROFORMA</div>' : ''}
@@ -246,7 +222,6 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
             <td>${importoFormatted}</td>
         </tr>
     </table>
-    ${bonificoBlock}
     <div class="footer-text">${footerText}</div>
     <div class="separator">_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _</div>`;
 
@@ -314,7 +289,12 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     const PDF_WIDTH = 794; // ≈ A4 a 96dpi
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `position:fixed;top:0;left:0;width:${PDF_WIDTH}px;background:#ffffff;z-index:-9999;pointer-events:none;`;
-    wrapper.innerHTML = `<style>${css}</style><div style="padding:20px;">${body}</div>`;
+    // Il CSS della ricevuta usa la regola `body { ... padding: 20px }`: iniettata così
+    // com'è inquinerebbe il <body> reale e il clone di html2canvas, spostando il
+    // contenuto e tagliandolo sul margine sinistro. La rendiamo quindi locale al
+    // wrapper, sostituendo il selettore `body` con `.ricevuta-root`.
+    const scopedCss = css.replace(/\bbody\b/g, '.ricevuta-root');
+    wrapper.innerHTML = `<style>${scopedCss}</style><div class="ricevuta-root">${body}</div>`;
     document.body.appendChild(wrapper);
 
     await waitForImages(wrapper);
