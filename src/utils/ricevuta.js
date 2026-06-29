@@ -300,14 +300,13 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     await waitForImages(wrapper);
 
     try {
-        // Misura le dimensioni reali del contenuto DOPO il layout/caricamento immagini.
-        // Passandole esplicitamente a html2canvas (width/height + windowWidth/windowHeight)
-        // la cattura non dipende più dalla posizione del wrapper nel viewport: senza queste
-        // dimensioni un wrapper fuori flusso (z-index negativo) veniva catturato come pagina
-        // bianca, generando un PDF "vuoto" di ~3kb.
-        const captureWidth = wrapper.scrollWidth || PDF_WIDTH;
-        const captureHeight = wrapper.scrollHeight || wrapper.offsetHeight || 1123;
-
+        // Lasciamo che html2canvas rilevi automaticamente il bounding box del nodo:
+        // impostando esplicitamente width/height/x/y la regione catturata veniva
+        // disallineata rispetto al contenuto, tagliando il margine sinistro.
+        // L'unico parametro necessario è `windowWidth`, che ricrea il documento alla
+        // larghezza giusta nel clone interno di html2canvas (così il wrapper fuori
+        // flusso non produce più una pagina bianca). Stesso schema usato per il PDF
+        // del bilancio in Contabilita.
         const dataUri = await html2pdf()
             .set({
                 margin: [10, 10, 10, 10],
@@ -316,14 +315,7 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
                     scale: 2,
                     useCORS: true,
                     backgroundColor: '#ffffff',
-                    scrollX: 0,
-                    scrollY: 0,
-                    x: 0,
-                    y: 0,
-                    width: captureWidth,
-                    height: captureHeight,
-                    windowWidth: captureWidth,
-                    windowHeight: captureHeight,
+                    windowWidth: PDF_WIDTH,
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'] },
