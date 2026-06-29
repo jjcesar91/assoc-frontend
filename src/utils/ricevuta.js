@@ -373,7 +373,9 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
             { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#333333' }], margin: [0, 10, 0, 16] },
             {
                 table: {
-                    widths: ['25%', '25%', '30%', '20%'],
+                    // Larghezze assolute (pt): l'area utile A4 con margini 40pt è ~515pt.
+                    // pdfmake NON supporta le percentuali nelle width.
+                    widths: [120, 120, 160, 115],
                     body: [
                         [headerCell('TIPO DOCUMENTO'), headerCell('NUMERO DOCUMENTO'), headerCell('DATA DOCUMENTO'), headerCell('STATO DOCUMENTO')],
                         [valueCell(data.tipoDocumento), valueCell(data.numeroDocumento), valueCell(data.dataDocumento), valueCell(data.statoLabel)],

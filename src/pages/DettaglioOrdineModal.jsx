@@ -711,9 +711,11 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
             {preparingCom && (
                 <div className="dpm-com-spinner-overlay">
-                    <div className="dpm-com-spinner-box">
-                        <div className="spinner" />
-                        <span>Invio comunicazione in corso…</span>
+                    <div className="dpm-com-progress-box">
+                        <span className="dpm-com-progress-label">Invio comunicazione in corso…</span>
+                        <div className="dpm-com-progress">
+                            <div className="dpm-com-progress-bar" />
+                        </div>
                     </div>
                 </div>
             )}
