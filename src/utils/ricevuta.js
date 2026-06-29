@@ -225,12 +225,39 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
     <div class="footer-text">${footerText}</div>
     <div class="separator">_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _</div>`;
 
+    const dataDocumento = (p.data_ricevuta || p.data_pagamento)
+        ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '';
+
     return {
         css: RICEVUTA_CSS,
         body,
         title: `Ricevuta ${p.numero_ricevuta || p.id}`,
         importoFormatted,
         isProforma,
+        // Dati strutturati per la generazione del PDF vettoriale (pdfmake),
+        // indipendente dal rendering HTML/canvas.
+        data: {
+            societa: {
+                denominazione: societa?.denominazione || '',
+                address: societaAddress,
+                codiceFiscale: societa?.codice_fiscale || '',
+                logoUrl,
+            },
+            tipoDocumento: isProforma ? 'PROFORMA' : 'RICEVUTA',
+            numeroDocumento: isProforma ? '' : (p.numero_ricevuta || ''),
+            dataDocumento,
+            statoLabel,
+            intestatario: (p.intestatario || '').toUpperCase(),
+            codiceFiscaleIntestatario: p.codice_fiscale || codiceFiscaleSocio || p.partita_iva || '',
+            modalitaLabel,
+            indirizzo: indirizzoSocio,
+            datiPagatore,
+            note: p.note || '',
+            lineItems,
+            importoFormatted,
+            footerText,
+        },
     };
 }
 
@@ -250,81 +277,162 @@ export async function buildRicevutaHtml(p, { societa, products, autoPrint = fals
 </html>`;
 }
 
-/**
- * Attende che tutte le immagini (es. logo) del container siano caricate.
- * html2canvas non aspetta il load delle immagini: senza questa attesa il logo
- * può risultare mancante nel PDF. Timeout di sicurezza per non bloccare l'invio.
- * @param {HTMLElement} el
- * @param {number} timeoutMs
- */
-function waitForImages(el, timeoutMs = 3000) {
-    const imgs = Array.from(el.querySelectorAll('img'));
-    if (imgs.length === 0) return Promise.resolve();
-    const loaders = imgs.map(img => {
-        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-        return new Promise(resolve => {
-            img.addEventListener('load', resolve, { once: true });
-            img.addEventListener('error', resolve, { once: true });
+/** Scarica un'immagine e la converte in data URL base64 (per pdfmake). */
+async function fetchImageAsDataUrl(url) {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise((resolve) => {
+            const fr = new FileReader();
+            fr.onloadend = () => resolve(typeof fr.result === 'string' ? fr.result : null);
+            fr.onerror = () => resolve(null);
+            fr.readAsDataURL(blob);
         });
-    });
-    return Promise.race([
-        Promise.all(loaders),
-        new Promise(resolve => setTimeout(resolve, timeoutMs)),
-    ]);
+    } catch {
+        return null;
+    }
 }
 
+let _pdfMakePromise = null;
+async function getPdfMake() {
+    if (_pdfMakePromise) return _pdfMakePromise;
+    _pdfMakePromise = (async () => {
+        const pdfMakeMod = await import('pdfmake/build/pdfmake');
+        const vfsMod = await import('pdfmake/build/vfs_fonts');
+        const pdfMake = pdfMakeMod.default || pdfMakeMod;
+        const vfs = vfsMod.vfs || vfsMod.default?.vfs || vfsMod.default || (vfsMod.pdfMake && vfsMod.pdfMake.vfs);
+        if (vfs && !pdfMake.vfs) pdfMake.vfs = vfs;
+        return pdfMake;
+    })();
+    return _pdfMakePromise;
+}
+
+const GREY_HEADER = '#f3f4f6';
+const BORDER = '#cccccc';
+
 /**
- * Genera la ricevuta come PDF e ritorna il contenuto in base64 (senza prefisso data URI).
- * Usa html2pdf.js renderizzando il documento in un container nascosto ma catturabile.
+ * Genera la ricevuta come PDF (vettoriale, via pdfmake) e ne ritorna il contenuto
+ * in base64 (senza prefisso data URI).
+ *
+ * Scelta architetturale: pdfmake costruisce il PDF direttamente dai dati, senza
+ * rasterizzare il DOM (niente html2canvas). Elimina così alla radice i problemi
+ * di pagina bianca / margini tagliati che affliggevano l'approccio basato su
+ * screenshot del DOM, e produce testo nitido e file più leggeri.
  * @returns {Promise<string>} base64 del PDF
  */
 export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
-    const { css, body } = await buildRicevutaDocument(p, { societa, products });
-    const html2pdf = (await import('html2pdf.js')).default;
+    const { data } = await buildRicevutaDocument(p, { societa, products });
+    const pdfMake = await getPdfMake();
 
-    // Approccio robusto: renderizziamo il documento ON-SCREEN all'origine del
-    // viewport (0,0) e lasciamo che html2canvas rilevi automaticamente il bounding
-    // box (nessun override di windowWidth/width/height/x/y). html2canvas clona il
-    // nodo in un proprio iframe (NON fa uno screenshot dello schermo), quindi il
-    // fatto che l'elemento sia coperto dall'overlay del modal + spinner lo rende
-    // invisibile all'utente senza compromettere la cattura. Renderizzare invece
-    // fuori schermo (top:-9999 o z-index molto negativo) mandava in tilt i calcoli
-    // di html2canvas → pagina bianca oppure taglio dei margini.
-    const CONTENT_WIDTH = 794; // ≈ A4 a 96dpi
-
-    // Il CSS della ricevuta usa la regola `body { ... padding: 20px }`: iniettata così
-    // com'è inquinerebbe il <body> reale e il clone di html2canvas. La rendiamo quindi
-    // locale al contenuto sostituendo il selettore `body` con `.ricevuta-root`.
-    const scopedCss = css.replace(/\bbody\b/g, '.ricevuta-root');
-
-    // z-index 0 / nessuno: l'overlay del modal (z 1200) e lo spinner (z 1900) stanno
-    // sopra e lo nascondono. box-sizing:border-box così la padding non causa overflow.
-    const content = document.createElement('div');
-    content.className = 'ricevuta-root';
-    content.style.cssText = `position:fixed;top:0;left:0;z-index:0;box-sizing:border-box;width:${CONTENT_WIDTH}px;background:#ffffff;`;
-    content.innerHTML = `<style>${scopedCss}</style>${body}`;
-    document.body.appendChild(content);
-
-    await waitForImages(content);
-
-    try {
-        const dataUri = await html2pdf()
-            .set({
-                margin: [10, 10, 10, 10],
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'] },
-            })
-            .from(content)
-            .outputPdf('datauristring');
-        // dataUri = "data:application/pdf;base64,...."
-        return dataUri.split(',')[1] || '';
-    } finally {
-        document.body.removeChild(content);
+    // Logo (solo PNG/JPEG: pdfmake non gestisce SVG come immagine raster).
+    let logoImage = null;
+    if (data.societa.logoUrl) {
+        const dataUrl = await fetchImageAsDataUrl(data.societa.logoUrl);
+        if (dataUrl && /^data:image\/(png|jpe?g);/i.test(dataUrl)) logoImage = dataUrl;
     }
+
+    const headerCell = (text) => ({ text, style: 'th', fillColor: GREY_HEADER });
+    const valueCell = (text, extra = {}) => ({ text: text || '', style: 'td', ...extra });
+    const footerPlain = (data.footerText || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+
+    const docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [40, 36, 40, 40],
+        defaultStyle: { fontSize: 9, color: '#000000' },
+        styles: {
+            th: { fontSize: 7.5, bold: true, color: '#555555' },
+            td: { fontSize: 9, bold: true },
+            itemTh: { fontSize: 9, bold: true, fillColor: GREY_HEADER },
+        },
+        content: [
+            {
+                columns: [
+                    logoImage
+                        ? { image: logoImage, fit: [150, 64], width: 160 }
+                        : { text: '', width: 160 },
+                    {
+                        width: '*',
+                        stack: [
+                            { text: data.societa.denominazione, bold: true, fontSize: 13, alignment: 'right' },
+                            { text: data.societa.address, fontSize: 9, color: '#444444', alignment: 'right', margin: [0, 2, 0, 0] },
+                            { text: `CF: ${data.societa.codiceFiscale}`, fontSize: 9, color: '#444444', alignment: 'right' },
+                        ],
+                    },
+                ],
+            },
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#333333' }], margin: [0, 10, 0, 16] },
+            {
+                table: {
+                    widths: ['25%', '25%', '30%', '20%'],
+                    body: [
+                        [headerCell('TIPO DOCUMENTO'), headerCell('NUMERO DOCUMENTO'), headerCell('DATA DOCUMENTO'), headerCell('STATO DOCUMENTO')],
+                        [valueCell(data.tipoDocumento), valueCell(data.numeroDocumento), valueCell(data.dataDocumento), valueCell(data.statoLabel)],
+                        [{ ...headerCell('INTESTATARIO'), colSpan: 2 }, {}, headerCell('CODICE FISCALE / PARTITA IVA INTESTATARIO'), headerCell("MODALITA' PAGAMENTO")],
+                        [{ ...valueCell(data.intestatario), colSpan: 2 }, {}, valueCell(data.codiceFiscaleIntestatario), valueCell(data.modalitaLabel)],
+                        [{ ...headerCell('INDIRIZZO'), colSpan: 2 }, {}, { ...headerCell('DATI DI CHI HA EFFETTUATO IL PAGAMENTO'), colSpan: 2 }, {}],
+                        [{ ...valueCell(data.indirizzo), colSpan: 2 }, {}, { ...valueCell(data.datiPagatore), colSpan: 2 }, {}],
+                        [{ ...headerCell('NOTE'), colSpan: 4 }, {}, {}, {}],
+                        [{ ...valueCell(data.note), colSpan: 4 }, {}, {}, {}],
+                    ],
+                },
+                layout: {
+                    hLineWidth: () => 0.5,
+                    vLineWidth: () => 0.5,
+                    hLineColor: () => BORDER,
+                    vLineColor: () => BORDER,
+                    paddingTop: () => 4,
+                    paddingBottom: () => 4,
+                    paddingLeft: () => 6,
+                    paddingRight: () => 6,
+                },
+                margin: [0, 0, 0, 16],
+            },
+            {
+                table: {
+                    headerRows: 1,
+                    widths: ['*', 'auto', 'auto', 'auto'],
+                    body: [
+                        [
+                            { text: 'Descrizione', style: 'itemTh' },
+                            { text: 'Qtà', style: 'itemTh', alignment: 'center' },
+                            { text: 'Costo unitario', style: 'itemTh', alignment: 'right' },
+                            { text: 'Subtotale', style: 'itemTh', alignment: 'right' },
+                        ],
+                        ...data.lineItems.map((li) => [
+                            { text: li.descrizione || '', fontSize: 9 },
+                            { text: li.qty !== null && li.qty !== undefined ? String(li.qty) : '—', fontSize: 9, alignment: 'center' },
+                            { text: li.unitPrice !== null && li.unitPrice !== undefined ? li.unitPrice.toFixed(2).replace('.', ',') : '—', fontSize: 9, alignment: 'right' },
+                            { text: li.subtotale !== null && li.subtotale !== undefined ? li.subtotale.toFixed(2).replace('.', ',') : '—', fontSize: 9, alignment: 'right' },
+                        ]),
+                        [
+                            { text: 'TOTALE', bold: true, colSpan: 3, margin: [0, 2, 0, 2] }, {}, {},
+                            { text: data.importoFormatted, bold: true, alignment: 'right', margin: [0, 2, 0, 2] },
+                        ],
+                    ],
+                },
+                layout: {
+                    hLineWidth: (i, node) => (i === node.table.body.length - 1 || i === node.table.body.length ? 1.2 : 0.5),
+                    vLineWidth: () => 0.5,
+                    hLineColor: () => BORDER,
+                    vLineColor: () => BORDER,
+                    paddingTop: () => 6,
+                    paddingBottom: () => 6,
+                    paddingLeft: () => 8,
+                    paddingRight: () => 8,
+                },
+            },
+            { text: footerPlain, fontSize: 7.5, color: '#555555', margin: [0, 18, 0, 14] },
+            { text: '_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _', color: '#999999', alignment: 'center' },
+        ],
+    };
+
+    return await new Promise((resolve, reject) => {
+        try {
+            pdfMake.createPdf(docDefinition).getBase64((b64) => resolve(b64 || ''));
+        } catch (e) {
+            reject(e);
+        }
+    });
 }
