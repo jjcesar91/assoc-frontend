@@ -282,32 +282,30 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     const { css, body } = await buildRicevutaDocument(p, { societa, products });
     const html2pdf = (await import('html2pdf.js')).default;
 
-    // Schema identico al PDF del bilancio in Contabilita (che funziona senza tagli
-    // né pagine bianche):
-    //  - il wrapper è solo un contenitore di posizionamento fuori schermo (no width);
-    //  - il CONTENUTO ha width esplicita + box-sizing:border-box (la padding non
-    //    causa overflow);
-    //  - html2canvas riceve solo `windowWidth`, leggermente MAGGIORE della larghezza
-    //    del contenuto: il margine extra evita il taglio del bordo sinistro, mentre
-    //    la larghezza fissa del documento evita la pagina bianca.
+    // Approccio robusto: renderizziamo il documento ON-SCREEN all'origine del
+    // viewport (0,0) e lasciamo che html2canvas rilevi automaticamente il bounding
+    // box (nessun override di windowWidth/width/height/x/y). html2canvas clona il
+    // nodo in un proprio iframe (NON fa uno screenshot dello schermo), quindi il
+    // fatto che l'elemento sia coperto dall'overlay del modal + spinner lo rende
+    // invisibile all'utente senza compromettere la cattura. Renderizzare invece
+    // fuori schermo (top:-9999 o z-index molto negativo) mandava in tilt i calcoli
+    // di html2canvas → pagina bianca oppure taglio dei margini.
     const CONTENT_WIDTH = 794; // ≈ A4 a 96dpi
-    const WINDOW_WIDTH = CONTENT_WIDTH + 40; // buffer anti-taglio
 
     // Il CSS della ricevuta usa la regola `body { ... padding: 20px }`: iniettata così
     // com'è inquinerebbe il <body> reale e il clone di html2canvas. La rendiamo quindi
     // locale al contenuto sostituendo il selettore `body` con `.ricevuta-root`.
     const scopedCss = css.replace(/\bbody\b/g, '.ricevuta-root');
 
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
+    // z-index 0 / nessuno: l'overlay del modal (z 1200) e lo spinner (z 1900) stanno
+    // sopra e lo nascondono. box-sizing:border-box così la padding non causa overflow.
     const content = document.createElement('div');
     content.className = 'ricevuta-root';
-    content.style.cssText = `box-sizing:border-box;width:${CONTENT_WIDTH}px;background:#ffffff;`;
+    content.style.cssText = `position:fixed;top:0;left:0;z-index:0;box-sizing:border-box;width:${CONTENT_WIDTH}px;background:#ffffff;`;
     content.innerHTML = `<style>${scopedCss}</style>${body}`;
-    wrapper.appendChild(content);
-    document.body.appendChild(wrapper);
+    document.body.appendChild(content);
 
-    await waitForImages(wrapper);
+    await waitForImages(content);
 
     try {
         const dataUri = await html2pdf()
@@ -318,7 +316,6 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
                     scale: 2,
                     useCORS: true,
                     backgroundColor: '#ffffff',
-                    windowWidth: WINDOW_WIDTH,
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'] },
@@ -328,6 +325,6 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
         // dataUri = "data:application/pdf;base64,...."
         return dataUri.split(',')[1] || '';
     } finally {
-        document.body.removeChild(wrapper);
+        document.body.removeChild(content);
     }
 }
