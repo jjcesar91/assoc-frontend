@@ -303,7 +303,15 @@ async function getPdfMake() {
         const vfsMod = await import('pdfmake/build/vfs_fonts');
         const pdfMake = pdfMakeMod.default || pdfMakeMod;
         const vfs = vfsMod.vfs || vfsMod.default?.vfs || vfsMod.default || (vfsMod.pdfMake && vfsMod.pdfMake.vfs);
-        if (vfs && !pdfMake.vfs) pdfMake.vfs = vfs;
+        // In pdfmake 0.3 i font vanno registrati nel virtual file system tramite
+        // addVirtualFileSystem(); impostare `pdfMake.vfs` non ha alcun effetto e
+        // getBase64 resterebbe appeso non trovando il font Roboto. I font di default
+        // (Roboto) sono già configurati nel costruttore del singleton.
+        if (vfs && typeof pdfMake.addVirtualFileSystem === 'function') {
+            pdfMake.addVirtualFileSystem(vfs);
+        } else if (vfs) {
+            pdfMake.vfs = vfs; // fallback per pdfmake 0.2.x
+        }
         return pdfMake;
     })();
     return _pdfMakePromise;
@@ -429,9 +437,16 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     };
 
     return await new Promise((resolve, reject) => {
+        // Safety net: se per qualunque motivo getBase64 non richiamasse la callback,
+        // evitiamo che lo spinner resti appeso a tempo indefinito.
+        const timer = setTimeout(() => reject(new Error('Timeout generazione PDF ricevuta')), 20000);
         try {
-            pdfMake.createPdf(docDefinition).getBase64((b64) => resolve(b64 || ''));
+            pdfMake.createPdf(docDefinition).getBase64((b64) => {
+                clearTimeout(timer);
+                resolve(b64 || '');
+            });
         } catch (e) {
+            clearTimeout(timer);
             reject(e);
         }
     });
