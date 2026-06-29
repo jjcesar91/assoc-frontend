@@ -438,18 +438,12 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
         ],
     };
 
-    return await new Promise((resolve, reject) => {
-        // Safety net: se per qualunque motivo getBase64 non richiamasse la callback,
-        // evitiamo che lo spinner resti appeso a tempo indefinito.
-        const timer = setTimeout(() => reject(new Error('Timeout generazione PDF ricevuta')), 20000);
-        try {
-            pdfMake.createPdf(docDefinition).getBase64((b64) => {
-                clearTimeout(timer);
-                resolve(b64 || '');
-            });
-        } catch (e) {
-            clearTimeout(timer);
-            reject(e);
-        }
-    });
+    // pdfmake 0.3: getBase64() è async e ritorna una Promise<string> (NON usa callback,
+    // come invece faceva la 0.2). Ritorna il base64 senza prefisso data URI.
+    const pdf = pdfMake.createPdf(docDefinition);
+    const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout generazione PDF ricevuta')), 20000)
+    );
+    const b64 = await Promise.race([pdf.getBase64(), timeout]);
+    return b64 || '';
 }
