@@ -230,7 +230,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         try {
             const base64 = await generateRicevutaPdfBase64(updated, { societa, products });
             if (base64) {
-                allegati = [{ filename: `Ricevuta_${updated?.numero_ricevuta || updated?.id || 'pagamento'}.pdf`, content: base64 }];
+                // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
+                const safeNumero = String(updated?.numero_ricevuta || updated?.id || 'pagamento').replace(/[\\/:*?"<>|]/g, '-');
+                allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
             }
         } catch (e) {
             console.error('Errore generazione PDF ricevuta per allegato', e);
