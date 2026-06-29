@@ -552,3 +552,31 @@
     transition: background 0.15s;
 }
 .dpm-confirm-btn-ok:hover { background: var(--danger); }
+
+/* Snackbar feedback invio comunicazione */
+.dpm-snackbar {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 13px 22px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+    z-index: 2000;
+    white-space: nowrap;
+    animation: dpm-snackbar-in 0.28s ease;
+}
+
+.dpm-snackbar-success { background: var(--success); }
+.dpm-snackbar-error   { background: var(--danger); }
+
+@keyframes dpm-snackbar-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

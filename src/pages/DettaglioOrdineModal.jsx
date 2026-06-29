@@ -23,6 +23,15 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const chiediResolveRef = useRef(null);
     const sendDataRef = useRef(null);
 
+    // Feedback (snackbar) dopo l'invio della comunicazione
+    const [comFeedback, setComFeedback] = useState(null);
+    const comFeedbackTimerRef = useRef(null);
+    const showComFeedback = (text, type = 'success') => {
+        setComFeedback({ text, type });
+        clearTimeout(comFeedbackTimerRef.current);
+        comFeedbackTimerRef.current = setTimeout(() => setComFeedback(null), 3000);
+    };
+
     // Etichette
     const [etichette, setEtichette] = useState([]);
     const [originalEtichette, setOriginalEtichette] = useState([]); // pool fisso all'apertura
@@ -38,6 +47,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
     const todayStr = new Date().toISOString().split('T')[0];
+
+    // Pulizia timer snackbar allo smontaggio
+    useEffect(() => () => clearTimeout(comFeedbackTimerRef.current), []);
 
     // Sincronizza etichette locali all'apertura/cambio ordine
     useEffect(() => {
@@ -169,8 +181,10 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
     const handleChiediConfirm = async () => {
         setChiediModal(m => (m ? { ...m, sending: true } : m));
-        await sendComunicazioneEmail(sendDataRef.current);
+        const res = await sendComunicazioneEmail(sendDataRef.current);
         setChiediModal(null);
+        if (res?.ok) showComFeedback(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
+        else showComFeedback(res?.error || 'Errore invio comunicazione', 'error');
         if (chiediResolveRef.current) { chiediResolveRef.current(); chiediResolveRef.current = null; }
     };
 
@@ -226,7 +240,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
         if (config.stato === 'AUTOMATICA') {
             if (!socioId || !email) return; // nessuna email → niente invio automatico
-            await sendComunicazioneEmail(sendData);
+            const res = await sendComunicazioneEmail(sendData);
+            if (res?.ok) showComFeedback(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
+            else showComFeedback(res?.error || 'Errore invio comunicazione', 'error');
             return;
         }
 
@@ -676,6 +692,15 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 onConfirm={handleChiediConfirm}
                 onClose={handleChiediClose}
             />
+
+            {comFeedback && (
+                <div className={`dpm-snackbar dpm-snackbar-${comFeedback.type}`}>
+                    {comFeedback.type === 'success'
+                        ? <Check size={18} strokeWidth={2.5} />
+                        : <X size={18} strokeWidth={2.5} />}
+                    {comFeedback.text}
+                </div>
+            )}
         </div>
     );
 };

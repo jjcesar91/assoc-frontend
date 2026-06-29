@@ -246,7 +246,7 @@ const Layout = ({ children, onLogout, title }) => {
                                 value={selectedSocietaId}
                                 onChange={(e) => setSelectedSocietaId(e.target.value)}
                             >
-                                {societaList.map(s => (
+                                {[...societaList].sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' })).map(s => (
                                     <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
                                 ))}
                             </select>

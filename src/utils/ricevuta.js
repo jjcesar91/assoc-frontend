@@ -311,20 +311,42 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     // Con top:-9999px html2canvas cattura l'area (0,0) e produce una pagina bianca.
     // Lo posizioniamo quindi a (0,0) ma dietro l'app (z-index negativo) così non è
     // visibile all'utente, mentre html2canvas legge direttamente il nodo DOM.
+    const PDF_WIDTH = 794; // ≈ A4 a 96dpi
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;top:0;left:0;width:794px;background:#ffffff;z-index:-9999;pointer-events:none;';
+    wrapper.style.cssText = `position:fixed;top:0;left:0;width:${PDF_WIDTH}px;background:#ffffff;z-index:-9999;pointer-events:none;`;
     wrapper.innerHTML = `<style>${css}</style><div style="padding:20px;">${body}</div>`;
     document.body.appendChild(wrapper);
 
     await waitForImages(wrapper);
 
     try {
+        // Misura le dimensioni reali del contenuto DOPO il layout/caricamento immagini.
+        // Passandole esplicitamente a html2canvas (width/height + windowWidth/windowHeight)
+        // la cattura non dipende più dalla posizione del wrapper nel viewport: senza queste
+        // dimensioni un wrapper fuori flusso (z-index negativo) veniva catturato come pagina
+        // bianca, generando un PDF "vuoto" di ~3kb.
+        const captureWidth = wrapper.scrollWidth || PDF_WIDTH;
+        const captureHeight = wrapper.scrollHeight || wrapper.offsetHeight || 1123;
+
         const dataUri = await html2pdf()
             .set({
                 margin: [10, 10, 10, 10],
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff' },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    scrollX: 0,
+                    scrollY: 0,
+                    x: 0,
+                    y: 0,
+                    width: captureWidth,
+                    height: captureHeight,
+                    windowWidth: captureWidth,
+                    windowHeight: captureHeight,
+                },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] },
             })
             .from(wrapper)
             .outputPdf('datauristring');
