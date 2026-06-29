@@ -450,7 +450,7 @@ const Ordini = () => {
                                                                 ) : p.intestatario}
                                                             </div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
-                                                                {p.data_pagamento} {p.createdAt ? `- h ${new Date(p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''} <User size={12}/> {p.utente_nome || 'ADMIN'}
+                                                                {new Date(p.updatedAt || p.createdAt).toLocaleDateString('it-IT')} {(p.updatedAt || p.createdAt) ? `- h ${new Date(p.updatedAt || p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''} <User size={12}/> {p.modificato_da || p.utente_nome || 'ADMIN'}
                                                                 {isAnnullato && <span style={{color:'var(--danger)', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>

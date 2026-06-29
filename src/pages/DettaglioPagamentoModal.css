@@ -580,3 +580,27 @@
     from { opacity: 0; transform: translateX(-50%) translateY(16px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* Overlay spinner: preparazione/invio comunicazione dopo la conversione */
+.dpm-com-spinner-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1900;
+}
+
+.dpm-com-spinner-box {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 20px 26px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}

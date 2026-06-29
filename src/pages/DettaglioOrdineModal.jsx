@@ -26,6 +26,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     // Feedback (snackbar) dopo l'invio della comunicazione
     const [comFeedback, setComFeedback] = useState(null);
     const comFeedbackTimerRef = useRef(null);
+    // Spinner mentre si prepara la comunicazione (generazione PDF + recupero socio)
+    // prima che compaia il modal di conferma invio.
+    const [preparingCom, setPreparingCom] = useState(false);
     const showComFeedback = (text, type = 'success') => {
         setComFeedback({ text, type });
         clearTimeout(comFeedbackTimerRef.current);
@@ -152,6 +155,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 const updated = await res.json();
                 setShowConvertForm(false);
                 if (onConvertProforma) onConvertProforma(updated);
+                // 1. Feedback immediato: proforma convertita correttamente in pagamento.
+                showComFeedback('Pagamento registrato', 'success');
+                // 2. Prepara/invia la comunicazione (spinner gestito in handlePagamentoComunicazione).
                 try {
                     await handlePagamentoComunicazione(updated);
                 } catch (e) {
@@ -199,6 +205,10 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         const config = getComConfig(societa, 'pagamento');
         if (config.stato === 'NON_ATTIVA') return;
 
+        // Spinner: stiamo preparando la comunicazione (PDF + dati socio) prima che
+        // compaia il modal di conferma invio / parta l'invio automatico.
+        setPreparingCom(true);
+        try {
         const socioId = updated?.socio_id || pagamento?.socio_id || null;
 
         // Recupera email e nominativo del socio
@@ -248,7 +258,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             return;
         }
 
-        // CHIEDI
+        // CHIEDI: nascondi lo spinner e mostra il modal di conferma invio.
+        setPreparingCom(false);
         await askInvioComunicazione({
             titolo: 'Comunicazione pagamento registrato',
             destinatario: email,
@@ -257,6 +268,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             allegatoNome: allegati[0]?.filename,
             sendData,
         });
+        } finally {
+            setPreparingCom(false);
+        }
     };
 
     const handleConfermaAnnulla = () => {
@@ -694,6 +708,15 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 onConfirm={handleChiediConfirm}
                 onClose={handleChiediClose}
             />
+
+            {preparingCom && (
+                <div className="dpm-com-spinner-overlay">
+                    <div className="dpm-com-spinner-box">
+                        <div className="spinner" />
+                        <span>Invio comunicazione in corso…</span>
+                    </div>
+                </div>
+            )}
 
             {comFeedback && (
                 <div className={`dpm-snackbar dpm-snackbar-${comFeedback.type}`}>
