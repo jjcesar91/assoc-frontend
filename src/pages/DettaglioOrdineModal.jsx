@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Ban, Calendar, Check, Plus, Tag, Trash2, User, X } from 'lucide-react';
+import { AlertTriangle, Ban, Calendar, Check, Download, FileCheck, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '../utils/ordineUtils';
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
 import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } from '../utils/comunicazioniOrdini';
-import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
+import { generateRicevutaPdfBase64, openRicevutaCaricata } from '../utils/ricevuta';
 import './DettaglioPagamentoModal.css';
 
 const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -33,6 +33,16 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         setComFeedback({ text, type });
         clearTimeout(comFeedbackTimerRef.current);
         comFeedbackTimerRef.current = setTimeout(() => setComFeedback(null), 3000);
+    };
+
+    // Apertura/download della ricevuta di pagamento caricata dal socio
+    const [apriRicevutaBusy, setApriRicevutaBusy] = useState(false);
+    const handleApriRicevuta = async () => {
+        if (apriRicevutaBusy) return;
+        setApriRicevutaBusy(true);
+        const r = await openRicevutaCaricata(pagamento.id);
+        setApriRicevutaBusy(false);
+        if (!r.ok) showComFeedback(r.error || 'Impossibile aprire la ricevuta', 'error');
     };
 
     // Etichette
@@ -426,6 +436,36 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Ricevuta di pagamento caricata dal socio ── */}
+                    {pagamento.ricevuta_uploaded_at && (
+                        <div className="dpm-card">
+                            <div className="dpm-card-label dpm-card-label-row">
+                                <span className="dpm-card-label-icon"><FileCheck size={11} /> Ricevuta di pagamento</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 600, wordBreak: 'break-word' }}>
+                                        {pagamento.ricevuta_file_nome || 'Ricevuta caricata'}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                        Caricata il {new Date(pagamento.ricevuta_uploaded_at).toLocaleString('it-IT', {
+                                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                                        })}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="dpm-btn-converti"
+                                    onClick={handleApriRicevuta}
+                                    disabled={apriRicevutaBusy}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                                >
+                                    <Download size={15} /> {apriRicevutaBusy ? 'Apertura…' : 'Apri / Scarica'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Quote ── */}
                     {quoteItems && (
