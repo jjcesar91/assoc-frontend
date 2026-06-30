@@ -96,7 +96,24 @@ const NuovoOrdine = () => {
         const socioId = created?.socio_id || selectedSocio?.id || null;
         // L'email può essere sul socio oppure sull'account utente collegato
         // (stessa precedenza della scheda socio): consideriamo entrambe.
-        const email = selectedSocio?.email || selectedSocio?.user?.email || null;
+        // selectedSocio proviene dalla ricerca e può NON contenere il campo email:
+        // in tal caso recuperiamo il socio aggiornato dal backend (come fanno le
+        // altre comunicazioni), così non segnaliamo erroneamente "email mancante".
+        let email = selectedSocio?.email || selectedSocio?.user?.email || null;
+        let nomeDestinatario = nomeSocio(selectedSocio) || created?.intestatario || '';
+        if (socioId && !email) {
+            try {
+                const token = localStorage.getItem('token');
+                const r = await fetch(`/users/api/soci/${socioId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
+                if (r.ok) {
+                    const s = await r.json();
+                    email = s.email || s.user?.email || null;
+                    nomeDestinatario = nomeSocio(s) || nomeDestinatario;
+                }
+            } catch { /* ignore */ }
+        }
         const modalita = paymentData?.modalita_pagamento || created?.modalita_pagamento;
         const contoDest = paymentData?.conto_destinazione || created?.conto_destinazione;
 
@@ -137,7 +154,7 @@ const NuovoOrdine = () => {
 
         const istruzioni = buildIstruzioniPagamento(conti, contoDest, modalita);
         const testo = applyShortcodes(config.testo, {
-            nome: nomeSocio(selectedSocio) || created?.intestatario || '',
+            nome: nomeDestinatario,
             importo: formatImporto(created?.importo),
             numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
             istruzioni,
