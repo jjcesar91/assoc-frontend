@@ -33,6 +33,18 @@ const GeneraOrdineModal = ({
     const [dataRicevuta, setDataRicevuta] = useState(todayStr); // YYYY-MM-DD
     const [nextNumeroRicevuta, setNextNumeroRicevuta] = useState(null);
     const [minDataRicevuta, setMinDataRicevuta] = useState('');
+    // Progressivo grezzo (intero) restituito dal backend: se === 1 significa che è
+    // la prima ricevuta dell'anno per questa società.
+    const [nextNumeroRaw, setNextNumeroRaw] = useState(null);
+    // Modal per scegliere il numero di partenza alla prima ricevuta.
+    const [showStartNumberModal, setShowStartNumberModal] = useState(false);
+    const [startNumberInput, setStartNumberInput] = useState('1');
+
+    const isFirstRicevuta = nextNumeroRaw === 1;
+    // Suffisso "/2026" o "/2025-26" ricavato dal numero formattato, per l'anteprima.
+    const numeroSuffix = nextNumeroRicevuta && nextNumeroRicevuta.includes('/')
+        ? nextNumeroRicevuta.slice(nextNumeroRicevuta.indexOf('/'))
+        : '';
 
     const maxDataRicevuta = useMemo(() => {
         if (!annoRicevuta) return todayStr;
@@ -110,6 +122,7 @@ const GeneraOrdineModal = ({
         let cancelled = false;
         const fetchNextNumero = async () => {
             setNextNumeroRicevuta(null);
+            setNextNumeroRaw(null);
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(
@@ -119,6 +132,7 @@ const GeneraOrdineModal = ({
                 if (res.ok && !cancelled) {
                     const data = await res.json();
                     setNextNumeroRicevuta(data.formatted);
+                    setNextNumeroRaw(data.nextNumero ?? null);
                     setMinDataRicevuta(data.lastPaymentDate || '');
                 }
             } catch (e) {
@@ -148,8 +162,22 @@ const GeneraOrdineModal = ({
         return `${d}/${m}/${y}`;
     };
 
-    const handleConfirm = (tipoDocumento = 'pagamento') => {
+    const handleConfirm = (tipoDocumento = 'pagamento', progressivoIniziale = null) => {
         if (submitting) return;
+
+        // Prima ricevuta dell'anno: chiedi da quale numero far partire la numerazione
+        // (solo per i pagamenti con ricevuta, non per le proforma).
+        if (
+            tipoDocumento === 'pagamento' &&
+            emettiRicevuta === 'SI' &&
+            isFirstRicevuta &&
+            progressivoIniziale == null
+        ) {
+            setStartNumberInput(String(nextNumeroRaw || 1));
+            setShowStartNumberModal(true);
+            return;
+        }
+
         setSubmitting(true);
         const periodoStr = (hasSubscription && subscriptionDates)
             ? ` [${formatDateIT(subscriptionDates.dataInizio)} - ${formatDateIT(subscriptionDates.dataFine)}]`
@@ -215,13 +243,23 @@ const GeneraOrdineModal = ({
             note: note,
             emetti_ricevuta: tipoDocumento === 'proforma' ? 'NO' : emettiRicevuta,
             anno_ricevuta: tipoDocumento === 'proforma' ? null : annoRicevuta,
+            progressivo_iniziale: tipoDocumento === 'proforma' ? null : progressivoIniziale,
             socio_id: socio?.id || null,
             tipo_documento: tipoDocumento,
         };
         onConfirm(payload);
     };
 
+    // Conferma del numero di partenza scelto nella modal della prima ricevuta.
+    const handleStartNumberConfirm = () => {
+        const n = parseInt(startNumberInput, 10);
+        if (isNaN(n) || n < 1) return;
+        setShowStartNumberModal(false);
+        handleConfirm('pagamento', n);
+    };
+
     return (
+        <>
         <div className="gpm-overlay">
             <div className="gpm-modal">
                 <div className="gpm-header">
@@ -387,6 +425,62 @@ const GeneraOrdineModal = ({
                 </div>
             </div>
         </div>
+
+        {showStartNumberModal && (
+            <div className="gpm-overlay" style={{ zIndex: 1100 }}>
+                <div className="gpm-modal" style={{ width: '440px' }}>
+                    <div className="gpm-header">
+                        <div className="gpm-title">
+                            <FileText size={20} strokeWidth={2}/> Numero di partenza
+                        </div>
+                        <button className="gpm-close-btn" onClick={() => setShowStartNumberModal(false)}>
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="gpm-body">
+                        <p style={{ margin: '0 0 16px', color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.5 }}>
+                            Questa è la <strong>prima ricevuta</strong> di questa società per l'anno selezionato.
+                            Scegli da quale numero far partire la numerazione (ad esempio se prosegui una
+                            numerazione già iniziata altrove).
+                        </p>
+                        <div className="gpm-field-group">
+                            <label>Numero di partenza</label>
+                            <input
+                                type="number"
+                                min="1"
+                                className="gpm-input"
+                                value={startNumberInput}
+                                autoFocus
+                                onChange={(e) => setStartNumberInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleStartNumberConfirm(); }}
+                            />
+                        </div>
+                        <div style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                            Numero ricevuta:{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                {(() => {
+                                    const n = parseInt(startNumberInput, 10);
+                                    return (!isNaN(n) && n >= 1 ? n : '—') + numeroSuffix;
+                                })()}
+                            </strong>
+                        </div>
+                    </div>
+                    <div className="gpm-footer">
+                        <button className="gpm-submit-btn gpm-submit-btn--proforma" onClick={() => setShowStartNumberModal(false)}>
+                            Annulla
+                        </button>
+                        <button
+                            className="gpm-submit-btn"
+                            onClick={handleStartNumberConfirm}
+                            disabled={(() => { const n = parseInt(startNumberInput, 10); return isNaN(n) || n < 1; })()}
+                        >
+                            <Check size={18} strokeWidth={2}/> Conferma
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 
