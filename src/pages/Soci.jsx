@@ -796,7 +796,7 @@ const Soci = ({ onLogout }) => {
 
         setShowActionsMenu(false);
         setImportLogFilters({ creati: true, saltati: true, errori: true });
-        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false });
+        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords: aziende });
 
         let creati = 0; let saltati = 0; const errori = []; const logs = [];
 
@@ -935,7 +935,7 @@ const Soci = ({ onLogout }) => {
             if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         }
 
-        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true });
+        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true, headers, dataRecords: aziende });
         if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         if (creati > 0) fetchSoci();
         if (importOdooFileRef.current) importOdooFileRef.current.value = '';
