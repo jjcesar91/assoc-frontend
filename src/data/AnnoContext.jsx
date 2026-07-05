@@ -75,21 +75,18 @@ export const AnnoProvider = ({ children }) => {
         [currentRefYear]
     );
 
-    const [selectedAnno, setSelectedAnnoState] = useState(() => {
-        const stored = localStorage.getItem('selectedAnno');
-        return stored ? parseInt(stored, 10) : null;
-    });
+    // All'ingresso nel programma si parte sempre dall'anno associativo corrente
+    // (nessun ripristino da sessioni precedenti).
+    const [selectedAnno, setSelectedAnnoState] = useState(null);
 
     // Quando cambia la società o viene caricata la lista, adegua l'anno se non è nelle opzioni disponibili
     useEffect(() => {
         if (selectedAnno !== null && annoOptions.includes(selectedAnno)) return;
         setSelectedAnnoState(currentRefYear);
-        localStorage.setItem('selectedAnno', String(currentRefYear));
     }, [selectedSocieta, currentRefYear, annoOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setSelectedAnno = (anno) => {
         setSelectedAnnoState(anno);
-        localStorage.setItem('selectedAnno', String(anno));
     };
 
     const formatAnnoLabel = (anno) => {
@@ -102,6 +99,7 @@ export const AnnoProvider = ({ children }) => {
             selectedAnno: selectedAnno ?? currentRefYear,
             setSelectedAnno,
             annoOptions,
+            currentRefYear,
             tipoAnno,
             formatAnnoLabel,
         }}>

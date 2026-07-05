@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar, FileText } from 'lucide-react';
+import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar, FileText, AlertTriangle } from 'lucide-react';
 import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -14,7 +14,7 @@ const GeneraOrdineModal = ({
     subscriptionDates
 }) => {
     const { selectedSocietaId, societaList } = useSocieta();
-    const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
+    const { annoOptions, formatAnnoLabel, currentRefYear } = useAnno();
     const selectedSocieta = useMemo(
         () => societaList?.find(s => s.id == selectedSocietaId) || null,
         [societaList, selectedSocietaId]
@@ -110,7 +110,8 @@ const GeneraOrdineModal = ({
             // Reset other fields as well to defaults if needed
             setModalita('Contanti');
             setEmettiRicevuta('SI');
-            setAnnoRicevuta(selectedAnno);
+            // Alla riapertura la modal mostra sempre l'anno associativo corrente
+            setAnnoRicevuta(currentRefYear);
             setDataRicevuta(todayStr);
             setNote('');
         }
@@ -153,6 +154,8 @@ const GeneraOrdineModal = ({
     };
 
     if (!isOpen) return null;
+
+    const annoDiverso = annoRicevuta != null && annoRicevuta !== currentRefYear;
 
     const hasSubscription = cart.some(i => i.type === 'subscription');
 
@@ -271,7 +274,22 @@ const GeneraOrdineModal = ({
                     </button>
                 </div>
                 <div className="gpm-body">
-                    
+
+                    {annoDiverso && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            marginBottom: '16px', padding: '12px 16px',
+                            background: '#fef3c7', border: '1px solid #f59e0b',
+                            borderRadius: '8px', color: '#7c2d12', fontSize: '0.9rem',
+                        }}>
+                            <AlertTriangle size={20} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                            <span>
+                                Attenzione: stai creando un ordine per l'anno associativo <strong>{formatAnnoLabel(annoRicevuta)}</strong>,
+                                diverso da quello corrente (<strong>{formatAnnoLabel(currentRefYear)}</strong>).
+                            </span>
+                        </div>
+                    )}
+
                     <div className="gpm-top-section">
                         <div className="gpm-field-group">
                             <label>Totale</label>
@@ -329,7 +347,12 @@ const GeneraOrdineModal = ({
                         </div>
                         <div className="gpm-field-group">
                             <label>Anno ricevuta</label>
-                            <select className="gpm-select" value={annoRicevuta ?? ''} onChange={(e) => setAnnoRicevuta(parseInt(e.target.value, 10))}>
+                            <select
+                                className="gpm-select"
+                                style={annoDiverso ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.4)', fontWeight: 700 } : undefined}
+                                value={annoRicevuta ?? ''}
+                                onChange={(e) => setAnnoRicevuta(parseInt(e.target.value, 10))}
+                            >
                                 {annoOptions.map(anno => (
                                     <option key={anno} value={anno}>{formatAnnoLabel(anno)}</option>
                                 ))}

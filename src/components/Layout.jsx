@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, LogOut, User, Edit, Star, UserCheck, ArrowLeftCircle } from 'lucide-react';
+import { Menu, LogOut, User, Edit, Star, UserCheck, ArrowLeftCircle, AlertTriangle } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno } from '../data/AnnoContext';
@@ -63,7 +63,8 @@ const FavShortcutBtn = ({ fav, Icon, onClick }) => {
 const Layout = ({ children, onLogout, title }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { societaList, selectedSocietaId, setSelectedSocietaId } = useSocieta();
-    const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel } = useAnno();
+    const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel, currentRefYear } = useAnno();
+    const annoDiverso = selectedAnno != null && selectedAnno !== currentRefYear;
     const navigate = useNavigate();
 
     // Impersonazione
@@ -266,16 +267,22 @@ const Layout = ({ children, onLogout, title }) => {
                                 {societaList.find(s => s.id == selectedSocietaId)?.denominazione || ''}
                             </span>
                         )}
-                        <select
-                            className="md-select"
-                            style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
-                            value={selectedAnno ?? ''}
-                            onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
+                        <div
+                            title={annoDiverso ? `Attenzione: stai operando su un anno associativo diverso da quello corrente (${formatAnnoLabel(currentRefYear)})` : undefined}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', ...(annoDiverso ? { padding: '2px 6px 2px 8px', borderRadius: '6px', backgroundColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.4)' } : {}) }}
                         >
-                            {annoOptions.map(anno => (
-                                <option key={anno} value={anno} style={{color: 'black'}}>{formatAnnoLabel(anno)}</option>
-                            ))}
-                        </select>
+                            {annoDiverso && <AlertTriangle size={16} color="#7c2d12" strokeWidth={2.5} />}
+                            <select
+                                className="md-select"
+                                style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: annoDiverso ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.2)', color: annoDiverso ? '#7c2d12' : 'white', fontWeight: annoDiverso ? 700 : 'normal' }}
+                                value={selectedAnno ?? ''}
+                                onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
+                            >
+                                {annoOptions.map(anno => (
+                                    <option key={anno} value={anno} style={{color: 'black'}}>{formatAnnoLabel(anno)}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                     <div style={{position:'relative'}}>
                         <button className="icon-btn profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ color: 'white' }}>

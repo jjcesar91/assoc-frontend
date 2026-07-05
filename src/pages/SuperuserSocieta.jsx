@@ -70,7 +70,7 @@ const SuperuserSocieta = () => {
         await handleCreate(dati);
     };
 
-    const handleCreate = async (data) => {
+    const handleCreate = async (data, logoFile) => {
         try {
             const res = await fetch('/users/api/societa', {
                 method: 'POST',
@@ -78,6 +78,20 @@ const SuperuserSocieta = () => {
                 body: JSON.stringify(data),
             });
             if (res.ok) {
+                // Upload del logo (se fornito nel wizard): richiede l'id appena creato
+                if (logoFile) {
+                    try {
+                        const created = await res.json();
+                        const fd = new FormData();
+                        fd.append('logo', logoFile);
+                        await fetch(`/users/api/societa/${created.id}/logo`, {
+                            method: 'POST',
+                            body: fd,
+                        });
+                    } catch (logoErr) {
+                        console.error('Errore caricamento logo società', logoErr);
+                    }
+                }
                 setIsModalOpen(false);
                 fetchAll();
                 fetchSocieta(); // aggiorna il selettore società nel layout
