@@ -1213,11 +1213,11 @@ const Soci = ({ onLogout }) => {
                                                     ? (socio.ragione_sociale || '-')
                                                     : `${socio.cognome} ${socio.nome}`}
                                             </div>
-                                            <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
-                                                {socio.tipo_socio === 'associazione'
-                                                    ? (socio.tipo_associazione || 'Associazione')
-                                                    : `Socio/Tesserato: ${socio.livello}`}
-                                            </div>
+                                            {socio.tipo_socio === 'associazione' && (
+                                                <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
+                                                    {socio.tipo_associazione || 'Associazione'}
+                                                </div>
+                                            )}
                                         </td>
                                         <td>
                                             {socio.data_nascita}
