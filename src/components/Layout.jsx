@@ -274,7 +274,7 @@ const Layout = ({ children, onLogout, title }) => {
                             {annoDiverso && <AlertTriangle size={16} color="#7c2d12" strokeWidth={2.5} />}
                             <select
                                 className="md-select"
-                                style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: annoDiverso ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.2)', color: annoDiverso ? '#7c2d12' : 'white', fontWeight: annoDiverso ? 700 : 'normal' }}
+                                style={{ padding: '8px', paddingRight: '28px', minWidth: '130px', width: 'auto', borderRadius: '4px', border: 'none', backgroundColor: annoDiverso ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.2)', color: annoDiverso ? '#7c2d12' : 'white', fontWeight: annoDiverso ? 700 : 'normal' }}
                                 value={selectedAnno ?? ''}
                                 onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
                             >
