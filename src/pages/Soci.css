@@ -83,6 +83,12 @@
   color: var(--primary);
 }
 
+/* Stato assente (NO): nessun pagamento/iscrizione */
+.chip.assente {
+  background-color: var(--surface-1);
+  color: var(--text-secondary);
+}
+
 /* FAB */
 .fab {
   position: fixed;

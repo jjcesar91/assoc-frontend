@@ -1991,7 +1991,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 <option value="comunicazione">Invia comunicazione</option>
                                 <option value="iscrizione_senza_ricevuta">Iscrizione senza ricevuta</option>
                                 <option value="revoca_iscrizione">Revoca iscrizione</option>
-                                <option value="accetta_socio">Accetta come socio</option>
                                 <option value="nuovo_pagamento">Nuovo ordine</option>
                                 
                                 <optgroup label="Modulistica">
