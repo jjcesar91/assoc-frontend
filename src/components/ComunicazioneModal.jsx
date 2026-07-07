@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, MessageSquare, Check } from 'lucide-react';
+import { X, Mail, MessageSquare, Check, Loader2 } from 'lucide-react';
 import SimpleEditor from './SimpleEditor';
 import { useAlert } from './AlertModal';
 import {
@@ -151,6 +151,8 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
             onClose();
             if (data.warning) {
                 showAlert(data.warning, 'Attenzione', 'warning');
+            } else {
+                showAlert('Comunicazione inviata correttamente', 'Inviata', 'success');
             }
         } catch (error) {
             console.error(error);
@@ -284,7 +286,11 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                         <X size={18} /> Annulla
                     </button>
                     <button className="btn-invia" onClick={handleSubmit} disabled={isSubmitting}>
-                        {isSubmitting ? 'Invio...' : (
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 size={18} className="comunicazione-spin" /> Invio in corso...
+                            </>
+                        ) : (
                             <>
                                 <Check size={18} /> Invia
                             </>

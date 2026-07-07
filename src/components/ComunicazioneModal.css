@@ -154,3 +154,7 @@
 
 .btn-annulla:hover { background-color: color-mix(in srgb, var(--danger) 88%, black); }
 .btn-invia:hover { background-color: color-mix(in srgb, var(--success) 88%, black); }
+
+.btn-invia:disabled { opacity: 0.8; cursor: default; }
+.comunicazione-spin { animation: comunicazione-spin 0.8s linear infinite; }
+@keyframes comunicazione-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
