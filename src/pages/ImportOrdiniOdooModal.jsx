@@ -171,21 +171,21 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
 
     return (
         <div style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            position: 'fixed', inset: 0, background: 'rgba(16, 24, 40, 0.45)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px',
         }}>
             <div style={{
-                backgroundColor: 'white', borderRadius: '12px', padding: '28px',
-                width: '90%', maxWidth: '900px', maxHeight: '85vh',
+                backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '28px',
+                width: '90%', maxWidth: '900px', maxHeight: '90vh',
                 display: 'flex', flexDirection: 'column', gap: '20px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                boxShadow: 'var(--shadow-modal)',
             }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Upload size={20} /> Importa ordini da Odoo
                     </h2>
-                    <button onClick={handleClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#666' }}>
+                    <button onClick={handleClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                         <X size={22} />
                     </button>
                 </div>
@@ -282,7 +282,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                     <button
                         onClick={handleClose}
-                        style={{ padding: '8px 20px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'white', cursor: 'pointer', fontSize: '0.9rem' }}
+                        style={{ padding: '8px 20px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.9rem' }}
                     >
                         {result?.success ? 'Chiudi' : 'Annulla'}
                     </button>

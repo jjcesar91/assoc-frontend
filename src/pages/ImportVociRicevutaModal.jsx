@@ -375,26 +375,26 @@ const ImportVociRicevutaModal = ({ isOpen, onClose, societaId, onImported }) => 
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(16, 24, 40, 0.45)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
         }}>
             <div style={{
-                background: '#fff', borderRadius: '12px',
+                background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
                 width: '900px', maxWidth: '95vw', maxHeight: '90vh',
                 display: 'flex', flexDirection: 'column',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                boxShadow: 'var(--shadow-modal)',
                 overflow: 'hidden',
             }}>
                 {/* Header */}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 20px', borderBottom: '1px solid #eee', flexShrink: 0,
+                    padding: '16px 20px', borderBottom: '1px solid var(--border-color)', flexShrink: 0,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <FileText size={20} color="var(--primary-hover)" />
-                        <span style={{ fontWeight: 700, fontSize: '1rem' }}>Importa voci ricevuta</span>
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Importa voci ricevuta</span>
                     </div>
-                    <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', padding: '4px' }}>
+                    <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}>
                         <X size={20} />
                     </button>
                 </div>

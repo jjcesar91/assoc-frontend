@@ -1,23 +1,22 @@
 .fast-modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(16, 24, 40, 0.45);
+    backdrop-filter: blur(2px);
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 50px;
+    align-items: center;
+    padding: var(--space-4);
     z-index: 1000;
 }
 
 .fast-modal-content {
     background-color: var(--surface);
-    border-radius: 8px;
-    box-shadow: var(--shadow-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
     width: 600px;
     max-width: 90%;
+    max-height: 90vh;
     color: var(--text-primary);
     overflow: hidden;
     display: flex;
@@ -30,6 +29,7 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .fast-icon-btn {
@@ -54,6 +54,8 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 

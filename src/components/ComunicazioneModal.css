@@ -1,7 +1,7 @@
 .comunicazione-modal {
     background-color: var(--surface);
-    border-radius: 8px;
-    box-shadow: var(--shadow-3);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
     overflow: hidden;
     font-family: var(--font-sans);
     width: 600px;

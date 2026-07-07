@@ -2,12 +2,13 @@
 .dpm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(16, 24, 40, 0.45);
+    backdrop-filter: blur(2px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1200;
-    padding: 16px;
+    padding: var(--space-4);
 }
 
 .dpm-modal {
@@ -17,8 +18,8 @@
     /* Altezza fissa: il modal non si ridimensiona col contenuto, il corpo scrolla. */
     height: min(90vh, 760px);
     max-height: 90vh;
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -36,7 +37,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.2px;
