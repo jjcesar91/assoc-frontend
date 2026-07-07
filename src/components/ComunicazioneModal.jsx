@@ -8,6 +8,7 @@ import {
     buildIstruzioniPagamento,
     formatImporto,
 } from '../utils/comunicazioniOrdini';
+import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './ComunicazioneModal.css';
 
 // Comunicazioni di default richiamabili dal selettore.
@@ -23,7 +24,7 @@ const nomeSocioFromRecord = (s) => {
         : [s.nome, s.cognome].filter(Boolean).join(' ');
 };
 
-const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa }) => {
+const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, products }) => {
     const showAlert = useAlert();
     const [tipo, setTipo] = useState('EMAIL'); // 'SMS' or 'EMAIL'
     const [oggetto, setOggetto] = useState('');
@@ -31,6 +32,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [templateKey, setTemplateKey] = useState('');
     const [loadingTemplate, setLoadingTemplate] = useState(false);
+    const [allegaRicevuta, setAllegaRicevuta] = useState(false);
 
     // Carica una comunicazione di default risolvendo i placeholder {{}} col
     // contesto dell'ordine (nome socio, importo, numero, istruzioni pagamento).
@@ -105,10 +107,30 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa }) => {
 
         setIsSubmitting(true);
         try {
+            // Se richiesto, genera la ricevuta in PDF e la allega alla email
+            // (stessa implementazione della comunicazione "Proforma registrata").
+            let allegati;
+            if (tipo === 'EMAIL' && allegaRicevuta && ordine) {
+                try {
+                    const base64 = await generateRicevutaPdfBase64(ordine, { societa, products });
+                    if (base64) {
+                        // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
+                        const safeNumero = String(ordine?.numero_ricevuta || ordine?.id || 'ricevuta').replace(/[\\/:*?"<>|]/g, '-');
+                        allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
+                    }
+                } catch (pdfErr) {
+                    console.error('Errore generazione PDF ricevuta per allegato', pdfErr);
+                    showAlert('Impossibile generare la ricevuta in PDF da allegare', 'Errore allegato', 'warning');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             const payload = {
                 tipo,
                 oggetto: tipo === 'EMAIL' ? oggetto : null,
-                testo
+                testo,
+                allegati
             };
 
             const response = await fetch(`/users/api/soci/${socioId}/comunicazioni`, {
@@ -235,12 +257,26 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa }) => {
                                 style={{height: '150px'}}
                             />
                         ) : (
-                            <SimpleEditor 
-                                value={testo} 
+                            <SimpleEditor
+                                value={testo}
                                 onChange={(e) => setTesto(e.target.value)}
                             />
                         )}
                     </div>
+
+                    {tipo === 'EMAIL' && ordine && (
+                        <div className="comunicazione-field">
+                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                                <input
+                                    type="checkbox"
+                                    checked={allegaRicevuta}
+                                    onChange={(e) => setAllegaRicevuta(e.target.checked)}
+                                    style={{width:'16px', height:'16px', cursor:'pointer'}}
+                                />
+                                Allega la ricevuta in PDF
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 <div className="comunicazione-footer">

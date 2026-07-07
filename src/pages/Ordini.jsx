@@ -601,6 +601,7 @@ const Ordini = () => {
                 <ComunicazioneModal
                     socioId={selectedSocioForComm}
                     ordine={selectedOrdineForComm}
+                    products={products}
                     societa={societaList?.find(s => s.id == selectedSocietaId)}
                     onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); setSelectedOrdineForComm(null); }}
                 />
