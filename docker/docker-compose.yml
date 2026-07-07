@@ -3,7 +3,9 @@ version: '3.8'
 # Project name dedicato e distinto dal backend: evita sia le collisioni con altri
 # stack (es. revisionilegali) sia i falsi "orphan containers" del backend, che
 # vive in un compose separato ma si aggancia alla stessa rete assoc_app_network.
-name: web-associazioni-frontend
+# NB: NON impostare qui una chiave top-level `name:` — docker-compose v1 (usato
+# in produzione) valida col vecchio schema e la rifiuta. Il nome progetto e'
+# gia' iniettato dallo script di deploy via COMPOSE_PROJECT_NAME=frontend.
 
 # Compose dedicato al frontend (Vite dev server).
 # Vive nel repo assoc-frontend ed e' avviato dalla sua GitHub Action ad ogni push.
