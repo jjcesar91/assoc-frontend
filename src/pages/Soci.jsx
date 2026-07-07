@@ -201,6 +201,8 @@ const Soci = ({ onLogout }) => {
         cognome: '',
         nome: '',
         iscritto: '',
+        iscrizione: '',
+        tesseramento: '',
         certMedico: '',
         pagamenti: '',
         etichetta: ''
@@ -376,6 +378,14 @@ const Soci = ({ onLogout }) => {
             if (filters.iscritto === '0' && isIscritto) return false;
         }
 
+        if (filters.iscrizione !== '') {
+            if (getIscrizioneStatus(socio) !== filters.iscrizione) return false;
+        }
+
+        if (filters.tesseramento !== '') {
+            if (getTesseramentoStatus(socio) !== filters.tesseramento) return false;
+        }
+
         if (filters.certMedico !== '') {
             const status = getCertStatus(socio.scadenza_certificato);
             if (status !== filters.certMedico) return false;
@@ -390,7 +400,7 @@ const Soci = ({ onLogout }) => {
 
     useEffect(() => {
         // Reset UI state e ricarica dati al cambio società
-        setFilters({ cognome: '', nome: '', iscritto: '', certMedico: '', pagamenti: '', etichetta: '' });
+        setFilters({ cognome: '', nome: '', iscritto: '', iscrizione: '', tesseramento: '', certMedico: '', pagamenti: '', etichetta: '' });
         setShowModal(false);
         setShowEditProfileModal(false);
         setShowComunicazioneModal(false);
@@ -472,6 +482,56 @@ const Soci = ({ onLogout }) => {
         document.head.appendChild(script);
     });
 
+    // Parser CSV robusto: gestisce virgolette e celle multilinea, con separatore configurabile.
+    const parseDelimited = (text, separator) => {
+        const records = [];
+        let cur = ''; let inQ = false; let fields = [];
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (inQ) {
+                if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
+                else if (ch === '"') { inQ = false; }
+                else { cur += ch; }
+            } else if (ch === '"') {
+                inQ = true;
+            } else if (ch === separator) {
+                fields.push(cur.trim()); cur = '';
+            } else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+                if (ch === '\r') i++;
+                fields.push(cur.trim()); cur = '';
+                if (fields.some(f => f !== '')) records.push(fields);
+                fields = [];
+            } else {
+                cur += ch;
+            }
+        }
+        if (cur.trim() || fields.length) { fields.push(cur.trim()); if (fields.some(f => f !== '')) records.push(fields); }
+        return records;
+    };
+
+    // Legge un file (CSV o XLSX) in una matrice di righe/celle.
+    // - Supporta i fogli XLSX/XLS
+    // - Rimuove l'eventuale BOM UTF-8 iniziale
+    // - Rileva automaticamente il separatore CSV (',' oppure ';')
+    const readFileToRecords = async (file) => {
+        const isXLSX = /\.(xlsx|xls)$/i.test(file.name);
+        if (isXLSX) {
+            const XLSX = await loadXLSXFromCDN();
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array', raw: false, dateNF: 'dd/mm/yyyy' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+            return aoa
+                .map(row => (row || []).map(c => (c === null || c === undefined) ? '' : String(c).trim()))
+                .filter(r => r.some(f => f !== ''));
+        }
+        let text = await file.text();
+        text = text.replace(/^\uFEFF/, '');
+        const firstLine = text.split(/\r?\n/)[0] || '';
+        const sep = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+        return parseDelimited(text, sep);
+    };
+
     const handleExportTemplate = () => {
         const headers = [
             'COGNOME', 'NOME', 'SESSO', 'DATA_NASCITA', 'COMUNE_NASCITA',
@@ -492,15 +552,9 @@ const Soci = ({ onLogout }) => {
         setShowActionsMenu(false);
     };
 
-    const handleExportImport = async () => {
-        if (!importReport) return;
-        let XLSX;
-        try {
-            XLSX = await loadXLSXFromCDN();
-        } catch (e) {
-            showAlert('Impossibile caricare il supporto XLSX.', 'Errore esportazione');
-            return;
-        }
+    // Ricava le righe (intestazioni originali + righe filtrate secondo i badge attivi) da esportare dal riepilogo import.
+    const buildExportRows = () => {
+        if (!importReport) return null;
         const { headers, dataRecords, logs } = importReport;
         const visibleLogs = (logs || []).filter(l =>
             (l.type === 'OK'     && importLogFilters.creati)     ||
@@ -510,8 +564,42 @@ const Soci = ({ onLogout }) => {
         );
         const rowIdxSet = new Set(visibleLogs.map(l => l.rowIdx));
         const filteredRows = (dataRecords || []).filter((_, idx) => rowIdxSet.has(idx));
-        const wsData = [headers || [], ...filteredRows];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        return { headers: headers || [], filteredRows };
+    };
+
+    // format: 'xlsx' -> reimportabile con "Importa Excel" | 'csv' -> reimportabile con "Importa CSV Odoo"
+    const handleExportImport = async (format = 'xlsx') => {
+        const data = buildExportRows();
+        if (!data) return;
+        const { headers, filteredRows } = data;
+
+        if (format === 'csv') {
+            // Mantiene le intestazioni originali Odoo con separatore virgola, così "Importa CSV Odoo" lo rilegge.
+            const escapeCell = (v) => {
+                const s = String(v ?? '');
+                return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const csv = [headers, ...filteredRows].map(r => (r || []).map(escapeCell).join(',')).join('\r\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'export_importazione_odoo.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return;
+        }
+
+        let XLSX;
+        try {
+            XLSX = await loadXLSXFromCDN();
+        } catch (e) {
+            showAlert('Impossibile caricare il supporto XLSX.', 'Errore esportazione');
+            return;
+        }
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...filteredRows]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Export');
         XLSX.writeFile(wb, 'export_importazione.xlsx');
@@ -520,60 +608,22 @@ const Soci = ({ onLogout }) => {
     const importFromFile = async (file) => {
         if (!selectedSocietaId) { showAlert('Seleziona prima una società.', 'Società mancante', 'warning'); return; }
 
-        const isXLSX = /\.(xlsx|xls)$/i.test(file.name);
-        let content;
-
-        if (isXLSX) {
-            let XLSX;
-            try {
-                XLSX = await loadXLSXFromCDN();
-            } catch(e) {
-                showAlert('Impossibile caricare il supporto XLSX. Usa il formato CSV oppure verifica la connessione internet.', 'Errore caricamento');
-                return;
-            }
-            const buffer = await file.arrayBuffer();
-            const wb = XLSX.read(buffer, { type: 'array', raw: false, dateNF: 'dd/mm/yyyy' });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            // Converti il foglio in CSV con ; come separatore
-            content = XLSX.utils.sheet_to_csv(ws, { FS: ';', blankrows: false });
-        } else {
-            content = await file.text();
-            content = content.replace(/^\uFEFF/, '');
+        let allRecords;
+        try {
+            allRecords = await readFileToRecords(file);
+        } catch (e) {
+            showAlert('Impossibile leggere il file. Se è un XLSX verifica la connessione internet, altrimenti usa un CSV.', 'Errore caricamento');
+            return;
         }
-
-        const firstLine = content.split(/\r?\n/)[0];
-        const sep = firstLine.includes(';') ? ';' : ',';
-
-        // Parser CSV che gestisce celle multilinea (a capo dentro virgolette)
-        const parseCSVContent = (text, separator) => {
-            const records = [];
-            let cur = ''; let inQ = false;
-            let fields = [];
-            for (let i = 0; i < text.length; i++) {
-                const ch = text[i];
-                if (inQ) {
-                    if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
-                    else if (ch === '"') { inQ = false; }
-                    else { cur += ch; }
-                } else if (ch === '"') {
-                    inQ = true;
-                } else if (ch === separator) {
-                    fields.push(cur.trim()); cur = '';
-                } else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
-                    if (ch === '\r') i++;
-                    fields.push(cur.trim()); cur = '';
-                    if (fields.some(f => f !== '')) records.push(fields);
-                    fields = [];
-                } else {
-                    cur += ch;
-                }
-            }
-            if (cur.trim() || fields.length) { fields.push(cur.trim()); if (fields.some(f => f !== '')) records.push(fields); }
-            return records;
-        };
-
-        const allRecords = parseCSVContent(content, sep);
         if (allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
+
+        // File in formato Odoo (contiene la colonna "È un'azienda")? -> usa la logica di importazione Odoo,
+        // così un file esportato dal riepilogo Odoo può essere reimportato anche da "Importa Excel".
+        if (allRecords.some(r => r.some(c => c.replace(/^\uFEFF/, '').trim() === "È un'azienda"))) {
+            await runOdooImport(allRecords);
+            if (importFileRef.current) importFileRef.current.value = '';
+            return;
+        }
 
         // Trova la riga header: la prima che contiene CODICE_FISCALE o COGNOME
         const headerIdx = allRecords.findIndex(r => {
@@ -603,7 +653,7 @@ const Soci = ({ onLogout }) => {
 
         setShowActionsMenu(false);
         setImportLogFilters({ creati: true, aggiornati: true, saltati: true, errori: true });
-        setImportReport({ total, current: 0, creati: 0, aggiornati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords });
+        setImportReport({ total, current: 0, creati: 0, aggiornati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords, source: 'excel' });
 
         let creati = 0; let aggiornati = 0; let saltati = 0; const errori = []; const logs = [];
 
@@ -725,7 +775,7 @@ const Soci = ({ onLogout }) => {
         }
 
         // Completato
-        setImportReport({ total, current: total, creati, aggiornati, saltati, errori, logs, done: true, headers, dataRecords });
+        setImportReport({ total, current: total, creati, aggiornati, saltati, errori, logs, done: true, headers, dataRecords, source: 'excel' });
         if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         if (creati > 0 || aggiornati > 0) fetchSoci();
         if (importFileRef.current) importFileRef.current.value = '';
@@ -733,39 +783,37 @@ const Soci = ({ onLogout }) => {
 
     const importOdooFromFile = async (file) => {
         if (!selectedSocietaId) { showAlert('Seleziona una società prima di importare.', 'Nessuna società selezionata', 'warning'); return; }
-        const content = await file.text();
+        let allRecords;
+        try {
+            allRecords = await readFileToRecords(file);
+        } catch (e) {
+            showAlert('Impossibile leggere il file. Se è un XLSX verifica la connessione internet, altrimenti usa un CSV.', 'Errore caricamento');
+            return;
+        }
+        await runOdooImport(allRecords);
+        if (importOdooFileRef.current) importOdooFileRef.current.value = '';
+    };
 
-        const parseCSV = (text) => {
-            const records = [];
-            let cur = ''; let inQ = false; let fields = [];
-            for (let i = 0; i < text.length; i++) {
-                const ch = text[i];
-                if (inQ) {
-                    if (ch === '"' && text[i+1] === '"') { cur += '"'; i++; }
-                    else if (ch === '"') { inQ = false; }
-                    else { cur += ch; }
-                } else if (ch === '"') { inQ = true;
-                } else if (ch === ',') { fields.push(cur.trim()); cur = '';
-                } else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
-                    if (ch === '\r') i++;
-                    fields.push(cur.trim()); cur = '';
-                    if (fields.some(f => f !== '')) records.push(fields);
-                    fields = [];
-                } else { cur += ch; }
-            }
-            if (cur.trim() || fields.length) { fields.push(cur.trim()); if (fields.some(f => f !== '')) records.push(fields); }
-            return records;
-        };
+    const runOdooImport = async (allRecords) => {
+        if (!selectedSocietaId) { showAlert('Seleziona una società prima di importare.', 'Nessuna società selezionata', 'warning'); return; }
+        if (!allRecords || allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
 
-        const allRecords = parseCSV(content);
-        if (allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
-
-        const headers = allRecords[0];
-        const col = (name) => headers.findIndex(h => h.trim() === name);
+        const headers = allRecords[0].map(h => h.replace(/^\uFEFF/, '').trim());
+        // Indici di TUTTE le colonne con lo stesso nome (gestisce header duplicati, es. doppia colonna "Codice Fiscale")
+        const colsFor = (name) => headers.reduce((acc, h, idx) => { if (h === name) acc.push(idx); return acc; }, []);
         const rows = allRecords.slice(1);
 
-        const get = (cells, name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
+        // Restituisce il primo valore NON vuoto tra le colonne con lo stesso nome
+        const get = (cells, name) => {
+            for (const idx of colsFor(name)) {
+                const v = (cells[idx] || '').trim();
+                if (v) return v;
+            }
+            return '';
+        };
         const stripPhone = (p) => p.replace(/^'+/, '').trim();
+        // Booleano tollerante: Odoo esporta "True"/"False", ma Excel può salvare "TRUE"/"VERO"/"1"
+        const isTrue = (v) => ['true', 'vero', '1', 'sì', 'si', 'x'].includes(String(v || '').trim().toLowerCase());
         const parseISODate = (s) => { if (!s) return null; return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; };
         const parseDecimal = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
         const parseInteger = (s) => { const n = parseInt(s, 10); return isNaN(n) ? null : n; };
@@ -775,7 +823,7 @@ const Soci = ({ onLogout }) => {
         const etichetteByNome = {};
         let lastAssocNome = null;
         for (const cells of rows) {
-            const isAz = get(cells, "È un'azienda") === 'True';
+            const isAz = isTrue(get(cells, "È un'azienda"));
             const hasLinked = get(cells, 'Azienda collegata') !== '';
             const etichetta = get(cells, 'Etichette');
             const nomeVis = (get(cells, 'Nome visualizzato') || get(cells, 'Nome')).trim();
@@ -790,7 +838,7 @@ const Soci = ({ onLogout }) => {
         }
 
         // Separa aziende da contatti persona
-        const aziende = rows.filter(r => get(r, "È un'azienda") === 'True');
+        const aziende = rows.filter(r => isTrue(get(r, "È un'azienda")));
         // Contatti: righe con "Azienda collegata" valorizzato
         const contattiRows = rows.filter(r => get(r, 'Azienda collegata') !== '');
 
@@ -830,7 +878,7 @@ const Soci = ({ onLogout }) => {
 
         setShowActionsMenu(false);
         setImportLogFilters({ creati: true, saltati: true, errori: true });
-        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords: aziende });
+        setImportReport({ total, current: 0, creati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords: aziende, source: 'odoo' });
 
         let creati = 0; let saltati = 0; const errori = []; const logs = [];
 
@@ -912,8 +960,8 @@ const Soci = ({ onLogout }) => {
                 durata_consiglio_direttivo: parseInteger(g('Durata consiglio direttivo')),
                 scadenza_consiglio_direttivo: parseISODate(g('Scadenza consiglio direttivo')),
                 etichette: (() => { const tags = etichetteByNome[nomeVisualizzato]; return (tags && tags.length > 0) ? JSON.stringify(tags) : null; })(),
-                runts: g('Runts') === 'True',
-                somministrazione: g('Somministrazione') === 'True',
+                runts: isTrue(g('Runts')),
+                somministrazione: isTrue(g('Somministrazione')),
                 note: g('Note') || null,
             };
 
@@ -969,10 +1017,9 @@ const Soci = ({ onLogout }) => {
             if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         }
 
-        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true, headers, dataRecords: aziende });
+        setImportReport({ total, current: total, creati, saltati, errori, logs, done: true, headers, dataRecords: aziende, source: 'odoo' });
         if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         if (creati > 0) fetchSoci();
-        if (importOdooFileRef.current) importOdooFileRef.current.value = '';
     };
 
     const handleEditSocio = (socio) => {
@@ -1118,6 +1165,40 @@ const Soci = ({ onLogout }) => {
                                     <option value="">TUTTI</option>
                                     <option value="1">SI</option>
                                     <option value="0">NO</option>
+                                </select>
+                            </div>
+
+                            {/* Iscrizione */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Iscrizione</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.iscrizione}
+                                    onChange={(e) => handleFilterChange('iscrizione', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="REGOLARE">REGOLARE</option>
+                                    <option value="IN SCADENZA">IN SCADENZA</option>
+                                    <option value="SCADUTO">SCADUTO</option>
+                                    <option value="NO">NO</option>
+                                </select>
+                            </div>
+
+                            {/* Tesseramento */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Tesseramento</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.tesseramento}
+                                    onChange={(e) => handleFilterChange('tesseramento', e.target.value)}
+                                >
+                                    <option value="">TUTTI</option>
+                                    <option value="REGOLARE">REGOLARE</option>
+                                    <option value="IN SCADENZA">IN SCADENZA</option>
+                                    <option value="SCADUTO">SCADUTO</option>
+                                    <option value="NO">NO</option>
                                 </select>
                             </div>
 
@@ -1335,7 +1416,7 @@ const Soci = ({ onLogout }) => {
             <input
                 ref={importOdooFileRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) importOdooFromFile(e.target.files[0]); }}
             />
@@ -1467,16 +1548,30 @@ const Soci = ({ onLogout }) => {
                                         ))
                                     }
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <p style={{ margin: '0 0 6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                    Esporta le righe filtrate (es. solo gli errori) per correggerle e reimportarle. Scegli il formato:
+                                </p>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                     <button
                                         className="btn-outlined"
                                         style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                        onClick={handleExportImport}
+                                        onClick={() => handleExportImport('xlsx')}
+                                        title="File .xlsx reimportabile con « Importa Excel »"
                                     >
                                         <FileDown size={15} /> Esporta XLSX
                                     </button>
-                                    <button className="btn-contained" style={{ flex: 1 }} onClick={() => setImportReport(null)}>Chiudi</button>
+                                    {importReport.source === 'odoo' && (
+                                        <button
+                                            className="btn-outlined"
+                                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                            onClick={() => handleExportImport('csv')}
+                                            title="File .csv reimportabile con « Importa CSV Odoo »"
+                                        >
+                                            <FileDown size={15} /> Esporta CSV (Odoo)
+                                        </button>
+                                    )}
                                 </div>
+                                <button className="btn-contained" style={{ width: '100%' }} onClick={() => setImportReport(null)}>Chiudi</button>
                             </>
                         )}
                     </div>

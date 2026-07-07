@@ -873,12 +873,34 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
 
     const fmt = (val) => `€ ${val.toFixed(2).replace('.', ',')}`;
 
-    // Totali generali
-    const grandTotUscite = sezioni.reduce((acc, s) => {
+    // Voci (line item) di un insieme di gruppi radice: se il gruppo ha
+    // sottogruppi usa quelli, altrimenti il gruppo stesso diventa una voce.
+    const lineItemsForRoots = (roots) => {
+        const items = [];
+        roots.forEach(r => {
+            const subs = getSottoGruppi(r.id);
+            if (subs.length > 0) items.push(...subs);
+            else items.push(r);
+        });
+        return items;
+    };
+
+    // Blocco "flat" — gruppi radice SENZA sezione (es. ASD): niente divisione in
+    // sezioni, solo le colonne Uscite/Entrate coi rispettivi sottogruppi.
+    const flatUsRoots = gruppiRadice.filter(g => !g.sezione && g.tipo === 'Uscita');
+    const flatEnRoots = gruppiRadice.filter(g => !g.sezione && g.tipo === 'Entrata');
+    const flatUsItems = lineItemsForRoots(flatUsRoots);
+    const flatEnItems = lineItemsForRoots(flatEnRoots);
+    const hasFlat = flatUsRoots.length > 0 || flatEnRoots.length > 0;
+    const flatTotUs = flatUsRoots.reduce((acc, r) => acc + getTotaleGruppo(r.id), 0);
+    const flatTotEn = flatEnRoots.reduce((acc, r) => acc + getTotaleGruppo(r.id), 0);
+
+    // Totali generali (blocco flat + sezioni)
+    const grandTotUscite = flatTotUs + sezioni.reduce((acc, s) => {
         const g = getGruppoBySezioneETipo(s, 'Uscita');
         return acc + (g ? getTotaleGruppo(g.id) : 0);
     }, 0);
-    const grandTotEntrate = sezioni.reduce((acc, s) => {
+    const grandTotEntrate = flatTotEn + sezioni.reduce((acc, s) => {
         const g = getGruppoBySezioneETipo(s, 'Entrata');
         return acc + (g ? getTotaleGruppo(g.id) : 0);
     }, 0);
@@ -892,11 +914,40 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     const totaleRow = { fontWeight: '700', fontStyle: 'italic', borderTop: '2px solid var(--border-color)', background: 'var(--surface-1)', padding: '8px 14px' };
     const avanzRow = { fontWeight: '600', fontStyle: 'italic', background: 'var(--surface-1)', padding: '6px 14px', fontSize: '0.86rem' };
 
+    // Cella di una voce (sottogruppo o gruppo radice senza sottogruppi).
+    // item === undefined → cella vuota; item === null → riga segnaposto.
+    const itemCell = (item, side) => {
+        if (item === undefined) return null;
+        if (item === null) return <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>&nbsp;</span>;
+        const val = totaliPerGruppo[item.id] || 0;
+        const color = side === 'us'
+            ? (val ? 'var(--danger)' : 'var(--text-secondary)')
+            : (val ? 'var(--success)' : 'var(--text-secondary)');
+        const label = item.numero != null ? `${item.numero}) ${item.descrizione}` : item.descrizione;
+        return (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>{label}</span>
+                <span style={{ fontFamily: 'monospace', color, whiteSpace: 'nowrap' }}>{fmt(val)}</span>
+            </div>
+        );
+    };
+
+    // Coppia di colonne Uscite/Entrate per due elenchi di voci
+    const renderPairRows = (usItems, enItems, keyPrefix) => {
+        const maxRows = Math.max(usItems.length, enItems.length, 1);
+        return Array.from({ length: maxRows }).map((_, i) => (
+            <tr key={`${keyPrefix}-${i}`} style={{ borderBottom: '1px solid var(--surface-1)' }}>
+                <td style={{ ...cellBase, borderRight: '1px solid var(--border-color)' }}>{itemCell(usItems[i], 'us')}</td>
+                <td style={cellBase}>{itemCell(enItems[i], 'en')}</td>
+            </tr>
+        ));
+    };
+
     if (loading || loadingGruppi) {
         return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>Caricamento...</div>;
     }
 
-    if (sezioni.length === 0) {
+    if (gruppiRadice.length === 0) {
         return (
             <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 <BarChart2 size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
@@ -950,7 +1001,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                     </div>
                 )}
                 <div style={{ textAlign: 'center', fontWeight: '600', fontSize: '0.9rem', marginBottom: '12px', color: '#444' }}>
-                    Mod. D — Rendiconto per Cassa &nbsp;|&nbsp; {dateRange.dataDa} — {dateRange.dataA}
+                    Rendiconto per Cassa &nbsp;|&nbsp; {dateRange.dataDa} — {dateRange.dataA}
                 </div>
 
                 {/* Tabella principale */}
@@ -966,6 +1017,9 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                         </tr>
                     </thead>
                     <tbody>
+                        {/* Blocco senza sezione (in cima): solo colonne Uscite/Entrate */}
+                        {hasFlat && renderPairRows(flatUsItems, flatEnItems, 'flat')}
+
                         {sezioni.map(sezione => {
                             const gu = getGruppoBySezioneETipo(sezione, 'Uscita');
                             const ge = getGruppoBySezioneETipo(sezione, 'Entrata');
@@ -974,7 +1028,6 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                             const totUs = gu ? getTotaleGruppo(gu.id) : 0;
                             const totEn = ge ? getTotaleGruppo(ge.id) : 0;
                             const avanzSez = totEn - totUs;
-                            const maxRows = Math.max(sottoUs.length, sottoEn.length, 1);
 
                             const rowsUs = sottoUs.length > 0 ? sottoUs : (gu ? [null] : []);
                             const rowsEn = sottoEn.length > 0 ? sottoEn : (ge ? [null] : []);
@@ -992,38 +1045,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                                     </tr>
 
                                     {/* Righe sottogruppi */}
-                                    {Array.from({ length: maxRows }).map((_, i) => {
-                                        const su = rowsUs[i];
-                                        const se = rowsEn[i];
-                                        return (
-                                            <tr key={i} style={{ borderBottom: '1px solid var(--surface-1)' }}>
-                                                <td style={{ ...cellBase, borderRight: '1px solid var(--border-color)' }}>
-                                                    {su === undefined ? null : su === null ? (
-                                                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}> </span>
-                                                    ) : (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                                            <span>{su.numero}) {su.descrizione}</span>
-                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[su.id] ? 'var(--danger)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                                                {fmt(totaliPerGruppo[su.id] || 0)}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td style={cellBase}>
-                                                    {se === undefined ? null : se === null ? (
-                                                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}> </span>
-                                                    ) : (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                                            <span>{se.numero}) {se.descrizione}</span>
-                                                            <span style={{ fontFamily: 'monospace', color: totaliPerGruppo[se.id] ? 'var(--success)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                                                {fmt(totaliPerGruppo[se.id] || 0)}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {renderPairRows(rowsUs, rowsEn, `sez-${sezione}`)}
 
                                     {/* Totale sezione */}
                                     <tr>

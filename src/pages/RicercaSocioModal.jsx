@@ -143,11 +143,11 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
     return (
         <div className="rsm-overlay">
             <div className="modal-container ricerva-socio-modal">
-                <div className="modal-header" style={{backgroundColor: 'var(--info-container)', color: 'white'}}>
-                    <h2 className="modal-title">
+                <div className="modal-header">
+                    <h2 className="modal-title" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                         <Search size={20} /> Ricerca socio
                     </h2>
-                    <button className="modal-close" onClick={onClose} style={{color: 'white'}}>
+                    <button className="modal-close" onClick={onClose}>
                         <X size={24} />
                     </button>
                 </div>

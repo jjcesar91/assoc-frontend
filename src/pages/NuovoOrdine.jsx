@@ -14,6 +14,7 @@ import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     sendComunicazioneEmail, formatImporto,
 } from '../utils/comunicazioniOrdini';
+import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
 const getCertStatus = (scadenza) => {
@@ -59,11 +60,11 @@ const NuovoOrdine = () => {
     const chiediResolveRef = useRef(null);
     const sendDataRef = useRef(null);
 
-    const askInvioComunicazione = ({ titolo, destinatario, oggetto, testoHtml, sendData }) =>
+    const askInvioComunicazione = ({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sendData }) =>
         new Promise(resolve => {
             chiediResolveRef.current = resolve;
             sendDataRef.current = sendData;
-            setChiediModal({ titolo, destinatario, oggetto, testoHtml, sending: false });
+            setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
         });
 
     const handleChiediConfirm = async () => {
@@ -179,6 +180,74 @@ const NuovoOrdine = () => {
             destinatario: email,
             oggetto: config.oggetto,
             testoHtml: testo,
+            sendData,
+        });
+    };
+
+    // Gestisce la comunicazione al socio dopo la registrazione di un pagamento
+    // ("Proforma registrata"). Allega la ricevuta in PDF.
+    const handlePagamentoComunicazione = async (created) => {
+        const societa = societaList.find(s => s.id == selectedSocietaId);
+        const config = getComConfig(societa, 'pagamento');
+        if (config.stato === 'NON_ATTIVA') return;
+
+        const socioId = created?.socio_id || selectedSocio?.id || null;
+        let email = selectedSocio?.email || selectedSocio?.user?.email || null;
+        let nomeDestinatario = nomeSocio(selectedSocio) || created?.intestatario || '';
+        if (socioId && !email) {
+            try {
+                const token = localStorage.getItem('token');
+                const r = await fetch(`/users/api/soci/${socioId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
+                if (r.ok) {
+                    const s = await r.json();
+                    email = s.email || s.user?.email || null;
+                    nomeDestinatario = nomeSocio(s) || nomeDestinatario;
+                }
+            } catch { /* ignore */ }
+        }
+
+        const testo = applyShortcodes(config.testo, {
+            nome: nomeDestinatario,
+            importo: formatImporto(created?.importo),
+            numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
+            istruzioni: '',
+        });
+
+        // Genera la ricevuta PDF da allegare
+        let allegati = [];
+        try {
+            const base64 = await generateRicevutaPdfBase64(created, { societa, products });
+            if (base64) {
+                // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
+                const safeNumero = String(created?.numero_ricevuta || created?.id || 'pagamento').replace(/[\\/:*?"<>|]/g, '-');
+                allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
+            }
+        } catch (e) {
+            console.error('Errore generazione PDF ricevuta per allegato', e);
+        }
+
+        const sendData = { socioId, oggetto: config.oggetto, testo, allegati };
+
+        if (config.stato === 'AUTOMATICA') {
+            if (!socioId || !email) {
+                showSnackbar('Comunicazione non inviata: il socio non ha un indirizzo email', 'error');
+                return;
+            }
+            const res = await sendComunicazioneEmail(sendData);
+            if (res.ok) showSnackbar(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
+            else showSnackbar(res.error || 'Errore invio comunicazione', 'error');
+            return;
+        }
+
+        // CHIEDI
+        await askInvioComunicazione({
+            titolo: 'Comunicazione pagamento registrato',
+            destinatario: email,
+            oggetto: config.oggetto,
+            testoHtml: testo,
+            allegatoNome: allegati[0]?.filename,
             sendData,
         });
     };
@@ -441,14 +510,21 @@ const NuovoOrdine = () => {
             if (response.ok) {
                 setIsGeneraModalOpen(false);
 
-                // Comunicazione al socio alla creazione di una proforma
-                if (paymentData.tipo_documento === 'proforma') {
-                    try {
-                        const created = await response.json();
+                let created = null;
+                try { created = await response.json(); } catch { /* ignore */ }
+
+                // Comunicazione al socio in base al tipo di documento:
+                //  - proforma  → "Creazione proforma"
+                //  - pagamento → "Proforma registrata"
+                // In entrambi i casi si rispetta lo stato NON_ATTIVA / CHIEDI / AUTOMATICA.
+                try {
+                    if (paymentData.tipo_documento === 'proforma') {
                         await handleProformaComunicazione(created, paymentData);
-                    } catch (e) {
-                        console.error('Errore gestione comunicazione proforma', e);
+                    } else {
+                        await handlePagamentoComunicazione(created);
                     }
+                } catch (e) {
+                    console.error('Errore gestione comunicazione', e);
                 }
 
                 // Se ci sono abbonamenti nel carrello, cerca corsi associati
@@ -598,6 +674,7 @@ const NuovoOrdine = () => {
                 destinatario={chiediModal?.destinatario}
                 oggetto={chiediModal?.oggetto}
                 testoHtml={chiediModal?.testoHtml}
+                allegatoNome={chiediModal?.allegatoNome}
                 sending={chiediModal?.sending}
                 onConfirm={handleChiediConfirm}
                 onClose={handleChiediClose}

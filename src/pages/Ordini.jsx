@@ -29,6 +29,7 @@ const Ordini = () => {
     const [showImportOdoo, setShowImportOdoo] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [selectedSocioForComm, setSelectedSocioForComm] = useState(null);
+    const [selectedOrdineForComm, setSelectedOrdineForComm] = useState(null);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -523,7 +524,7 @@ const Ordini = () => {
                                                             <Folder size={16} />
                                                         </button>
                                                         <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setSelectedOrdineForComm(p); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
 
                                                     </div>
                                                 </td>
@@ -599,7 +600,9 @@ const Ordini = () => {
             {showComunicazioneModal && selectedSocioForComm && (
                 <ComunicazioneModal
                     socioId={selectedSocioForComm}
-                    onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); }}
+                    ordine={selectedOrdineForComm}
+                    societa={societaList?.find(s => s.id == selectedSocietaId)}
+                    onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); setSelectedOrdineForComm(null); }}
                 />
             )}
         </div>
