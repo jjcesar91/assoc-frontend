@@ -14,6 +14,8 @@
     background: var(--surface);
     width: 100%;
     max-width: 680px;
+    /* Altezza fissa: il modal non si ridimensiona col contenuto, il corpo scrolla. */
+    height: min(90vh, 760px);
     max-height: 90vh;
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);

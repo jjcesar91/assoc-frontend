@@ -6,6 +6,8 @@
     font-family: var(--font-sans);
     width: 600px;
     max-width: 95%;
+    /* Altezza fissa: il modal non si ridimensiona col contenuto, il corpo scrolla. */
+    height: min(85vh, 680px);
     display: flex;
     flex-direction: column;
 }.comunicazione-header {
@@ -18,6 +20,7 @@
     font-weight: 500;
     font-size: 1.1rem;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }.comunicazione-close {
     background: transparent;
     border: none;
@@ -32,6 +35,10 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    /* Area scrollabile entro l'altezza fissa del modal. */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .comunicazione-type-selector {
@@ -112,6 +119,7 @@
     justify-content: flex-end;
     gap: 12px;
     border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .btn-annulla {
