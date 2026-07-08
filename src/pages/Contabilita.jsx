@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink } from 'lucide-react';
+import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -687,8 +687,10 @@ const QUOTE_TYPE_TO_CODICE = {
 const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     const { selectedSocietaId, societaList } = useSocieta();
     const [gruppi, setGruppi] = useState([]);
+    const [vociConfig, setVociConfig] = useState([]);
     const [loadingGruppi, setLoadingGruppi] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [escludiZero, setEscludiZero] = useState(false);
     const tableRef = useRef(null);
 
     const nomeSocieta = useMemo(
@@ -792,14 +794,15 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     };
 
     useEffect(() => {
-        if (!selectedSocietaId) { setGruppi([]); return; }
+        if (!selectedSocietaId) { setGruppi([]); setVociConfig([]); return; }
         setLoadingGruppi(true);
         const token = localStorage.getItem('token');
-        fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-        })
-            .then(r => r.ok ? r.json() : [])
-            .then(data => setGruppi(data))
+        const headers = { 'Authorization': `Bearer ${token}` };
+        Promise.all([
+            fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
+            fetch(`/payments/api/voci-config?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
+        ])
+            .then(([gruppiData, configData]) => { setGruppi(gruppiData); setVociConfig(configData); })
             .catch(() => {})
             .finally(() => setLoadingGruppi(false));
     }, [selectedSocietaId]);
@@ -816,28 +819,43 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
         };
     }, [selectedAnno, societa]);
 
+    // Mappa tipo prodotto → id sottogruppo. Parte dal default hardcoded
+    // (retrocompatibilità) e viene sovrascritta dalla configurazione salvata.
+    const quoteTypeToGruppoId = useMemo(() => {
+        const codiceToId = {};
+        gruppi.forEach(g => { if (g.codice) codiceToId[g.codice] = g.id; });
+        const validIds = new Set(gruppi.map(g => g.id));
+        const map = {};
+        Object.entries(QUOTE_TYPE_TO_CODICE).forEach(([t, codice]) => {
+            if (codiceToId[codice]) map[t] = codiceToId[codice];
+        });
+        vociConfig.forEach(c => {
+            if (c.gruppo_id && validIds.has(c.gruppo_id)) map[c.quote_type] = c.gruppo_id;
+        });
+        // Retrocompat: i pagamenti legacy con tipo 'inscription' seguono 'quota_associativa'
+        if (!map.inscription && map.quota_associativa) map.inscription = map.quota_associativa;
+        return map;
+    }, [gruppi, vociConfig]);
+
     // Pagamenti validi del periodo: con gruppo assegnato OPPURE con tipo auto-mappabile
     const paymentsValidi = useMemo(() => payments.filter(p => {
         if (p.stato_pagamento?.startsWith('3.')) return false;
-        const hasAutoGroup = p.quote_types && p.quote_types.split(',').some(t => QUOTE_TYPE_TO_CODICE[t.trim()]);
+        const hasAutoGroup = p.quote_types && p.quote_types.split(',').some(t => quoteTypeToGruppoId[t.trim()]);
         if (!p.gruppo_id && !hasAutoGroup) return false;
         if (dateRange.dataDa && p.data_pagamento < dateRange.dataDa) return false;
         if (dateRange.dataA && p.data_pagamento > dateRange.dataA) return false;
         return true;
-    }), [payments, dateRange]);
+    }), [payments, dateRange, quoteTypeToGruppoId]);
 
     // Totale per gruppo/sottogruppo (sempre positivo — il segno è dato dal tipo)
     const totaliPerGruppo = useMemo(() => {
-        const codiceToId = {};
-        gruppi.forEach(g => { if (g.codice) codiceToId[g.codice] = g.id; });
         const map = {};
         paymentsValidi.forEach(p => {
             let targetId = p.gruppo_id;
             if (!targetId && p.quote_types) {
                 const types = p.quote_types.split(',').map(t => t.trim());
                 for (const t of types) {
-                    const codice = QUOTE_TYPE_TO_CODICE[t];
-                    if (codice && codiceToId[codice]) { targetId = codiceToId[codice]; break; }
+                    if (quoteTypeToGruppoId[t]) { targetId = quoteTypeToGruppoId[t]; break; }
                 }
             }
             if (targetId) {
@@ -845,7 +863,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
             }
         });
         return map;
-    }, [paymentsValidi, gruppi]);
+    }, [paymentsValidi, quoteTypeToGruppoId]);
 
     const gruppiRadice = useMemo(() => gruppi.filter(g => !g.gruppo_id), [gruppi]);
     const allSotto = useMemo(() => gruppi.filter(g => g.gruppo_id), [gruppi]);
@@ -885,12 +903,17 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
         return items;
     };
 
+    // Se il flag "Escludi le voci con importo zero" è attivo, rimuove dalle voci
+    // visualizzate quelle con importo pari a zero (i totali restano invariati).
+    const filtraVoci = (items) =>
+        escludiZero ? items.filter(it => it && (totaliPerGruppo[it.id] || 0) !== 0) : items;
+
     // Blocco "flat" — gruppi radice SENZA sezione (es. ASD): niente divisione in
     // sezioni, solo le colonne Uscite/Entrate coi rispettivi sottogruppi.
     const flatUsRoots = gruppiRadice.filter(g => !g.sezione && g.tipo === 'Uscita');
     const flatEnRoots = gruppiRadice.filter(g => !g.sezione && g.tipo === 'Entrata');
-    const flatUsItems = lineItemsForRoots(flatUsRoots);
-    const flatEnItems = lineItemsForRoots(flatEnRoots);
+    const flatUsItems = filtraVoci(lineItemsForRoots(flatUsRoots));
+    const flatEnItems = filtraVoci(lineItemsForRoots(flatEnRoots));
     const hasFlat = flatUsRoots.length > 0 || flatEnRoots.length > 0;
     const flatTotUs = flatUsRoots.reduce((acc, r) => acc + getTotaleGruppo(r.id), 0);
     const flatTotEn = flatEnRoots.reduce((acc, r) => acc + getTotaleGruppo(r.id), 0);
@@ -968,6 +991,16 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                         Periodo: <strong>{dateRange.dataDa}</strong> — <strong>{dateRange.dataA}</strong>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <input
+                                type="checkbox"
+                                checked={escludiZero}
+                                onChange={(e) => setEscludiZero(e.target.checked)}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            Escludi le voci con importo zero
+                        </label>
                     <button
                         onClick={handleDownloadPdf}
                         disabled={generatingPdf}
@@ -989,6 +1022,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                         <Download size={15} />
                         {generatingPdf ? 'Generazione...' : 'Scarica PDF'}
                     </button>
+                    </div>
                 </div>
 
                 {/* Contenuto PDF */}
@@ -1023,8 +1057,8 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                         {sezioni.map(sezione => {
                             const gu = getGruppoBySezioneETipo(sezione, 'Uscita');
                             const ge = getGruppoBySezioneETipo(sezione, 'Entrata');
-                            const sottoUs = gu ? getSottoGruppi(gu.id) : [];
-                            const sottoEn = ge ? getSottoGruppi(ge.id) : [];
+                            const sottoUs = filtraVoci(gu ? getSottoGruppi(gu.id) : []);
+                            const sottoEn = filtraVoci(ge ? getSottoGruppi(ge.id) : []);
                             const totUs = gu ? getTotaleGruppo(gu.id) : 0;
                             const totEn = ge ? getTotaleGruppo(ge.id) : 0;
                             const avanzSez = totEn - totUs;
@@ -1135,6 +1169,164 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                 </table>
 
                 </div>{/* fine ref={tableRef} */}
+            </div>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
+// Tab: Configurazione — voci di pagamento del sistema (una per tipo prodotto).
+// Ogni tipo prodotto può essere assegnato a un sottogruppo del bilancio.
+// ---------------------------------------------------------------------------
+const TIPI_PRODOTTO = [
+    { value: 'quota_associativa', label: 'Quota associativa' },
+    { value: 'tesseramento',      label: 'Tesseramento' },
+    { value: 'subscription',      label: 'Abbonamento' },
+    { value: 'generic',           label: 'Generico' },
+];
+
+const ConfigurazioneTab = () => {
+    const { selectedSocietaId } = useSocieta();
+    const [gruppi, setGruppi] = useState([]);
+    const [config, setConfig] = useState({}); // { quote_type: gruppo_id }
+    const [loading, setLoading] = useState(false);
+    const [savingType, setSavingType] = useState(null);
+
+    useEffect(() => {
+        if (!selectedSocietaId) { setGruppi([]); setConfig({}); return; }
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        Promise.all([
+            fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
+            fetch(`/payments/api/voci-config?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
+        ])
+            .then(([gruppiData, configData]) => {
+                setGruppi(gruppiData);
+                const map = {};
+                configData.forEach(c => { map[c.quote_type] = c.gruppo_id || ''; });
+                setConfig(map);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [selectedSocietaId]);
+
+    // Gruppi radice ordinati (per codice) e sottogruppi raggruppati per gruppo padre.
+    const gruppiRadice = useMemo(
+        () => gruppi.filter(g => !g.gruppo_id)
+                    .sort((a, b) => (a.codice || '').localeCompare(b.codice || '')),
+        [gruppi]
+    );
+    const sottoByParent = useMemo(() => {
+        const map = {};
+        gruppi.filter(g => g.gruppo_id).forEach(g => {
+            (map[g.gruppo_id] = map[g.gruppo_id] || []).push(g);
+        });
+        Object.values(map).forEach(list => list.sort((a, b) => (a.numero || 0) - (b.numero || 0)));
+        return map;
+    }, [gruppi]);
+
+    const handleChange = async (quote_type, value) => {
+        const gruppo_id = value === '' ? null : parseInt(value, 10);
+        setConfig(prev => ({ ...prev, [quote_type]: value }));
+        setSavingType(quote_type);
+        try {
+            const token = localStorage.getItem('token');
+            await fetch('/payments/api/voci-config', {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ societa_id: selectedSocietaId, quote_type, gruppo_id }),
+            });
+        } catch (e) {
+            console.error('Errore salvataggio configurazione voce:', e);
+        } finally {
+            setSavingType(null);
+        }
+    };
+
+    if (!selectedSocietaId) {
+        return (
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                Seleziona una società per configurare le voci di pagamento.
+            </div>
+        );
+    }
+
+    if (loading) {
+        return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>Caricamento...</div>;
+    }
+
+    if (gruppiRadice.length === 0) {
+        return (
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <Settings size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                <div>Nessun gruppo configurato.</div>
+                <div style={{ fontSize: '0.85rem', marginTop: '6px' }}>
+                    Crea gruppi e sottogruppi nella sezione <strong>Gruppi &amp; Sottogruppi</strong> per poter assegnare le voci.
+                </div>
+            </div>
+        );
+    }
+
+    const renderOptions = () => gruppiRadice.map(root => {
+        const subs = sottoByParent[root.id] || [];
+        if (subs.length === 0) return null;
+        const label = root.codice ? `${root.codice} — ${root.descrizione}` : root.descrizione;
+        return (
+            <optgroup key={root.id} label={label}>
+                {subs.map(s => (
+                    <option key={s.id} value={s.id}>
+                        {s.numero != null ? `${s.numero}) ${s.descrizione}` : s.descrizione}
+                    </option>
+                ))}
+            </optgroup>
+        );
+    });
+
+    return (
+        <div style={{ maxWidth: '720px' }}>
+            <div style={{ marginBottom: '18px' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.05rem' }}>Voci di pagamento</h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                    Assegna a ogni tipo di prodotto il sottogruppo di bilancio in cui confluiscono
+                    automaticamente i relativi pagamenti.
+                </p>
+            </div>
+
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+                {TIPI_PRODOTTO.map((tp, i) => (
+                    <div
+                        key={tp.value}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '16px',
+                            padding: '14px 18px',
+                            borderTop: i === 0 ? 'none' : '1px solid var(--surface-1)',
+                            background: 'var(--surface-0, #fff)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                            <Tag size={16} style={{ color: 'var(--text-tertiary)' }} />
+                            <span style={{ fontWeight: '600', fontSize: '0.92rem' }}>{tp.label}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: 'flex-end' }}>
+                            <select
+                                className="md-select"
+                                value={config[tp.value] ?? ''}
+                                onChange={(e) => handleChange(tp.value, e.target.value)}
+                                style={{ minWidth: '280px', maxWidth: '360px' }}
+                            >
+                                <option value="">— Nessun sottogruppo —</option>
+                                {renderOptions()}
+                            </select>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', minWidth: '70px' }}>
+                                {savingType === tp.value ? 'Salvataggio…' : ''}
+                            </span>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -1262,6 +1454,29 @@ const Contabilita = () => {
                         <BarChart2 size={17} />
                         Bilancio
                     </button>
+
+                    <button
+                        onClick={() => setActiveTab('configurazione')}
+                        style={{
+                            padding: '12px 32px',
+                            border: 'none',
+                            borderRadius: '8px 8px 0 0',
+                            backgroundColor: activeTab === 'configurazione' ? 'var(--primary-color, var(--primary))' : 'transparent',
+                            cursor: 'pointer',
+                            fontWeight: '500',
+                            color: activeTab === 'configurazione' ? '#fff' : 'var(--text-secondary)',
+                            fontSize: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={e => { if (activeTab !== 'configurazione') e.currentTarget.style.backgroundColor = 'var(--border-color)'; }}
+                        onMouseLeave={e => { if (activeTab !== 'configurazione') e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                        <Settings size={17} />
+                        Configurazione
+                    </button>
                 </div>
 
                 {/* Tab content */}
@@ -1286,6 +1501,10 @@ const Contabilita = () => {
                         selectedAnno={selectedAnno}
                         societa={societa}
                     />
+                )}
+
+                {activeTab === 'configurazione' && (
+                    <ConfigurazioneTab />
                 )}
 
                 <NuovaOperazioneModal
