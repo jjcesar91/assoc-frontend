@@ -4,7 +4,7 @@
 
 const RICEVUTA_CSS = `
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
-        .header { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
         .header-logo { margin-right: 20px; }
         .header-logo img { max-height: 70px; }
         .header-info { text-align: right; }
@@ -166,7 +166,7 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
     const body = `
     ${isProforma ? '<div class="proforma-watermark">PROFORMA</div>' : ''}
     <div class="header">
-        ${logoUrl ? `<div class="header-logo"><img src="${logoUrl}" alt="Logo" /></div>` : ''}
+        <div class="header-logo">${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : ''}</div>
         <div class="header-info">
             <h2>${societa?.denominazione || ''}</h2>
             <div>${societaAddress}</div>

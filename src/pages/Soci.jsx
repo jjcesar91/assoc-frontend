@@ -156,24 +156,25 @@ const Soci = ({ onLogout }) => {
     }, [soci, location.search, hasOpenedFromUrl]);
     
 
-    // Fetch dei pagamenti della società (una sola volta per società): le scadenze
+    // Fetch dei pagamenti della società: le scadenze
     // Iscrizione/Tesseramento vengono poi precalcolate in scadenzaMaps.
+    const fetchPayments = async () => {
+        if (!selectedSocietaId || !canReadPayments) {
+            setPayments([]);
+            return;
+        }
+        try {
+            const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}`);
+            if (!response.ok) { setPayments([]); return; }
+            const data = await response.json();
+            setPayments(Array.isArray(data) ? data : []);
+        } catch (e) {
+            console.error('Error fetching payments', e);
+            setPayments([]);
+        }
+    };
+
     useEffect(() => {
-        const fetchPayments = async () => {
-            if (!selectedSocietaId || !canReadPayments) {
-                setPayments([]);
-                return;
-            }
-            try {
-                const response = await fetch(`/payments/api?societa_id=${selectedSocietaId}`);
-                if (!response.ok) { setPayments([]); return; }
-                const data = await response.json();
-                setPayments(Array.isArray(data) ? data : []);
-            } catch (e) {
-                console.error('Error fetching payments', e);
-                setPayments([]);
-            }
-        };
         fetchPayments();
     }, [selectedSocietaId, canReadPayments]);
 
@@ -452,7 +453,9 @@ const Soci = ({ onLogout }) => {
 
             if (response.ok) {
                 setShowModal(false);
+                // Soft refresh: ricarica i dati della pagina senza reload del browser
                 fetchSoci();
+                fetchPayments();
             } else {
                 const err = await response.json();
                 showAlert(err.error || err.message, 'Errore salvataggio');

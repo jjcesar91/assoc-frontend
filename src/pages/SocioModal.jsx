@@ -2416,22 +2416,21 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     />
                                 </div>
                                 <div className="form-group grid-span-3">
-                                    <label className="field-label">Email *</label>
-                                    <input 
-                                        className="md-input" 
-                                        type="email" 
-                                        name="email" 
-                                        value={formData.email} 
-                                        onChange={handleChange} 
-                                        onBlur={handleEmailBlur} 
-                                        required 
+                                    <label className="field-label">Email</label>
+                                    <input
+                                        className="md-input"
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        onBlur={handleEmailBlur}
                                         style={emailError ? { borderColor: 'var(--danger)' } : {}}
                                     />
                                     {emailError && <span style={{color: 'var(--danger)', fontSize: '11px', marginTop: '2px'}}>{emailError}</span>}
                                 </div>
                                 <div className="form-group grid-span-5">
-                                    <label className="field-label">Telefono *</label>
-                                    <input className="md-input" name="telefono" value={formData.telefono} onChange={handleChange} required />
+                                    <label className="field-label">Telefono</label>
+                                    <input className="md-input" name="telefono" value={formData.telefono} onChange={handleChange} />
                                 </div>
 
                                 {/* Row 3 - Indirizzo */}

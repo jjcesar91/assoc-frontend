@@ -144,12 +144,21 @@ const Ordini = () => {
     };
 
     const handlePrintPayment = async (p) => {
-        const societa = societaList.find(s => s.id == selectedSocietaId);
-        const html = await buildRicevutaHtml(p, { societa, products, autoPrint: true });
+        // Apri la finestra subito, dentro il gesto dell'utente: se la si apre dopo
+        // l'await il popup blocker restituisce un about:blank vuoto (o null).
         const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
+        try {
+            const societa = societaList.find(s => s.id == selectedSocietaId);
+            const html = await buildRicevutaHtml(p, { societa, products, autoPrint: true });
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+            }
+        } catch (e) {
+            console.error('Errore generazione ricevuta', e);
+            if (printWindow) printWindow.close();
+            showAlert(`Errore durante la generazione della ricevuta: ${e?.message || e}`, 'Errore');
         }
     };
 

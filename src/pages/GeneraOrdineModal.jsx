@@ -32,7 +32,9 @@ const GeneraOrdineModal = ({
     const [annoRicevuta, setAnnoRicevuta] = useState(null);
     const [dataRicevuta, setDataRicevuta] = useState(todayStr); // YYYY-MM-DD
     const [nextNumeroRicevuta, setNextNumeroRicevuta] = useState(null);
-    const [minDataRicevuta, setMinDataRicevuta] = useState('');
+    // Data dell'ultima ricevuta dell'anno selezionato (stringa YYYY-MM-DD) restituita
+    // dal backend; vuota se per quell'anno non esistono ancora ricevute.
+    const [lastPaymentDate, setLastPaymentDate] = useState('');
     // Progressivo grezzo (intero) restituito dal backend: se === 1 significa che è
     // la prima ricevuta dell'anno per questa società.
     const [nextNumeroRaw, setNextNumeroRaw] = useState(null);
@@ -46,12 +48,28 @@ const GeneraOrdineModal = ({
         ? nextNumeroRicevuta.slice(nextNumeroRicevuta.indexOf('/'))
         : '';
 
+    // Estremo superiore selezionabile: oggi per l'anno corrente, ultimo giorno
+    // dell'anno associativo per gli anni passati.
     const maxDataRicevuta = useMemo(() => {
         if (!annoRicevuta) return todayStr;
         const { end } = getAnnoDateRange(annoRicevuta, selectedSocieta);
         const endStr = end.toISOString().split('T')[0];
         return endStr < todayStr ? endStr : todayStr;
     }, [annoRicevuta, selectedSocieta, todayStr]);
+
+    // Inizio dell'anno associativo selezionato (YYYY-MM-DD).
+    const annoStartStr = useMemo(() => {
+        if (!annoRicevuta) return '';
+        const { start } = getAnnoDateRange(annoRicevuta, selectedSocieta);
+        return start.toISOString().split('T')[0];
+    }, [annoRicevuta, selectedSocieta]);
+
+    // Estremo inferiore selezionabile: la data dell'ultima ricevuta dell'anno se
+    // esiste, altrimenti l'inizio dell'anno associativo.
+    const minDataRicevuta = useMemo(
+        () => lastPaymentDate || annoStartStr,
+        [lastPaymentDate, annoStartStr]
+    );
     
     const [codiceFiscale, setCodiceFiscale] = useState('');
     const [codiceFiscaleGenitore, setCodiceFiscaleGenitore] = useState('');
@@ -60,12 +78,21 @@ const GeneraOrdineModal = ({
     const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    // Clamp dataRicevuta quando il massimo cambia (es. cambio anno ricevuta)
+    // Al cambio dell'anno ricevuta posiziona la data documento sul default:
+    // oggi per l'anno corrente, ultimo giorno dell'anno per gli anni passati.
+    useEffect(() => {
+        if (!isOpen || annoRicevuta == null) return;
+        setDataRicevuta(maxDataRicevuta);
+    }, [annoRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Clamp difensivo: mantieni la data dentro l'intervallo consentito.
     useEffect(() => {
         if (dataRicevuta > maxDataRicevuta) {
             setDataRicevuta(maxDataRicevuta);
+        } else if (minDataRicevuta && dataRicevuta < minDataRicevuta) {
+            setDataRicevuta(minDataRicevuta);
         }
-    }, [maxDataRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [maxDataRicevuta, minDataRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (isOpen) {
@@ -134,7 +161,7 @@ const GeneraOrdineModal = ({
                     const data = await res.json();
                     setNextNumeroRicevuta(data.formatted);
                     setNextNumeroRaw(data.nextNumero ?? null);
-                    setMinDataRicevuta(data.lastPaymentDate || '');
+                    setLastPaymentDate(data.lastPaymentDate || '');
                 }
             } catch (e) {
                 console.error(e);
