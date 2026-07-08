@@ -1383,7 +1383,7 @@ const Soci = ({ onLogout }) => {
 
 
 
-            {showModal && <SocioModal onClose={() => setShowModal(false)} onSave={handleSaveSocio} socioData={selectedSocio} />}
+            {showModal && <SocioModal onClose={() => setShowModal(false)} onSave={handleSaveSocio} socioData={selectedSocio} allEtichette={etichetteOptions} />}
             
             {showComunicazioneModal && (
                 <ComunicazioneModal

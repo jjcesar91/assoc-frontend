@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
@@ -108,7 +109,131 @@ const ScadenzaBadge = ({ stato }) => {
 };
 // ---------------------------------------------------------------------------
 
-const SocioModal = ({ onClose, onSave, socioData }) => {
+// Tag-input con suggerimento etichette (stesso meccanismo del modal ordine):
+// pool globale + snapshot iniziale, filtro per sottostringa, dropdown a portale,
+// navigazione da tastiera e opzione "Crea".
+const EtichetteInput = ({ etichetteList, setEtichetteList, allEtichette = [], originalEtichette = [], getTagStyle }) => {
+    const [input, setInput] = useState('');
+    const [activeIdx, setActiveIdx] = useState(-1);
+    const [focused, setFocused] = useState(false);
+    const inputRef = useRef(null);
+    const boxRef = useRef(null);
+
+    const query = input.toLowerCase().trim();
+    const pool = [...new Set([...allEtichette, ...originalEtichette])].sort((a, b) => a.localeCompare(b, 'it'));
+    const suggestions = pool.filter(t => !etichetteList.includes(t) && (query === '' || t.toLowerCase().includes(query)));
+    const showDropdown = focused && suggestions.length > 0;
+    const isNewValue = query !== '' && !pool.some(t => t.toLowerCase() === query) && !etichetteList.some(t => t.toLowerCase() === query);
+
+    const add = (forced) => {
+        const val = (forced ?? input).trim().replace(/,$/, '').trim();
+        if (val && !etichetteList.includes(val)) setEtichetteList(prev => [...prev, val]);
+        setInput('');
+        setActiveIdx(-1);
+        inputRef.current?.focus();
+    };
+    const removeAt = (idx) => setEtichetteList(prev => prev.filter((_, j) => j !== idx));
+
+    return (
+        <div className="form-group grid-span-6">
+            <label className="field-label">Etichette</label>
+            <div ref={boxRef}>
+                <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '5px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', minHeight: '36px', alignItems: 'center', background: '#fff', cursor: 'text', boxSizing: 'border-box', width: '100%' }}
+                    onClick={() => inputRef.current?.focus()}
+                >
+                    {etichetteList.map((tag, i) => {
+                        const ts = getTagStyle(tag);
+                        return (
+                            <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
+                                {tag}
+                                <button type="button" onClick={e => { e.stopPropagation(); removeAt(i); }}>×</button>
+                            </span>
+                        );
+                    })}
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={e => { setInput(e.target.value); setActiveIdx(-1); }}
+                        onFocus={() => setFocused(true)}
+                        onBlur={() => { if (input.trim()) add(); setFocused(false); setActiveIdx(-1); }}
+                        onKeyDown={e => {
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                if (showDropdown) setActiveIdx(i => Math.min(i + 1, suggestions.length - 1));
+                            } else if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                if (showDropdown) setActiveIdx(i => Math.max(i - 1, -1));
+                            } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setFocused(false); setActiveIdx(-1); setInput('');
+                            } else if (e.key === 'Enter' || e.key === ',') {
+                                e.preventDefault();
+                                if (showDropdown && activeIdx >= 0) add(suggestions[activeIdx]);
+                                else if (input.trim()) add();
+                            } else if (e.key === 'Backspace' && !input && etichetteList.length > 0) {
+                                removeAt(etichetteList.length - 1);
+                            }
+                        }}
+                        placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
+                        style={{ border: 'none', outline: 'none', flexGrow: 1, minWidth: '100px', fontSize: '0.88rem', padding: '1px 0', background: 'transparent', fontFamily: 'inherit' }}
+                    />
+                </div>
+                {!showDropdown && isNewValue && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
+                        Premi Invio per aggiungere <strong>"{input.trim()}"</strong>
+                    </div>
+                )}
+            </div>
+            {showDropdown && boxRef.current && createPortal(
+                (() => {
+                    const rect = boxRef.current.getBoundingClientRect();
+                    return (
+                        <ul style={{
+                            position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 9999,
+                            margin: 0, padding: '4px', listStyle: 'none', background: '#fff',
+                            border: '1px solid var(--border-color)', borderRadius: '6px',
+                            boxShadow: '0 6px 20px rgba(0,0,0,0.12)', maxHeight: '220px', overflowY: 'auto',
+                        }}>
+                            {suggestions.map((s, i) => (
+                                <li
+                                    key={s}
+                                    onMouseDown={e => e.preventDefault()}
+                                    onMouseEnter={() => setActiveIdx(i)}
+                                    onClick={() => add(s)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px',
+                                        borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem',
+                                        background: i === activeIdx ? 'var(--primary-container)' : 'transparent',
+                                    }}
+                                >
+                                    <Tag size={12} style={{ opacity: 0.6, flexShrink: 0 }} /> {s}
+                                </li>
+                            ))}
+                            {isNewValue && (
+                                <li
+                                    onMouseDown={e => e.preventDefault()}
+                                    onClick={() => add()}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px',
+                                        borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--primary)',
+                                        borderTop: suggestions.length ? '1px solid var(--border-color)' : 'none', marginTop: suggestions.length ? '2px' : 0,
+                                    }}
+                                >
+                                    <PlusCircle size={12} style={{ flexShrink: 0 }} /> Crea <strong>"{input.trim()}"</strong>
+                                </li>
+                            )}
+                        </ul>
+                    );
+                })(),
+                document.body
+            )}
+        </div>
+    );
+};
+
+const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const { societaList, selectedSocietaId } = useSocieta();
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
@@ -196,8 +321,7 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
 
     // ── Etichette (tag) state ─────────────────────────────────────────────────
     const [etichetteList, setEtichetteList] = useState([]);
-    const [etichetteInput, setEtichetteInput] = useState('');
-    const etichetteInputRef = useRef(null);
+    const [originalEtichette, setOriginalEtichette] = useState([]); // snapshot all'apertura, per il pool suggerimenti
 
     const parseEtichette = (val) => {
         if (!val) return [];
@@ -217,11 +341,6 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
         let h = 0;
         for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0x7fffffff;
         return TAG_PALETTE[h % TAG_PALETTE.length];
-    };
-    const addEtichetta = (raw) => {
-        const tag = raw.trim().replace(/,$/, '').trim();
-        if (tag && !etichetteList.includes(tag)) setEtichetteList(prev => [...prev, tag]);
-        setEtichetteInput('');
     };
 
     const [activeTab, setActiveTab] = useState('Anagrafica');
@@ -779,8 +898,9 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
             
             // Set Checkbox state based on date existence
             setHaCertificato(!!socioData.scadenza_certificato);
-            setEtichetteList(parseEtichette(socioData.etichette));
-            setEtichetteInput('');
+            const tags = parseEtichette(socioData.etichette);
+            setEtichetteList(tags);
+            setOriginalEtichette(tags);
 
             // Popola stato accesso frontend
             setFrontendAccess({
@@ -2452,43 +2572,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                 </div>
                                 
                                 {/* Etichette */}
-                                <div className="form-group grid-span-6">
-                                    <label className="field-label">Etichette</label>
-                                    <div
-                                        style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid var(--border-color)', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
-                                        onClick={() => etichetteInputRef.current?.focus()}
-                                    >
-                                        {etichetteList.map((tag, i) => {
-                                            const ts = getTagStyle(tag);
-                                            return (
-                                                <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
-                                                    {tag}
-                                                    <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }}>×</button>
-                                                </span>
-                                            );
-                                        })}
-                                        <input
-                                            ref={etichetteInputRef}
-                                            type="text"
-                                            value={etichetteInput}
-                                            onChange={e => setEtichetteInput(e.target.value)}
-                                            onKeyDown={e => {
-                                                if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
-                                                    e.preventDefault();
-                                                    addEtichetta(etichetteInput);
-                                                } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
-                                                    setEtichetteList(prev => prev.slice(0, -1));
-                                                }
-                                            }}
-                                            onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
-                                            placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
-                                            style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
-                                        />
-                                    </div>
-                                    {etichetteInput.trim() && (
-                                        <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
-                                    )}
-                                </div>
+                                <EtichetteInput
+                                    etichetteList={etichetteList}
+                                    setEtichetteList={setEtichetteList}
+                                    allEtichette={allEtichette}
+                                    originalEtichette={originalEtichette}
+                                    getTagStyle={getTagStyle}
+                                />
 
                                 {/* Row 6 - Note and Extra */}
                                 <div className="form-group grid-span-12" style={{gridRow: 'span 2'}}>
@@ -3215,43 +3305,13 @@ const SocioModal = ({ onClose, onSave, socioData }) => {
                                     placeholder="https://"
                                 />
                             </div>
-                            <div className="form-group grid-span-6">
-                                <label className="field-label">Etichette</label>
-                                <div
-                                    style={{ display:'flex', flexWrap:'wrap', gap:'4px', padding:'5px 8px', border:'1px solid var(--border-color)', borderRadius:'4px', minHeight:'36px', alignItems:'center', background:'#fff', cursor:'text', boxSizing:'border-box', width:'100%' }}
-                                    onClick={() => etichetteInputRef.current?.focus()}
-                                >
-                                    {etichetteList.map((tag, i) => {
-                                        const ts = getTagStyle(tag);
-                                        return (
-                                            <span key={i} className="etichetta-chip" style={{ '--chip-bg': ts.bg, '--chip-color': ts.text }}>
-                                                {tag}
-                                                <button type="button" onClick={e => { e.stopPropagation(); setEtichetteList(prev => prev.filter((_, j) => j !== i)); }}>×</button>
-                                            </span>
-                                        );
-                                    })}
-                                    <input
-                                        ref={etichetteInputRef}
-                                        type="text"
-                                        value={etichetteInput}
-                                        onChange={e => setEtichetteInput(e.target.value)}
-                                        onKeyDown={e => {
-                                            if ((e.key === 'Enter' || e.key === ',') && etichetteInput.trim()) {
-                                                e.preventDefault();
-                                                addEtichetta(etichetteInput);
-                                            } else if (e.key === 'Backspace' && !etichetteInput && etichetteList.length > 0) {
-                                                setEtichetteList(prev => prev.slice(0, -1));
-                                            }
-                                        }}
-                                        onBlur={() => { if (etichetteInput.trim()) addEtichetta(etichetteInput); }}
-                                        placeholder={etichetteList.length === 0 ? 'Aggiungi etichetta...' : ''}
-                                        style={{ border:'none', outline:'none', flexGrow:1, minWidth:'100px', fontSize:'0.88rem', padding:'1px 0', background:'transparent', fontFamily:'inherit' }}
-                                    />
-                                </div>
-                                {etichetteInput.trim() && (
-                                    <div style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'3px' }}>Premi Invio o virgola per aggiungere</div>
-                                )}
-                            </div>
+                            <EtichetteInput
+                                etichetteList={etichetteList}
+                                setEtichetteList={setEtichetteList}
+                                allEtichette={allEtichette}
+                                originalEtichette={originalEtichette}
+                                getTagStyle={getTagStyle}
+                            />
 
                             <div className="form-group grid-span-6">
                                 <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
