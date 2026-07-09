@@ -142,6 +142,13 @@
     outline: none;
 }
 
+/* Nasconde l'icona calendario nativa del browser: usiamo la nostra (lucide)
+   sovrapposta, che è tematizzata e apre il picker via showPicker(). */
+.gpm-input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+}
+
 .gpm-row-4 {
     display: flex;
     gap: 15px;
