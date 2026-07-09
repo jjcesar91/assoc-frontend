@@ -1391,6 +1391,7 @@ const Soci = ({ onLogout }) => {
             {showComunicazioneModal && (
                 <ComunicazioneModal
                     socioId={comunicazioneSocioId}
+                    societa={currentSocieta}
                     onClose={() => setShowComunicazioneModal(false)}
                     onSave={() => {
                         // Optionally refresh socio list or show success message

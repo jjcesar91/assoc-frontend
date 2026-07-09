@@ -204,9 +204,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
         });
 
-    const handleChiediConfirm = async () => {
+    const handleChiediConfirm = async (cc) => {
         setChiediModal(m => (m ? { ...m, sending: true } : m));
-        const res = await sendComunicazioneEmail(sendDataRef.current);
+        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccSocieta: cc });
         setChiediModal(null);
         if (res?.ok) showComFeedback(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
         else showComFeedback(res?.error || 'Errore invio comunicazione', 'error');
@@ -247,12 +247,16 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             } catch { /* ignore */ }
         }
 
-        const testo = applyShortcodes(config.testo, {
+        const ctx = {
             nome,
             importo: formatImporto(updated?.importo),
             numeroOrdine: updated?.numero_ricevuta || `#${updated?.id || ''}`,
+            numeroRicevuta: updated?.numero_ricevuta || '',
+            nomeAssociazione: societa?.denominazione || '',
             istruzioni: '',
-        });
+        };
+        const testo = applyShortcodes(config.testo, ctx);
+        const oggetto = applyShortcodes(config.oggetto, ctx);
 
         // Genera la ricevuta PDF da allegare
         let allegati = [];
@@ -267,7 +271,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             console.error('Errore generazione PDF ricevuta per allegato', e);
         }
 
-        const sendData = { socioId, oggetto: config.oggetto, testo, allegati };
+        // AUTOMATICA: usa il flag CC configurato; CHIEDI: sarà la spunta del modal a decidere.
+        const sendData = { socioId, oggetto, testo, allegati, ccSocieta: config.cc };
 
         if (config.stato === 'AUTOMATICA') {
             if (!socioId || !email) return; // nessuna email → niente invio automatico
@@ -282,7 +287,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         await askInvioComunicazione({
             titolo: 'Comunicazione pagamento registrato',
             destinatario: email,
-            oggetto: config.oggetto,
+            oggetto,
             testoHtml: testo,
             allegatoNome: allegati[0]?.filename,
             sendData,
@@ -781,6 +786,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 oggetto={chiediModal?.oggetto}
                 testoHtml={chiediModal?.testoHtml}
                 allegatoNome={chiediModal?.allegatoNome}
+                ccEmail={societa?.email}
                 sending={chiediModal?.sending}
                 onConfirm={handleChiediConfirm}
                 onClose={handleChiediClose}

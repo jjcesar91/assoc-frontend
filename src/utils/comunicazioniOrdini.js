@@ -16,6 +16,8 @@ export const STATO_LABELS = {
 // Shortcode disponibili nel WYSIWYG (inseribili dai pulsanti della toolbar).
 export const SHORTCODE_ISTRUZIONI = '{{ISTRUZIONI_PAGAMENTO}}';
 export const SHORTCODE_LINK_RICEVUTA = '{{LINK_RICEVUTA}}';
+export const SHORTCODE_NOME_ASSOCIAZIONE = '{{NOME_ASSOCIAZIONE}}';
+export const SHORTCODE_NUMERO_RICEVUTA = '{{NUMERO_RICEVUTA}}';
 
 export const SHORTCODE_FIELDS_COMUNI = [
     { label: 'Nome', token: '{{NOME}}', title: 'Inserisci il nome del destinatario' },
@@ -29,6 +31,19 @@ export const SHORTCODE_FIELDS_PROFORMA = [
     { label: 'Link ricevuta', token: SHORTCODE_LINK_RICEVUTA, title: 'Inserisce il link per il caricamento della ricevuta (solo per pagamenti con bonifico, valido 3 giorni)' },
 ];
 
+// Placeholder disponibili nel WYSIWYG dell'oggetto (unica funzione: inserire i campi dinamici).
+export const SUBJECT_FIELDS_PROFORMA = [
+    { label: 'Importo', token: '{{IMPORTO}}', title: "Inserisci l'importo totale dell'ordine" },
+    { label: 'N. Ordine', token: '{{NUMERO_ORDINE}}', title: 'Inserisci il numero del documento' },
+    { label: 'Nome socio', token: '{{NOME}}', title: 'Inserisci il nome del socio destinatario' },
+    { label: 'Nome associazione', token: SHORTCODE_NOME_ASSOCIAZIONE, title: "Inserisci il nome dell'associazione" },
+];
+
+export const SUBJECT_FIELDS_PAGAMENTO = [
+    ...SUBJECT_FIELDS_PROFORMA,
+    { label: 'N. Ricevuta', token: SHORTCODE_NUMERO_RICEVUTA, title: 'Inserisci il numero della ricevuta' },
+];
+
 // Testi di default già pronti all'uso.
 export const DEFAULTS = {
     proforma: {
@@ -40,7 +55,7 @@ export const DEFAULTS = {
             '<p>Grazie,<br>Lo staff</p>',
     },
     pagamento: {
-        oggetto: 'Pagamento registrato - Ricevuta allegata',
+        oggetto: 'Pagamento registrato {{NOME_ASSOCIAZIONE}} - Ricevuta n. {{NUMERO_RICEVUTA}}',
         testo:
             '<p>Gentile {{NOME}},</p>' +
             '<p>confermiamo il tuo ordine: il pagamento di <strong>{{IMPORTO}}</strong> è stato registrato correttamente.</p>' +
@@ -64,13 +79,15 @@ export function getComConfig(societa, tipo) {
         stato,
         oggetto: oggetto || DEFAULTS[tipo].oggetto,
         testo: testo || DEFAULTS[tipo].testo,
+        // Copia conoscenza alla mail anagrafica della società (solo invii automatici).
+        cc: !!societa?.[`${prefix}_cc`],
     };
 }
 
 /**
- * Sostituisce gli shortcode nel testo HTML.
+ * Sostituisce gli shortcode nel testo HTML (usato anche per l'oggetto).
  * @param {string} html
- * @param {{ nome?: string, importo?: string, numeroOrdine?: string, istruzioni?: string, linkRicevuta?: string }} ctx
+ * @param {{ nome?: string, importo?: string, numeroOrdine?: string, numeroRicevuta?: string, nomeAssociazione?: string, istruzioni?: string, linkRicevuta?: string }} ctx
  */
 export function applyShortcodes(html, ctx = {}) {
     if (!html) return '';
@@ -78,6 +95,8 @@ export function applyShortcodes(html, ctx = {}) {
         .replaceAll('{{NOME}}', ctx.nome || '')
         .replaceAll('{{IMPORTO}}', ctx.importo || '')
         .replaceAll('{{NUMERO_ORDINE}}', ctx.numeroOrdine || '')
+        .replaceAll(SHORTCODE_NUMERO_RICEVUTA, ctx.numeroRicevuta || '')
+        .replaceAll(SHORTCODE_NOME_ASSOCIAZIONE, ctx.nomeAssociazione || '')
         .replaceAll(SHORTCODE_ISTRUZIONI, ctx.istruzioni || '');
 
     // Link ricevuta: solo per bonifico. Se assente, rimuovo l'eventuale paragrafo che lo contiene.
@@ -123,9 +142,10 @@ export function buildIstruzioniPagamento(conti, contoDestinazione, modalita) {
  * @param {string} params.oggetto
  * @param {string} params.testo - HTML
  * @param {Array} [params.allegati] - [{ filename, content(base64) }]
+ * @param {boolean} [params.ccSocieta] - Se true, invia in CC alla mail anagrafica della società
  * @returns {Promise<{ ok: boolean, warning?: string, error?: string }>}
  */
-export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati }) {
+export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati, ccSocieta }) {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`/users/api/soci/${socioId}/comunicazioni`, {
@@ -134,7 +154,7 @@ export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati
                 'Content-Type': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ tipo: 'EMAIL', oggetto, testo, allegati }),
+            body: JSON.stringify({ tipo: 'EMAIL', oggetto, testo, allegati, ccSocieta: !!ccSocieta }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {

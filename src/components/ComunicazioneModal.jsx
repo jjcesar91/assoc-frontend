@@ -33,6 +33,8 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
     const [templateKey, setTemplateKey] = useState('');
     const [loadingTemplate, setLoadingTemplate] = useState(false);
     const [allegaRicevuta, setAllegaRicevuta] = useState(false);
+    const [ccSocieta, setCcSocieta] = useState(false);
+    const societaEmail = societa?.email || '';
 
     // Carica una comunicazione di default risolvendo i placeholder {{}} col
     // contesto dell'ordine (nome socio, importo, numero, istruzioni pagamento).
@@ -76,16 +78,19 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                 } catch { /* ignore */ }
             }
 
-            const testoRisolto = applyShortcodes(config.testo, {
+            const ctx = {
                 nome,
                 importo: formatImporto(ordine?.importo),
                 numeroOrdine: ordine?.numero_ricevuta || `#${ordine?.id || ''}`,
+                numeroRicevuta: ordine?.numero_ricevuta || '',
+                nomeAssociazione: societa?.denominazione || '',
                 istruzioni,
                 linkRicevuta: '',
-            });
+            };
+            const testoRisolto = applyShortcodes(config.testo, ctx);
 
             setTipo('EMAIL');
-            setOggetto(config.oggetto);
+            setOggetto(applyShortcodes(config.oggetto, ctx));
             setTesto(testoRisolto);
         } finally {
             setLoadingTemplate(false);
@@ -130,7 +135,8 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                 tipo,
                 oggetto: tipo === 'EMAIL' ? oggetto : null,
                 testo,
-                allegati
+                allegati,
+                ccSocieta: tipo === 'EMAIL' && ccSocieta
             };
 
             const response = await fetch(`/users/api/soci/${socioId}/comunicazioni`, {
@@ -276,6 +282,20 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                                     style={{width:'16px', height:'16px', cursor:'pointer'}}
                                 />
                                 Allega la ricevuta in PDF
+                            </label>
+                        </div>
+                    )}
+
+                    {tipo === 'EMAIL' && societaEmail && (
+                        <div className="comunicazione-field">
+                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                                <input
+                                    type="checkbox"
+                                    checked={ccSocieta}
+                                    onChange={(e) => setCcSocieta(e.target.checked)}
+                                    style={{width:'16px', height:'16px', cursor:'pointer'}}
+                                />
+                                Invia una copia (CC) alla mail della società ({societaEmail})
                             </label>
                         </div>
                     )}

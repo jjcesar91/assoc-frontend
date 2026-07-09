@@ -9,6 +9,8 @@ import {
     getComConfig,
     SHORTCODE_FIELDS_PROFORMA,
     SHORTCODE_FIELDS_COMUNI,
+    SUBJECT_FIELDS_PROFORMA,
+    SUBJECT_FIELDS_PAGAMENTO,
 } from '../utils/comunicazioniOrdini';
 import './Soci.css';
 
@@ -36,7 +38,7 @@ const StatoSelector = ({ value, onChange }) => (
     </div>
 );
 
-const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig, insertFields }) => {
+const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig, insertFields, subjectFields, societaEmail }) => {
     const disabled = config.stato === 'NON_ATTIVA';
     return (
         <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'stretch', marginBottom: 24 }}>
@@ -53,18 +55,33 @@ const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig,
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
                     <strong>Non attiva</strong>: nessun invio · <strong>Chiedi</strong>: chiede conferma prima di inviare · <strong>Automatica</strong>: invia in automatico al socio.
                 </span>
+
+                {config.stato === 'AUTOMATICA' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <input
+                            type="checkbox"
+                            checked={!!config.cc}
+                            onChange={(e) => setConfig({ ...config, cc: e.target.checked })}
+                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                        />
+                        Invia sempre una copia (CC) alla mail della società{societaEmail ? ` (${societaEmail})` : ''}
+                    </label>
+                )}
             </div>
 
             {!disabled && (
                 <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Oggetto email</label>
-                        <input
-                            className="md-input"
+                        <SimpleEditor
+                            subject
                             value={config.oggetto}
                             onChange={(e) => setConfig({ ...config, oggetto: e.target.value })}
-                            placeholder="Oggetto della mail"
+                            insertFields={subjectFields}
                         />
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <Info size={13} /> Usa i pulsanti per inserire i campi dinamici nell'oggetto.
+                        </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -97,8 +114,9 @@ const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig,
 const OrdiniComunicazioni = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
 
-    const [proforma, setProforma] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '' });
-    const [pagamento, setPagamento] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '' });
+    const [proforma, setProforma] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', cc: false });
+    const [pagamento, setPagamento] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', cc: false });
+    const societaEmail = societaList.find(s => s.id == selectedSocietaId)?.email || '';
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
 
@@ -122,9 +140,11 @@ const OrdiniComunicazioni = () => {
                 com_proforma_stato: proforma.stato,
                 com_proforma_oggetto: proforma.oggetto,
                 com_proforma_testo: proforma.testo,
+                com_proforma_cc: proforma.stato === 'AUTOMATICA' ? !!proforma.cc : false,
                 com_pagamento_stato: pagamento.stato,
                 com_pagamento_oggetto: pagamento.oggetto,
                 com_pagamento_testo: pagamento.testo,
+                com_pagamento_cc: pagamento.stato === 'AUTOMATICA' ? !!pagamento.cc : false,
             };
             const res = await fetch(`/users/api/societa/${selectedSocietaId}`, {
                 method: 'PUT',
@@ -174,23 +194,27 @@ const OrdiniComunicazioni = () => {
                 </p>
 
                 <ComunicazioneCard
-                    titolo="Creazione proforma"
+                    titolo="Comunicazione nuova proforma"
                     icon={<FileText size={18} />}
                     descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione dell'ordine e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
                     tipo="proforma"
                     config={proforma}
                     setConfig={setProforma}
                     insertFields={SHORTCODE_FIELDS_PROFORMA}
+                    subjectFields={SUBJECT_FIELDS_PROFORMA}
+                    societaEmail={societaEmail}
                 />
 
                 <ComunicazioneCard
-                    titolo="Proforma registrata come pagamento"
+                    titolo="Comunicazione ordine pagato"
                     icon={<Mail size={18} />}
                     descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma l'ordine, comunica la registrazione del pagamento e allega la ricevuta in PDF."
                     tipo="pagamento"
                     config={pagamento}
                     setConfig={setPagamento}
                     insertFields={SHORTCODE_FIELDS_COMUNI}
+                    subjectFields={SUBJECT_FIELDS_PAGAMENTO}
+                    societaEmail={societaEmail}
                 />
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

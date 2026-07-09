@@ -3794,9 +3794,10 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             </div>
 
             {showComunicazioneModal && (
-                 <ComunicazioneModal 
+                 <ComunicazioneModal
                     onClose={() => setShowComunicazioneModal(false)}
                     socioId={formData.id}
+                    societa={societaList?.find(s => s.id == selectedSocietaId)}
                     onSave={() => {
                         fetchComunicazioni();
                     }}

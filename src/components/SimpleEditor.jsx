@@ -1,8 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { Bold, Italic, Underline, List, ListOrdered, Link, Type, Plus } from 'lucide-react';
 
-const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
+const SimpleEditor = ({ value, onChange, style, insertFields = [], subject = false }) => {
     const editorRef = useRef(null);
+
+    // In modalità "subject" l'editor gestisce testo semplice su una riga:
+    // il valore esterno/interno è plain text, non HTML.
+    const readContent = (editor) => (subject ? editor.textContent : editor.innerHTML);
 
     useEffect(() => {
         const editor = editorRef.current;
@@ -12,10 +16,11 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
         // l'utente sta scrivendo: in quel caso non sovrascriviamo, altrimenti
         // perderemmo il contenuto digitato e la posizione del cursore.
         const incoming = value || '';
-        if (editor.innerHTML !== incoming && document.activeElement !== editor) {
-            editor.innerHTML = incoming;
+        if (readContent(editor) !== incoming && document.activeElement !== editor) {
+            if (subject) editor.textContent = incoming;
+            else editor.innerHTML = incoming;
         }
-    }, [value]);
+    }, [value, subject]);
 
     const execCommand = (command, value = null) => {
         document.execCommand(command, false, value);
@@ -23,7 +28,7 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
         if (editorRef.current && onChange) {
             onChange({
                 target: {
-                    value: editorRef.current.innerHTML
+                    value: readContent(editorRef.current)
                 }
             });
         }
@@ -33,7 +38,7 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
         if (editorRef.current && onChange) {
             onChange({
                 target: {
-                    value: editorRef.current.innerHTML
+                    value: readContent(editorRef.current)
                 }
             });
         }
@@ -102,26 +107,30 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
                 background: 'var(--surface-1)',
                 flexWrap: 'wrap'
             }}>
-                <ToolbarButton icon={Bold} command="bold" title="Grassetto" />
-                <ToolbarButton icon={Italic} command="italic" title="Corsivo" />
-                <ToolbarButton icon={Underline} command="underline" title="Sottolineato" />
-                <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
-                <ToolbarButton icon={List} command="insertUnorderedList" title="Elenco puntato" />
-                <ToolbarButton icon={ListOrdered} command="insertOrderedList" title="Elenco numerato" />
-                <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
-                {/* <ToolbarButton icon={Link} command="createLink" arg={prompt('URL link:')} title="Link (non implementato completamente)" /> */}
-                <button 
-                  onMouseDown={(e) => {
-                      e.preventDefault();
-                      execCommand('removeFormat');
-                  }}
-                  style={{border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'var(--text-secondary)'}}
-                >
-                    Clear
-                </button>
+                {!subject && (
+                    <>
+                        <ToolbarButton icon={Bold} command="bold" title="Grassetto" />
+                        <ToolbarButton icon={Italic} command="italic" title="Corsivo" />
+                        <ToolbarButton icon={Underline} command="underline" title="Sottolineato" />
+                        <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
+                        <ToolbarButton icon={List} command="insertUnorderedList" title="Elenco puntato" />
+                        <ToolbarButton icon={ListOrdered} command="insertOrderedList" title="Elenco numerato" />
+                        <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
+                        {/* <ToolbarButton icon={Link} command="createLink" arg={prompt('URL link:')} title="Link (non implementato completamente)" /> */}
+                        <button
+                          onMouseDown={(e) => {
+                              e.preventDefault();
+                              execCommand('removeFormat');
+                          }}
+                          style={{border:'none', background:'none', cursor:'pointer', fontSize:'12px', color:'var(--text-secondary)'}}
+                        >
+                            Clear
+                        </button>
+                    </>
+                )}
                 {insertFields.length > 0 && (
                     <>
-                        <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>
+                        {!subject && <div style={{width: '1px', background: 'var(--border-color)', margin: '0 4px'}}></div>}
                         {insertFields.map((field) => (
                             <button
                                 key={field.token}
@@ -157,9 +166,17 @@ const SimpleEditor = ({ value, onChange, style, insertFields = [] }) => {
                 contentEditable
                 className="editor-content"
                 onInput={handleInput}
+                onKeyDown={subject ? (e) => { if (e.key === 'Enter') e.preventDefault(); } : undefined}
                 suppressContentEditableWarning={true}
                 tabIndex={0}
-                style={{
+                style={subject ? {
+                    padding: '10px 12px',
+                    minHeight: '22px',
+                    outline: 'none',
+                    overflowX: 'auto',
+                    whiteSpace: 'nowrap',
+                    flex: 1
+                } : {
                     padding: '12px',
                     minHeight: '150px',
                     outline: 'none',
