@@ -33,7 +33,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
     const [templateKey, setTemplateKey] = useState('');
     const [loadingTemplate, setLoadingTemplate] = useState(false);
     const [allegaRicevuta, setAllegaRicevuta] = useState(false);
-    const [ccSocieta, setCcSocieta] = useState(false);
+    const [ccnSocieta, setCcnSocieta] = useState(false);
     const societaEmail = societa?.email || '';
 
     // Carica una comunicazione di default risolvendo i placeholder {{}} col
@@ -136,7 +136,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                 oggetto: tipo === 'EMAIL' ? oggetto : null,
                 testo,
                 allegati,
-                ccSocieta: tipo === 'EMAIL' && ccSocieta
+                ccnSocieta: tipo === 'EMAIL' && ccnSocieta
             };
 
             const response = await fetch(`/users/api/soci/${socioId}/comunicazioni`, {
@@ -291,11 +291,11 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                             <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
                                 <input
                                     type="checkbox"
-                                    checked={ccSocieta}
-                                    onChange={(e) => setCcSocieta(e.target.checked)}
+                                    checked={ccnSocieta}
+                                    onChange={(e) => setCcnSocieta(e.target.checked)}
                                     style={{width:'16px', height:'16px', cursor:'pointer'}}
                                 />
-                                Invia una copia (CC) alla mail della società ({societaEmail})
+                                Invia una copia nascosta (CCn) alla mail della società ({societaEmail})
                             </label>
                         </div>
                     )}

@@ -67,9 +67,9 @@ const NuovoOrdine = () => {
             setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
         });
 
-    const handleChiediConfirm = async (cc) => {
+    const handleChiediConfirm = async (ccn) => {
         setChiediModal(m => (m ? { ...m, sending: true } : m));
-        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccSocieta: cc });
+        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccnSocieta: ccn });
         if (res.ok) showSnackbar(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
         else showSnackbar(res.error || 'Errore invio comunicazione', 'error');
         setChiediModal(null);
@@ -165,8 +165,8 @@ const NuovoOrdine = () => {
         };
         const testo = applyShortcodes(config.testo, ctx);
         const oggetto = applyShortcodes(config.oggetto, ctx);
-        // AUTOMATICA: usa il flag CC configurato; CHIEDI: sarà la spunta del modal a decidere.
-        const sendData = { socioId, oggetto, testo, ccSocieta: config.cc };
+        // AUTOMATICA: usa il flag CCn configurato; CHIEDI: sarà la spunta del modal a decidere.
+        const sendData = { socioId, oggetto, testo, ccnSocieta: config.ccn };
 
         if (config.stato === 'AUTOMATICA') {
             if (!socioId || !email) {
@@ -237,7 +237,7 @@ const NuovoOrdine = () => {
             console.error('Errore generazione PDF ricevuta per allegato', e);
         }
 
-        const sendData = { socioId, oggetto, testo, allegati, ccSocieta: config.cc };
+        const sendData = { socioId, oggetto, testo, allegati, ccnSocieta: config.ccn };
 
         if (config.stato === 'AUTOMATICA') {
             if (!socioId || !email) {

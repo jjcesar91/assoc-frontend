@@ -204,9 +204,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
         });
 
-    const handleChiediConfirm = async (cc) => {
+    const handleChiediConfirm = async (ccn) => {
         setChiediModal(m => (m ? { ...m, sending: true } : m));
-        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccSocieta: cc });
+        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccnSocieta: ccn });
         setChiediModal(null);
         if (res?.ok) showComFeedback(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
         else showComFeedback(res?.error || 'Errore invio comunicazione', 'error');
@@ -271,8 +271,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             console.error('Errore generazione PDF ricevuta per allegato', e);
         }
 
-        // AUTOMATICA: usa il flag CC configurato; CHIEDI: sarà la spunta del modal a decidere.
-        const sendData = { socioId, oggetto, testo, allegati, ccSocieta: config.cc };
+        // AUTOMATICA: usa il flag CCn configurato; CHIEDI: sarà la spunta del modal a decidere.
+        const sendData = { socioId, oggetto, testo, allegati, ccnSocieta: config.ccn };
 
         if (config.stato === 'AUTOMATICA') {
             if (!socioId || !email) return; // nessuna email → niente invio automatico

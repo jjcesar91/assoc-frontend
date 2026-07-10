@@ -60,11 +60,11 @@ const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig,
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                         <input
                             type="checkbox"
-                            checked={!!config.cc}
-                            onChange={(e) => setConfig({ ...config, cc: e.target.checked })}
+                            checked={!!config.ccn}
+                            onChange={(e) => setConfig({ ...config, ccn: e.target.checked })}
                             style={{ width: 16, height: 16, cursor: 'pointer' }}
                         />
-                        Invia sempre una copia (CC) alla mail della società{societaEmail ? ` (${societaEmail})` : ''}
+                        Invia sempre una copia nascosta (CCn) alla mail della società{societaEmail ? ` (${societaEmail})` : ''}
                     </label>
                 )}
             </div>
@@ -114,8 +114,8 @@ const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig,
 const OrdiniComunicazioni = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
 
-    const [proforma, setProforma] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', cc: false });
-    const [pagamento, setPagamento] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', cc: false });
+    const [proforma, setProforma] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', ccn: false });
+    const [pagamento, setPagamento] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', ccn: false });
     const societaEmail = societaList.find(s => s.id == selectedSocietaId)?.email || '';
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -140,11 +140,11 @@ const OrdiniComunicazioni = () => {
                 com_proforma_stato: proforma.stato,
                 com_proforma_oggetto: proforma.oggetto,
                 com_proforma_testo: proforma.testo,
-                com_proforma_cc: proforma.stato === 'AUTOMATICA' ? !!proforma.cc : false,
+                com_proforma_ccn: proforma.stato === 'AUTOMATICA' ? !!proforma.ccn : false,
                 com_pagamento_stato: pagamento.stato,
                 com_pagamento_oggetto: pagamento.oggetto,
                 com_pagamento_testo: pagamento.testo,
-                com_pagamento_cc: pagamento.stato === 'AUTOMATICA' ? !!pagamento.cc : false,
+                com_pagamento_ccn: pagamento.stato === 'AUTOMATICA' ? !!pagamento.ccn : false,
             };
             const res = await fetch(`/users/api/societa/${selectedSocietaId}`, {
                 method: 'PUT',

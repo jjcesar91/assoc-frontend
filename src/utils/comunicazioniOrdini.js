@@ -79,8 +79,8 @@ export function getComConfig(societa, tipo) {
         stato,
         oggetto: oggetto || DEFAULTS[tipo].oggetto,
         testo: testo || DEFAULTS[tipo].testo,
-        // Copia conoscenza alla mail anagrafica della società (solo invii automatici).
-        cc: !!societa?.[`${prefix}_cc`],
+        // Copia conoscenza nascosta (CCn) alla mail anagrafica della società (solo invii automatici).
+        ccn: !!societa?.[`${prefix}_ccn`],
     };
 }
 
@@ -142,10 +142,10 @@ export function buildIstruzioniPagamento(conti, contoDestinazione, modalita) {
  * @param {string} params.oggetto
  * @param {string} params.testo - HTML
  * @param {Array} [params.allegati] - [{ filename, content(base64) }]
- * @param {boolean} [params.ccSocieta] - Se true, invia in CC alla mail anagrafica della società
+ * @param {boolean} [params.ccnSocieta] - Se true, invia in CCn (copia conoscenza nascosta) alla mail anagrafica della società
  * @returns {Promise<{ ok: boolean, warning?: string, error?: string }>}
  */
-export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati, ccSocieta }) {
+export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati, ccnSocieta }) {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch(`/users/api/soci/${socioId}/comunicazioni`, {
@@ -154,7 +154,7 @@ export async function sendComunicazioneEmail({ socioId, oggetto, testo, allegati
                 'Content-Type': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ tipo: 'EMAIL', oggetto, testo, allegati, ccSocieta: !!ccSocieta }),
+            body: JSON.stringify({ tipo: 'EMAIL', oggetto, testo, allegati, ccnSocieta: !!ccnSocieta }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {

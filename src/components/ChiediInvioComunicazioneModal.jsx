@@ -10,9 +10,9 @@ import { Mail, X, Send } from 'lucide-react';
  *  - oggetto           : oggetto email
  *  - testoHtml         : anteprima HTML del corpo (shortcode già risolti)
  *  - allegatoNome      : (opzionale) nome del file allegato (es. ricevuta PDF)
- *  - ccEmail           : (opzionale) mail anagrafica società per l'invio in CC
+ *  - ccEmail           : (opzionale) mail anagrafica società per l'invio in CCn (copia conoscenza nascosta)
  *  - sending           : bool, invio in corso
- *  - onConfirm(cc)     : callback conferma; riceve lo stato della spunta CC
+ *  - onConfirm(ccn)    : callback conferma; riceve lo stato della spunta CCn
  *  - onClose
  */
 const ChiediInvioComunicazioneModal = ({
@@ -27,9 +27,9 @@ const ChiediInvioComunicazioneModal = ({
     onConfirm,
     onClose,
 }) => {
-    const [cc, setCc] = useState(false);
+    const [ccn, setCcn] = useState(false);
     // Reset della spunta ad ogni apertura del modal.
-    useEffect(() => { if (isOpen) setCc(false); }, [isOpen]);
+    useEffect(() => { if (isOpen) setCcn(false); }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -71,12 +71,12 @@ const ChiediInvioComunicazioneModal = ({
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 14, fontSize: '0.9rem' }}>
                                     <input
                                         type="checkbox"
-                                        checked={cc}
-                                        onChange={(e) => setCc(e.target.checked)}
+                                        checked={ccn}
+                                        onChange={(e) => setCcn(e.target.checked)}
                                         disabled={sending}
                                         style={{ width: 16, height: 16, cursor: 'pointer' }}
                                     />
-                                    Invia una copia (CC) alla mail della società ({ccEmail})
+                                    Invia una copia nascosta (CCn) alla mail della società ({ccEmail})
                                 </label>
                             )}
                         </>
@@ -88,7 +88,7 @@ const ChiediInvioComunicazioneModal = ({
                         <X size={16} /> {noEmail ? 'Chiudi' : 'Non inviare'}
                     </button>
                     {!noEmail && (
-                        <button onClick={() => onConfirm(cc)} disabled={sending} className="btn-contained" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button onClick={() => onConfirm(ccn)} disabled={sending} className="btn-contained" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Send size={16} /> {sending ? 'Invio in corso...' : 'Invia'}
                         </button>
                     )}
