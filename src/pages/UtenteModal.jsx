@@ -27,7 +27,9 @@ const EMPTY = {
 
 const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
     const currentRole = localStorage.getItem('user_role') || 'user';
-    const ROLE_OPTIONS = currentRole === 'superuser' ? ROLE_OPTIONS_SUPERUSER : ROLE_OPTIONS_ADMIN;
+    // Il ruolo Superuser non è assegnabile in creazione: resta disponibile
+    // solo a un superuser che modifica un utente esistente.
+    const ROLE_OPTIONS = (currentRole === 'superuser' && !!utente) ? ROLE_OPTIONS_SUPERUSER : ROLE_OPTIONS_ADMIN;
     const [form, setForm] = useState(EMPTY);
     const [errors, setErrors] = useState({});
 
