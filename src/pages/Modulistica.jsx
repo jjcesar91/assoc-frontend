@@ -50,8 +50,12 @@ const Modulistica = () => {
     }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchModuli = async () => {
+        if (!selectedSocietaId) {
+            setModuli([]);
+            return;
+        }
         try {
-            const response = await fetch('/documents/api/moduli');
+            const response = await fetch(`/documents/api/moduli?societa_id=${selectedSocietaId}`);
             if (response.ok) {
                 const data = await response.json();
                 setModuli(data);
@@ -291,7 +295,8 @@ const Modulistica = () => {
         const payload = {
             descrizione: formData.descrizione,
             testo: plainText,
-            htmlContent: finalContent
+            htmlContent: finalContent,
+            societa_id: selectedSocietaId
         };
 
         try {
