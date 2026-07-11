@@ -204,7 +204,7 @@ export default function SocioDashboard({ onLogout }) {
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         socioId = payload.socio_ref_id;
-        userName = [payload.nome, payload.cognome].filter(Boolean).join(' ') || payload.username || 'Socio';
+        userName = [payload.nome, payload.cognome].filter(Boolean).join(' ') || payload.email || 'Socio';
     } catch { /* noop */ }
 
     const [socio, setSocio] = useState(null);

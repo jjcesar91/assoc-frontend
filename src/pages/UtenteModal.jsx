@@ -15,7 +15,6 @@ const ROLE_OPTIONS_ADMIN = [
 ];
 
 const EMPTY = {
-    username: '',
     password: '',
     confirmPassword: '',
     email: '',
@@ -36,7 +35,6 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
         if (!isOpen) return;
         if (utente) {
             setForm({
-                username:        utente.username || '',
                 password:        '',
                 confirmPassword: '',
                 email:           utente.email    || '',
@@ -67,7 +65,6 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
 
     const validate = () => {
         const e = {};
-        if (!form.username.trim()) e.username = 'Campo obbligatorio';
         if (!isEdit) {
             if (!form.password) e.password = 'Campo obbligatorio';
             if (!form.email.trim()) e.email = 'Campo obbligatorio';
@@ -86,7 +83,6 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
         const errs = validate();
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
         const payload = {
-            username: form.username,
             nome:     form.nome,
             cognome:  form.cognome,
             telefono: form.telefono,
@@ -121,7 +117,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <User size={20} style={{ color: 'var(--success)' }} />
                         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {isEdit ? `Modifica utente – ${utente.username}` : 'Nuovo utente'}
+                            {isEdit ? `Modifica utente – ${utente.email}` : 'Nuovo utente'}
                         </h2>
                     </div>
                     <button
@@ -139,19 +135,20 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                     <form id="utente-form" onSubmit={handleSubmit} noValidate>
                         <div className="md-form-grid-custom">
 
-                            {/* Username */}
+                            {/* Email (identità utente) */}
                             <div className="form-group grid-span-12">
-                                <label className="field-label">Username {!isEdit && '*'}</label>
+                                <label className="field-label">Email {!isEdit && '*'}</label>
                                 <input
-                                    name="username"
-                                    className="md-input"
-                                    placeholder="Username"
-                                    value={form.username}
+                                    name="email"
+                                    type="email"
+                                    className={`md-input ${errors.email ? 'input-error' : ''}`}
+                                    placeholder="Email"
+                                    value={form.email}
                                     onChange={handleChange}
                                     readOnly={isEdit}
                                     style={isEdit ? { backgroundColor: 'var(--surface-1)', color: 'var(--text-secondary)', cursor: 'default' } : {}}
                                 />
-                                {errors.username && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.username}</div>}
+                                {errors.email && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.email}</div>}
                             </div>
 
                             {/* Password – solo in creazione */}
@@ -184,20 +181,7 @@ const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
                                 {errors.confirmPassword && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.confirmPassword}</div>}
                             </div>
 
-                            {/* Email – solo in creazione */}
-                            <div className="form-group grid-span-6">
-                                <label className="field-label">Email *</label>
-                                <input
-                                    name="email"
-                                    type="email"
-                                    className={`md-input ${errors.email ? 'input-error' : ''}`}
-                                    placeholder="Email"
-                                    value={form.email}
-                                    onChange={handleChange}
-                                />
-                                {errors.email && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors.email}</div>}
-                            </div>
-
+                            {/* Conferma email – solo in creazione */}
                             <div className="form-group grid-span-6">
                                 <label className="field-label">Conferma email</label>
                                 <input

@@ -82,7 +82,7 @@ const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-    const username = utente?.username || '';
+    const utenteLabel = utente?.email || [utente?.cognome, utente?.nome].filter(Boolean).join(' ') || '';
 
     return (
         <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '72px' }}>
@@ -103,7 +103,7 @@ const FunzionalitaModal = ({ isOpen, onClose, utente }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <LayoutGrid size={20} style={{ color: 'var(--success)' }} />
                         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            Funzionalità utente – {username}
+                            Funzionalità utente – {utenteLabel}
                         </h2>
                     </div>
                     <button

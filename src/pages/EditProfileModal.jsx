@@ -4,7 +4,6 @@ import { getPasswordValidationErrors } from '../utils/passwordValidation';
 
 const EditProfileModal = ({ isOpen, onClose }) => {
     const [formData, setFormData] = useState({
-        username: '',
         nome: '',
         cognome: '',
         email: '',
@@ -44,7 +43,6 @@ const EditProfileModal = ({ isOpen, onClose }) => {
                 const data = await response.json();
                 console.log('Profile data fetched:', data); // Debug log
                 setFormData({
-                    username: data.username || '',
                     nome: data.nome || '',
                     cognome: data.cognome || '',
                     email: data.email || '',
@@ -162,15 +160,6 @@ const EditProfileModal = ({ isOpen, onClose }) => {
                             <h3>INFORMAZIONI PERSONALI</h3>
                         </div>
                         <form onSubmit={handleInfoSubmit} className="profile-form">
-                            <div className="form-group">
-                                <label>Username</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.username} 
-                                    readOnly 
-                                    className="modal-input readonly"
-                                />
-                            </div>
                             <div className="form-group">
                                 <label>Nome</label>
                                 <input 

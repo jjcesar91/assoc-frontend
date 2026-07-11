@@ -62,7 +62,7 @@ const Utenti = () => {
     const [showFunzionalitaModal, setShowFunzionalitaModal] = useState(false);
     const [funzionalitaTarget, setFunzionalitaTarget] = useState(null);
 
-    const [filters, setFilters] = useState({ username: '', cognome: '', nome: '', email: '' });
+    const [filters, setFilters] = useState({ cognome: '', nome: '', email: '' });
     const [currentPage, setCurrentPage] = useState(1);
 
     const societaNome = (() => {
@@ -95,7 +95,6 @@ const Utenti = () => {
 
     const filtered = utenti.filter(u => {
         if (u.role === 'superuser') return false;
-        if (filters.username && !(u.username || '').toLowerCase().includes(filters.username.toLowerCase())) return false;
         if (filters.cognome  && !(u.cognome  || '').toLowerCase().includes(filters.cognome.toLowerCase()))  return false;
         if (filters.nome     && !(u.nome     || '').toLowerCase().includes(filters.nome.toLowerCase()))     return false;
         if (filters.email    && !(u.email    || '').toLowerCase().includes(filters.email.toLowerCase()))    return false;
@@ -156,7 +155,7 @@ const Utenti = () => {
     };
 
     const handleDelete = async (utente) => {
-        const ok = await confirm(`Sei sicuro di voler eliminare l'utente "${utente.username}"?`, 'Elimina utente');
+        const ok = await confirm(`Sei sicuro di voler eliminare l'utente "${utente.email}"?`, 'Elimina utente');
         if (!ok) return;
         const token = localStorage.getItem('token');
         try {
@@ -171,7 +170,7 @@ const Utenti = () => {
     };
 
     const handleImpersonate = async (utente) => {
-        const ok = await confirm(`Vuoi accedere come "${utente.username}"? La tua sessione admin verrà salvata.`, 'Impersona utente', { confirmLabel: 'Impersona', confirmColor: 'var(--primary)' });
+        const ok = await confirm(`Vuoi accedere come "${utente.email}"? La tua sessione admin verrà salvata.`, 'Impersona utente', { confirmLabel: 'Impersona', confirmColor: 'var(--primary)' });
         if (!ok) return;
         const token = localStorage.getItem('token');
         try {
@@ -238,7 +237,6 @@ const Utenti = () => {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
-                    username: resetTarget.username,
                     email: resetTarget.email,
                     password: newPwd,
                 }),
@@ -266,7 +264,6 @@ const Utenti = () => {
                 <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
                         {[
-                            { field: 'username', label: 'Username',  placeholder: 'Username' },
                             { field: 'cognome',  label: 'Cognome',   placeholder: 'Cognome' },
                             { field: 'nome',     label: 'Nome',      placeholder: 'Nome' },
                             { field: 'email',    label: 'Email',     placeholder: 'Email' },
@@ -299,7 +296,7 @@ const Utenti = () => {
                         <table className="md-table">
                             <thead>
                                 <tr>
-                                    <th>Username</th>
+                                    <th>Nominativo</th>
                                     <th>Email</th>
                                     <th>Data creazione</th>
                                     <th>Stato</th>
@@ -323,9 +320,8 @@ const Utenti = () => {
                                 ) : paginated.map(u => (
                                     <tr key={u.id}>
                                         <td>
-                                            <div style={{ fontWeight: 500 }}>{u.username}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                                                {[u.cognome, u.nome].filter(Boolean).join(' ')}
+                                            <div style={{ fontWeight: 500, textTransform: 'uppercase' }}>
+                                                {[u.cognome, u.nome].filter(Boolean).join(' ') || '—'}
                                             </div>
                                         </td>
                                         <td>
@@ -446,7 +442,7 @@ const Utenti = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <Key size={20} style={{ color: 'var(--success)' }} />
                                 <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    Reimposta password – {resetTarget?.username}
+                                    Reimposta password – {resetTarget?.email}
                                 </h2>
                             </div>
                             <button

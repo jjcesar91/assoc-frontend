@@ -62,7 +62,7 @@ const FavShortcutBtn = ({ fav, Icon, onClick }) => {
 
 const Layout = ({ children, onLogout, title }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { societaList, selectedSocietaId, setSelectedSocietaId } = useSocieta();
+    const { societaList, selectedSocietaId, setSelectedSocietaId, selectSocieta } = useSocieta();
     const { annoOptions, selectedAnno, setSelectedAnno, formatAnnoLabel, currentRefYear } = useAnno();
     const annoDiverso = selectedAnno != null && selectedAnno !== currentRefYear;
     const navigate = useNavigate();
@@ -170,7 +170,7 @@ const Layout = ({ children, onLogout, title }) => {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <UserCheck size={16} />
-                        Stai operando come <strong style={{ marginLeft: '4px' }}>{currentUser?.username || '...'}</strong>
+                        Stai operando come <strong style={{ marginLeft: '4px' }}>{currentUser?.email || '...'}</strong>
                         {currentUser?.nome || currentUser?.cognome
                             ? ` (${[currentUser.cognome, currentUser.nome].filter(Boolean).join(' ')})`
                             : ''}
@@ -240,12 +240,12 @@ const Layout = ({ children, onLogout, title }) => {
                 </div>
                 <div className="app-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
-                        {currentUser?.role === 'superuser' ? (
+                        {(currentUser?.role === 'superuser' || (Array.isArray(currentUser?.societaIds) && currentUser.societaIds.length > 1)) ? (
                             <select
                                 className="md-select"
                                 style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
                                 value={selectedSocietaId}
-                                onChange={(e) => setSelectedSocietaId(e.target.value)}
+                                onChange={(e) => (currentUser?.role === 'superuser' ? setSelectedSocietaId(e.target.value) : selectSocieta(e.target.value))}
                             >
                                 {[...societaList].sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' })).map(s => (
                                     <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
