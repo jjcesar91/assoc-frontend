@@ -5,6 +5,7 @@ import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import UtenteModal from './UtenteModal';
 import FunzionalitaModal from './FunzionalitaModal';
+import ComunicazioniModal, { NOTIFICHE_TIPI } from './ComunicazioniModal';
 import './SocioModal.css';
 import './Soci.css';
 import { getPasswordValidationErrors } from '../utils/passwordValidation';
@@ -61,6 +62,9 @@ const Utenti = () => {
 
     const [showFunzionalitaModal, setShowFunzionalitaModal] = useState(false);
     const [funzionalitaTarget, setFunzionalitaTarget] = useState(null);
+
+    const [showComunicazioniModal, setShowComunicazioniModal] = useState(false);
+    const [comunicazioniTarget, setComunicazioniTarget] = useState(null);
 
     const [filters, setFilters] = useState({ cognome: '', nome: '', email: '' });
     const [currentPage, setCurrentPage] = useState(1);
@@ -154,24 +158,22 @@ const Utenti = () => {
         }
     };
 
-    const handleToggleComunicazioni = async (utente) => {
-        const token = localStorage.getItem('token');
-        try {
-            const res = await fetch(`/auth/api/admin/users/${utente.id}/toggle-comunicazioni`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (res.ok) {
-                const updated = await res.json();
-                setUtenti(prev => prev.map(u => u.id === updated.id ? updated : u));
-            } else {
-                const err = await res.json();
-                showAlert(err.error || err.message, 'Errore');
-            }
-        } catch (e) {
-            console.error('Errore toggle comunicazioni', e);
-            showAlert('Errore di rete', 'Errore');
-        }
+    // true se l'admin ha disattivato almeno una delle notifiche configurabili
+    const hasComunicazioniDisattivate = (utente) => {
+        const prefs = utente.comunicazioni_preferenze;
+        if (!prefs) return false;
+        return NOTIFICHE_TIPI.some(t => prefs[t.key] === false);
+    };
+
+    const handleOpenComunicazioni = (utente) => {
+        setComunicazioniTarget(utente);
+        setShowComunicazioniModal(true);
+    };
+
+    const handleCloseComunicazioni = (saved) => {
+        setShowComunicazioniModal(false);
+        setComunicazioniTarget(null);
+        if (saved) fetchUtenti(); // ricarica per aggiornare l'indicatore
     };
 
     const handleDelete = async (utente) => {
@@ -374,16 +376,19 @@ const Utenti = () => {
                                                 <LayoutGrid size={16} />
                                             </button>
                                             )}
-                                            {u.role === 'admin' && (
-                                            <button
-                                                className="btn-icon-small"
-                                                title={u.riceve_comunicazioni !== false ? 'Comunicazioni attive – clicca per disattivare' : 'Comunicazioni disattivate – clicca per attivare'}
-                                                style={{ backgroundColor: u.riceve_comunicazioni !== false ? 'var(--success)' : 'var(--text-tertiary)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
-                                                onClick={() => handleToggleComunicazioni(u)}
-                                            >
-                                                {u.riceve_comunicazioni !== false ? <Bell size={16} /> : <BellOff size={16} />}
-                                            </button>
-                                            )}
+                                            {u.role === 'admin' && (() => {
+                                                const someOff = hasComunicazioniDisattivate(u);
+                                                return (
+                                                    <button
+                                                        className="btn-icon-small"
+                                                        title="Configura comunicazioni"
+                                                        style={{ backgroundColor: someOff ? 'var(--text-tertiary)' : 'var(--success)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                        onClick={() => handleOpenComunicazioni(u)}
+                                                    >
+                                                        {someOff ? <BellOff size={16} /> : <Bell size={16} />}
+                                                    </button>
+                                                );
+                                            })()}
                                             <button
                                                 className="btn-icon-small"
                                                 title="Impersona"
@@ -454,6 +459,13 @@ const Utenti = () => {
                 isOpen={showFunzionalitaModal}
                 onClose={() => setShowFunzionalitaModal(false)}
                 utente={funzionalitaTarget}
+            />
+
+            {/* Comunicazioni modal */}
+            <ComunicazioniModal
+                isOpen={showComunicazioniModal}
+                onClose={handleCloseComunicazioni}
+                utente={comunicazioniTarget}
             />
 
             {/* Reset password modal */}
