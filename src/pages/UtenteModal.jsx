@@ -3,13 +3,8 @@ import { X, User } from 'lucide-react';
 import './SocioModal.css';
 import { getPasswordValidationErrors } from '../utils/passwordValidation';
 
-const ROLE_OPTIONS_SUPERUSER = [
-    { value: 'user',      label: 'Utente' },
-    { value: 'admin',     label: 'Amministratore' },
-    { value: 'superuser', label: 'Superuser' },
-];
-
-const ROLE_OPTIONS_ADMIN = [
+// Il ruolo Superuser non è assegnabile da questa interfaccia (né in creazione né in modifica).
+const ROLE_OPTIONS = [
     { value: 'user',  label: 'Utente' },
     { value: 'admin', label: 'Amministratore' },
 ];
@@ -26,10 +21,6 @@ const EMPTY = {
 };
 
 const UtenteModal = ({ isOpen, onClose, utente, onSave }) => {
-    const currentRole = localStorage.getItem('user_role') || 'user';
-    // Il ruolo Superuser non è assegnabile in creazione: resta disponibile
-    // solo a un superuser che modifica un utente esistente.
-    const ROLE_OPTIONS = (currentRole === 'superuser' && !!utente) ? ROLE_OPTIONS_SUPERUSER : ROLE_OPTIONS_ADMIN;
     const [form, setForm] = useState(EMPTY);
     const [errors, setErrors] = useState({});
 
