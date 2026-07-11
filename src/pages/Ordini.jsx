@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, Zap, FileInput } from 'lucide-react';
+import { Plus, Edit2, Trash2, Folder, Printer, Mail, ChevronLeft, ChevronRight, User, Banknote, CreditCard, Landmark, DollarSign, ChevronDown, ChevronUp, Filter, Zap, FileInput } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
@@ -51,8 +51,10 @@ const Ordini = () => {
         dataA: '',
         utente: 'TUTTI',
         statoOrdine: 'TUTTI',
-        modalitaPagamento: 'TUTTI'
+        modalitaPagamento: 'TUTTI',
+        etichetta: ''
     });
+    const [showMoreFilters, setShowMoreFilters] = useState(false);
 
     useEffect(() => {
         // Reset filtri e stato UI al cambio società
@@ -62,7 +64,8 @@ const Ordini = () => {
             dataA: '',
             utente: 'TUTTI',
             statoOrdine: 'TUTTI',
-            modalitaPagamento: 'TUTTI'
+            modalitaPagamento: 'TUTTI',
+            etichetta: ''
         });
         setSelectedPaymentDetail(null);
         setIsFastModalOpen(false);
@@ -224,6 +227,10 @@ const Ordini = () => {
         if (filters.statoOrdine !== 'TUTTI' && getStatoOrdine(p) !== filters.statoOrdine.toLowerCase()) return false;
         if (filters.dataDa && (p.data_ricevuta || p.data_pagamento) < filters.dataDa) return false;
         if (filters.dataA && (p.data_ricevuta || p.data_pagamento) > filters.dataA) return false;
+        if (filters.etichetta) {
+            const tags = (p.etichette || '').split(',').map(t => t.trim());
+            if (!tags.includes(filters.etichetta)) return false;
+        }
         return true;
     }).sort((a, b) => {
         let va, vb;
@@ -280,71 +287,16 @@ const Ordini = () => {
                             />
                         </div>
                         
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Data da</label>
-                            <input 
-                                type="date"
-                                className="md-input" 
-                                style={{width: '100%', padding: '6px 12px'}} 
-                                value={filters.dataDa}
-                                onChange={(e) => handleFilterChange('dataDa', e.target.value)}
-                            />
-                        </div>
-
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Data a</label>
-                            <input 
-                                type="date"
-                                className="md-input" 
-                                style={{width: '100%', padding: '6px 12px'}} 
-                                value={filters.dataA}
-                                onChange={(e) => handleFilterChange('dataA', e.target.value)}
-                            />
-                        </div>
-
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Utente</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.utente}
-                                onChange={(e) => handleFilterChange('utente', e.target.value)}
-                            >
-                                <option value="TUTTI">TUTTI</option>
-                            </select>
-                        </div>
-                        
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato ordine</label>
-                            <select
-                                className="md-select"
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.statoOrdine}
-                                onChange={(e) => handleFilterChange('statoOrdine', e.target.value)}
-                            >
-                                <option value="TUTTI">TUTTI</option>
-                                <option value="PROFORMA">PROFORMA</option>
-                                <option value="PAGATO">PAGATO</option>
-                                <option value="ANNULLATO">ANNULLATO</option>
-                            </select>
-                        </div>
-
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità pagamento</label>
-                            <select
-                                className="md-select"
-                                style={{width: '100%', padding: '6px 12px'}}
-                                value={filters.modalitaPagamento}
-                                onChange={(e) => handleFilterChange('modalitaPagamento', e.target.value)}
-                            >
-                                <option value="TUTTI">TUTTI</option>
-                                <option value="Contanti">CONTANTI</option>
-                                <option value="POS">POS</option>
-                                <option value="Assegno">ASSEGNO</option>
-                                <option value="Bonifico">BONIFICO</option>
-                                <option value="Online">ONLINE</option>
-                            </select>
-                        </div>
+                        {/* Toggle filtri a scomparsa */}
+                        <button
+                            type="button"
+                            className="btn-outlined"
+                            style={{height: '35px', display:'flex', alignItems:'center', gap:'6px', fontSize:'0.9rem', padding: '0 12px'}}
+                            onClick={() => setShowMoreFilters(v => !v)}
+                            aria-expanded={showMoreFilters}
+                        >
+                            <Filter size={14}/> Filtri {showMoreFilters ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                        </button>
 
                         <div style={{display:'flex', gap:'8px', marginLeft: 'auto'}}>
                             <button
@@ -406,6 +358,100 @@ const Ordini = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Filtri a scomparsa */}
+                    {showMoreFilters && (
+                        <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '16px'}}>
+
+                            {/* Data da */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Data da</label>
+                                <input
+                                    type="date"
+                                    className="md-input"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.dataDa}
+                                    onChange={(e) => handleFilterChange('dataDa', e.target.value)}
+                                />
+                            </div>
+
+                            {/* Data a */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Data a</label>
+                                <input
+                                    type="date"
+                                    className="md-input"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.dataA}
+                                    onChange={(e) => handleFilterChange('dataA', e.target.value)}
+                                />
+                            </div>
+
+                            {/* Utente */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Utente</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.utente}
+                                    onChange={(e) => handleFilterChange('utente', e.target.value)}
+                                >
+                                    <option value="TUTTI">TUTTI</option>
+                                </select>
+                            </div>
+
+                            {/* Stato ordine */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato ordine</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.statoOrdine}
+                                    onChange={(e) => handleFilterChange('statoOrdine', e.target.value)}
+                                >
+                                    <option value="TUTTI">TUTTI</option>
+                                    <option value="PROFORMA">PROFORMA</option>
+                                    <option value="PAGATO">PAGATO</option>
+                                    <option value="ANNULLATO">ANNULLATO</option>
+                                </select>
+                            </div>
+
+                            {/* Modalità pagamento */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità pagamento</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.modalitaPagamento}
+                                    onChange={(e) => handleFilterChange('modalitaPagamento', e.target.value)}
+                                >
+                                    <option value="TUTTI">TUTTI</option>
+                                    <option value="Contanti">CONTANTI</option>
+                                    <option value="POS">POS</option>
+                                    <option value="Assegno">ASSEGNO</option>
+                                    <option value="Bonifico">BONIFICO</option>
+                                    <option value="Online">ONLINE</option>
+                                </select>
+                            </div>
+
+                            {/* Etichette */}
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Etichette</label>
+                                <select
+                                    className="md-select"
+                                    style={{width: '100%', padding: '6px 12px'}}
+                                    value={filters.etichetta}
+                                    onChange={(e) => handleFilterChange('etichetta', e.target.value)}
+                                >
+                                    <option value="">TUTTE</option>
+                                    {allEtichette.map(et => (
+                                        <option key={et} value={et}>{et}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                        </div>
+                    )}
                 </div>
 
                 {/* Table Block */}
