@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Key, Trash2, X, UserCheck, LayoutGrid } from 'lucide-react';
+import { Plus, Edit, Key, Trash2, X, UserCheck, LayoutGrid, Bell, BellOff } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
@@ -151,6 +151,26 @@ const Utenti = () => {
             }
         } catch (e) {
             console.error('Errore toggle attivo', e);
+        }
+    };
+
+    const handleToggleComunicazioni = async (utente) => {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/auth/api/admin/users/${utente.id}/toggle-comunicazioni`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setUtenti(prev => prev.map(u => u.id === updated.id ? updated : u));
+            } else {
+                const err = await res.json();
+                showAlert(err.error || err.message, 'Errore');
+            }
+        } catch (e) {
+            console.error('Errore toggle comunicazioni', e);
+            showAlert('Errore di rete', 'Errore');
         }
     };
 
@@ -352,6 +372,16 @@ const Utenti = () => {
                                                 onClick={() => { setFunzionalitaTarget(u); setShowFunzionalitaModal(true); }}
                                             >
                                                 <LayoutGrid size={16} />
+                                            </button>
+                                            )}
+                                            {u.role === 'admin' && (
+                                            <button
+                                                className="btn-icon-small"
+                                                title={u.riceve_comunicazioni !== false ? 'Comunicazioni attive – clicca per disattivare' : 'Comunicazioni disattivate – clicca per attivare'}
+                                                style={{ backgroundColor: u.riceve_comunicazioni !== false ? 'var(--success)' : 'var(--text-tertiary)', color: '#fff', borderRadius: '4px', padding: '5px 8px', marginLeft: '4px' }}
+                                                onClick={() => handleToggleComunicazioni(u)}
+                                            >
+                                                {u.riceve_comunicazioni !== false ? <Bell size={16} /> : <BellOff size={16} />}
                                             </button>
                                             )}
                                             <button
