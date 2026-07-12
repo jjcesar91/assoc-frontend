@@ -912,6 +912,65 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         }
     }, [socioData]);
 
+    // L'accesso frontend è legato alla MAIL, non al singolo socio: interroga l'auth
+    // service per riflettere lo stato reale anche quando l'accesso è stato abilitato
+    // aprendo un altro socio con la stessa email (magari di un'altra società).
+    useEffect(() => {
+        if (!isEditMode) return;
+        const email = formData.email;
+        if (!email) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/auth/api/socio-access/status?email=${encodeURIComponent(email)}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled || !data.enabled) return;
+                let mine = (data.entries || []).find(e => e.socio_ref_id === formData.id);
+
+                // Accesso attivo sulla mail ma questo socio (magari creato dopo, in
+                // un'altra società) non ha ancora la sua riga di login: la creiamo
+                // riusando la password condivisa, così l'accesso è davvero "sulla mail".
+                if (!mine) {
+                    const siblings = await fetchSociByEmail(email);
+                    const sharedPassword = siblings.map(s => s.frontend_password_plain).find(p => !!p) || undefined;
+                    const provRes = await fetch('/auth/api/socio-access', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({
+                            email,
+                            ...(sharedPassword && { sharedPassword }),
+                            targets: [{ socio_ref_id: formData.id, societaId: formData.societa_id ?? selectedSocietaId, nome: formData.nome, cognome: formData.cognome }],
+                        }),
+                    });
+                    if (provRes.ok) {
+                        const provData = await provRes.json();
+                        mine = (provData.entries || []).find(e => e.socio_ref_id === formData.id);
+                        const passwordToStore = provData.password_plain ?? sharedPassword ?? null;
+                        if (mine && !mine.skipped) {
+                            await patchSociFrontendFlags([{ id: formData.id }], {
+                                frontend_enabled: true,
+                                ...(passwordToStore != null && { frontend_password_plain: passwordToStore }),
+                                frontend_user_id: mine.user_id,
+                            });
+                        }
+                    }
+                }
+                if (cancelled) return;
+                setFrontendAccess(prev => ({
+                    ...prev,
+                    enabled: true,
+                    email,
+                    user_id: mine?.user_id ?? prev.user_id,
+                }));
+            } catch { /* noop */ }
+        })();
+        return () => { cancelled = true; };
+    }, [isEditMode, formData.email, formData.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Calculate if socio is minor
     const isMinorenne = React.useMemo(() => {
         if (!formData.data_nascita) return false;
@@ -1000,6 +1059,33 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             });
             if (activeTab === 'Storico') fetchStorico();
         } catch (e) { console.error('Storico log error', e); }
+    };
+
+    // ── Accesso frontend condiviso a livello di MAIL ─────────────────────────
+    // Tutti i soci (di società diverse) che condividono la stessa email
+    // condividono un unico accesso Area Soci con password comune.
+
+    // Recupera tutti i soci con una data email (tutte le società).
+    const fetchSociByEmail = async (email) => {
+        if (!email) return [];
+        try {
+            const res = await fetch(`/users/api/soci?email=${encodeURIComponent(email)}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+        } catch { return []; }
+    };
+
+    // Applica una patch (flag accesso frontend) a un elenco di soci.
+    const patchSociFrontendFlags = async (soci, patchFor) => {
+        await Promise.all(soci.map(s => {
+            const body = typeof patchFor === 'function' ? patchFor(s) : patchFor;
+            return fetch(`/users/api/soci/${s.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            }).catch(() => {});
+        }));
     };
 
     const fetchSocioPagamenti = async () => {
@@ -3569,6 +3655,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                             </div>
                             <p style={{ margin: '0 0 24px 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                 Abilita l'accesso al portale online per questo socio. Una volta abilitato, potrà accedere con email e password per visualizzare abbonamenti, corsi e comunicazioni.
+                                L'accesso è legato all'email: se la stessa email è socio in più società, l'accesso vale per tutte e il socio potrà passare da una all'altra dall'Area Soci.
                             </p>
 
                             {/* Status card */}
@@ -3604,7 +3691,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                             }}
                                             disabled={frontendAccessLoading}
                                             onClick={async () => {
-                                                if (!window.confirm('Sei sicuro di voler revocare l\'accesso frontend a questo socio?')) return;
+                                                if (!window.confirm('Sei sicuro di voler revocare l\'accesso frontend? La revoca vale per tutte le società in cui questa email è registrata come socio.')) return;
                                                 setFrontendAccessLoading(true);
                                                 try {
                                                     const token = localStorage.getItem('token');
@@ -3613,12 +3700,10 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                         headers: { 'Authorization': `Bearer ${token}` },
                                                     });
                                                     if (res.ok) {
-                                                        // Remove frontend fields from socio record
-                                                        await fetch(`/users/api/soci/${formData.id}`, {
-                                                            method: 'PUT',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ frontend_enabled: false, frontend_password_plain: null, frontend_user_id: null }),
-                                                        });
+                                                        // L'accesso è condiviso sulla mail: azzera i flag su TUTTI i soci con questa email.
+                                                        const soci = await fetchSociByEmail(formData.email);
+                                                        const targets = soci.length ? soci : [{ id: formData.id }];
+                                                        await patchSociFrontendFlags(targets, { frontend_enabled: false, frontend_password_plain: null, frontend_user_id: null });
                                                         setFrontendAccess({ enabled: false, email: formData.email, password_plain: '', user_id: null });
                                                         logToStorico('accesso_frontend', `Accesso frontend revocato (email: ${formData.email})`);
                                                         showSnackbar('Accesso frontend revocato', 'success');
@@ -3652,31 +3737,45 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                 setFrontendAccessLoading(true);
                                                 try {
                                                     const token = localStorage.getItem('token');
+                                                    // L'accesso è condiviso sulla mail: raccogli tutti i soci (di ogni
+                                                    // società) con questa email e abilitali con un'unica password.
+                                                    const soci = await fetchSociByEmail(formData.email);
+                                                    const targetsSoci = soci.length ? soci : [{ id: formData.id, societa_id: selectedSocietaId, nome: formData.nome, cognome: formData.cognome }];
+                                                    // Se l'accesso esiste già altrove riusa la password condivisa nota.
+                                                    const sharedPassword = targetsSoci.map(s => s.frontend_password_plain).find(p => !!p) || undefined;
                                                     const res = await fetch('/auth/api/socio-access', {
                                                         method: 'POST',
                                                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                                                         body: JSON.stringify({
-                                                            socio_ref_id: formData.id,
                                                             email: formData.email,
-                                                            nome: formData.nome,
-                                                            cognome: formData.cognome,
-                                                            societaId: selectedSocietaId,
+                                                            ...(sharedPassword && { sharedPassword }),
+                                                            targets: targetsSoci.map(s => ({
+                                                                socio_ref_id: s.id,
+                                                                societaId: s.societa_id,
+                                                                nome: s.nome,
+                                                                cognome: s.cognome,
+                                                            })),
                                                         }),
                                                     });
                                                     const data = await res.json();
                                                     if (res.ok) {
-                                                        // Save to socio record (sync anche se already_existed)
-                                                        await fetch(`/users/api/soci/${formData.id}`, {
-                                                            method: 'PUT',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({
-                                                                frontend_enabled: true,
-                                                                ...(data.password_plain !== null && { frontend_password_plain: data.password_plain }),
-                                                                frontend_user_id: data.user_id,
-                                                            }),
+                                                        const entries = Array.isArray(data.entries) ? data.entries : [];
+                                                        const userIdFor = (socioId) => entries.find(e => e.socio_ref_id === socioId)?.user_id ?? null;
+                                                        // Password condivisa da persistere: quella nuova/echo, altrimenti quella già nota.
+                                                        const passwordToStore = data.password_plain ?? sharedPassword ?? null;
+                                                        // Sincronizza i flag su tutti i soci con questa email.
+                                                        await patchSociFrontendFlags(targetsSoci, (s) => ({
+                                                            frontend_enabled: true,
+                                                            ...(passwordToStore != null && { frontend_password_plain: passwordToStore }),
+                                                            frontend_user_id: userIdFor(s.id),
+                                                        }));
+                                                        setFrontendAccess({
+                                                            enabled: true,
+                                                            email: formData.email,
+                                                            password_plain: passwordToStore || '',
+                                                            user_id: userIdFor(formData.id),
                                                         });
-                                                        setFrontendAccess({ enabled: true, email: formData.email, password_plain: data.password_plain, user_id: data.user_id });
-                                                        if (!data.already_existed) logToStorico('accesso_frontend', `Accesso frontend abilitato (email: ${formData.email})`);
+                                                        if (!data.already_existed) logToStorico('accesso_frontend', `Accesso frontend abilitato (email: ${formData.email}${targetsSoci.length > 1 ? `, ${targetsSoci.length} società` : ''})`);
                                                         showSnackbar(data.already_existed ? 'Accesso già presente — stato sincronizzato' : 'Accesso frontend abilitato con successo', 'success');
                                                     } else {
                                                         showSnackbar(data.error || 'Errore durante l\'abilitazione', 'error');
@@ -3746,7 +3845,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                         }}
                                         disabled={frontendAccessLoading}
                                         onClick={async () => {
-                                            if (!window.confirm('Generare una nuova password per questo socio?')) return;
+                                            if (!window.confirm('Generare una nuova password? Vale per tutte le società in cui questa email accede come socio.')) return;
                                             setFrontendAccessLoading(true);
                                             try {
                                                 const token = localStorage.getItem('token');
@@ -3756,11 +3855,10 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                 });
                                                 const data = await res.json();
                                                 if (res.ok) {
-                                                    await fetch(`/users/api/soci/${formData.id}`, {
-                                                        method: 'PUT',
-                                                        headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ frontend_password_plain: data.password_plain }),
-                                                    });
+                                                    // Password condivisa: aggiorna il chiaro memorizzato su tutti i soci con questa email.
+                                                    const soci = await fetchSociByEmail(formData.email);
+                                                    const targets = soci.length ? soci : [{ id: formData.id }];
+                                                    await patchSociFrontendFlags(targets, { frontend_password_plain: data.password_plain });
                                                     setFrontendAccess(prev => ({ ...prev, password_plain: data.password_plain }));
                                                     setShowFrontendPassword(true);
                                                     logToStorico('accesso_frontend', `Password accesso frontend rigenerata`);

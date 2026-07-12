@@ -273,6 +273,45 @@
   cursor: not-allowed;
 }
 
+/* Variante secondaria per la scelta gestionale / Area Soci */
+.login-button--secondary {
+  background: var(--surface-1, #f4f5f7);
+  color: var(--primary, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--primary, #2563eb) 40%, transparent);
+  box-shadow: none;
+}
+
+.login-button--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary, #2563eb) 8%, #fff);
+  box-shadow: none;
+}
+
+.login-back-btn {
+  margin-top: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary, #6b7280);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+}
+
+.login-back-btn:hover:not(:disabled) {
+  color: var(--text-primary, #111827);
+}
+
+.login-back-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ── Spinner ──────────────────────────────────────────────────── */
 .login-spinner {
   width: 18px;

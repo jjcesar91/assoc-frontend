@@ -4,7 +4,7 @@ import {
     LogOut, CreditCard, BookOpen, MessageSquare,
     Clock, CheckCircle, AlertTriangle, ChevronRight,
     CalendarDays, Bell, User, Activity, MapPin, UserCheck, Timer,
-    X, Mail, Smartphone
+    X, Mail, Smartphone, ArrowLeftCircle
 } from 'lucide-react';
 import './SocioDashboard.css';
 
@@ -194,18 +194,24 @@ const ComunicazioneDetailModal = ({ comunicazione, onClose }) => {
 };
 
 // ── main component ─────────────────────────────────────────────────────────
+const decodeTokenPayload = () => {
+    try {
+        const t = localStorage.getItem('token');
+        return JSON.parse(atob(t.split('.')[1])) || {};
+    } catch { return {}; }
+};
+
 export default function SocioDashboard({ onLogout }) {
     const navigate = useNavigate();
 
-    // Decode token to get socio_ref_id
+    // Payload del token in stato: cambia quando il socio passa a un'altra società.
+    const [tokenPayload, setTokenPayload] = useState(decodeTokenPayload);
     const token = localStorage.getItem('token');
-    let socioId = null;
-    let userName = '';
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        socioId = payload.socio_ref_id;
-        userName = [payload.nome, payload.cognome].filter(Boolean).join(' ') || payload.email || 'Socio';
-    } catch { /* noop */ }
+    const socioId = tokenPayload.socio_ref_id ?? null;
+    const userName = [tokenPayload.nome, tokenPayload.cognome].filter(Boolean).join(' ') || tokenPayload.email || 'Socio';
+    // Società in cui questa email accede come socio (per la tendina di cambio società).
+    const societaIds = Array.isArray(tokenPayload.societaIds) ? tokenPayload.societaIds : [];
+    const activeSocietaId = tokenPayload.societaId ?? null;
 
     const [socio, setSocio] = useState(null);
     const [abbonamenti, setAbbonamenti] = useState([]);
@@ -213,6 +219,47 @@ export default function SocioDashboard({ onLogout }) {
     const [comunicazioni, setComunicazioni] = useState([]);
     const [loading, setLoading] = useState({ abbonamenti: true, corsi: true, comunicazioni: true });
     const [selectedComunicazione, setSelectedComunicazione] = useState(null);
+    const [societaList, setSocietaList] = useState([]);
+    const [switching, setSwitching] = useState(false);
+
+    // Carica le denominazioni delle società consentite (per la tendina).
+    useEffect(() => {
+        if (societaIds.length <= 1) return;
+        fetch('/users/api/societa', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(list => setSocietaList(Array.isArray(list) ? list : []))
+            .catch(() => {});
+    }, [societaIds.length]);
+
+    // Cambio società: riemette il token per la riga socio della società scelta,
+    // poi ricarica la dashboard per il nuovo socio_ref_id.
+    const handleSwitchSocieta = async (newId) => {
+        const parsed = parseInt(newId, 10);
+        if (!Number.isInteger(parsed) || parsed === activeSocietaId || switching) return;
+        setSwitching(true);
+        try {
+            const res = await fetch('/auth/api/switch-societa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                body: JSON.stringify({ societaId: parsed }),
+            });
+            const data = await res.json();
+            if (res.ok && data.accessToken) {
+                localStorage.setItem('token', data.accessToken);
+                if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+                // Reset dei dati dipendenti dal socio prima del ricaricamento.
+                setSocio(null);
+                setAbbonamenti([]);
+                setCorsi([]);
+                setComunicazioni([]);
+                setLoading({ abbonamenti: true, corsi: true, comunicazioni: true });
+                setTokenPayload(decodeTokenPayload());
+                window.dispatchEvent(new Event('session-updated'));
+            }
+        } catch { /* noop */ } finally {
+            setSwitching(false);
+        }
+    };
 
     // Fetch socio profile
     useEffect(() => {
@@ -325,6 +372,39 @@ export default function SocioDashboard({ onLogout }) {
         }
     };
 
+    // Impersonazione: se un admin ha effettuato l'accesso "come socio", offriamo il
+    // ritorno all'account originale ripristinando il token salvato.
+    const isImpersonating = !!localStorage.getItem('impersonate_admin_token');
+    const handleStopImpersonate = () => {
+        const adminToken = localStorage.getItem('impersonate_admin_token');
+        const adminRefreshToken = localStorage.getItem('impersonate_admin_refresh_token') || '';
+        const adminRole = localStorage.getItem('impersonate_admin_role') || 'admin';
+        const adminFeatures = localStorage.getItem('impersonate_admin_features') || 'null';
+        if (!adminToken) return;
+        localStorage.setItem('token', adminToken);
+        if (adminRefreshToken) {
+            localStorage.setItem('refresh_token', adminRefreshToken);
+        } else {
+            localStorage.removeItem('refresh_token');
+        }
+        localStorage.setItem('user_role', adminRole);
+        localStorage.setItem('user_features', adminFeatures);
+        localStorage.removeItem('impersonate_admin_token');
+        localStorage.removeItem('impersonate_admin_refresh_token');
+        localStorage.removeItem('impersonate_admin_role');
+        localStorage.removeItem('impersonate_admin_features');
+        window.location.href = '/amministrazione/utenti';
+    };
+
+    // Nome da mostrare: gestisce persona fisica, associazione e dati mancanti
+    // (evita l'etichetta "null null" quando nome/cognome non sono valorizzati).
+    const socioFullName = socio
+        ? ([socio.nome, socio.cognome].filter(Boolean).join(' ') || socio.ragione_sociale || socio.email || userName)
+        : userName;
+    const socioFirstName = socio
+        ? (socio.nome || socio.ragione_sociale || socio.email || userName)
+        : userName;
+
     return (
         <div className="sd-root">
             {/* ── Header ──────────────────────────────────────────── */}
@@ -338,12 +418,38 @@ export default function SocioDashboard({ onLogout }) {
                     </div>
 
                     <div className="sd-header-user">
+                        {societaIds.length > 1 && (
+                            <select
+                                className="sd-societa-select"
+                                value={activeSocietaId ?? ''}
+                                onChange={(e) => handleSwitchSocieta(e.target.value)}
+                                disabled={switching}
+                                title="Cambia società"
+                            >
+                                {[...societaList]
+                                    .filter(s => societaIds.includes(s.id))
+                                    .sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' }))
+                                    .map(s => (
+                                        <option key={s.id} value={s.id}>{s.denominazione}</option>
+                                    ))}
+                            </select>
+                        )}
                         <div className="sd-avatar">
                             <User size={16} />
                         </div>
                         <span className="sd-username">
-                            {socio ? `${socio.nome} ${socio.cognome}` : userName}
+                            {socioFullName}
                         </span>
+                        {isImpersonating && (
+                            <button
+                                className="sd-return-btn"
+                                onClick={handleStopImpersonate}
+                                title="Torna al tuo account"
+                            >
+                                <ArrowLeftCircle size={16} />
+                                <span>Torna al tuo account</span>
+                            </button>
+                        )}
                         <button className="sd-logout-btn" onClick={handleLogout} title="Esci">
                             <LogOut size={16} />
                             <span>Esci</span>
@@ -356,7 +462,7 @@ export default function SocioDashboard({ onLogout }) {
             <div className="sd-welcome">
                 <div className="sd-welcome-inner">
                     <h1 className="sd-welcome-title">
-                        Ciao, {socio ? socio.nome : userName}!
+                        Ciao, {socioFirstName}!
                     </h1>
                     <p className="sd-welcome-sub">
                         Qui puoi consultare i tuoi abbonamenti, corsi e comunicazioni.

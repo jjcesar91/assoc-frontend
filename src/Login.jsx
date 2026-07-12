@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn, Building2, UserRound, ArrowLeft } from 'lucide-react';
 import './Login.css';
 
 function Login({ onLoginSuccess }) {
@@ -8,9 +8,11 @@ function Login({ onLoginSuccess }) {
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Quando la stessa email apre sia il gestionale sia l'Area Soci, chiediamo in
+  // quale mondo entrare prima di emettere il token.
+  const [roleChoice, setRoleChoice] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const submitLogin = async (accessType) => {
     setMessage('');
     setLoading(true);
     try {
@@ -19,15 +21,19 @@ function Login({ onLoginSuccess }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(accessType && { accessType }) }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        if (data.requiresRoleChoice) {
+          setRoleChoice(true);
+          return;
+        }
         onLoginSuccess(data.accessToken, data.refreshToken);
       } else {
-        setMessage(data.message || 'Credenziali non valide');
+        setMessage(data.message || data.error || 'Credenziali non valide');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -35,6 +41,11 @@ function Login({ onLoginSuccess }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    submitLogin();
   };
 
   return (
@@ -62,10 +73,50 @@ function Login({ onLoginSuccess }) {
       <div className="login-form-panel">
         <div className="login-card">
           <div className="login-card-header">
-            <h2 className="login-card-title">Accedi al portale</h2>
-            <p className="login-card-subtitle">Inserisci le tue credenziali per continuare</p>
+            <h2 className="login-card-title">{roleChoice ? 'Come vuoi accedere?' : 'Accedi al portale'}</h2>
+            <p className="login-card-subtitle">
+              {roleChoice
+                ? 'Questo account può accedere sia al gestionale sia all\'Area Soci.'
+                : 'Inserisci le tue credenziali per continuare'}
+            </p>
           </div>
 
+          {roleChoice ? (
+            <div className="login-form">
+              <button
+                type="button"
+                className="login-button"
+                disabled={loading}
+                onClick={() => submitLogin('gestionale')}
+              >
+                <Building2 size={18} />
+                Accedi al Gestionale
+              </button>
+              <button
+                type="button"
+                className="login-button login-button--secondary"
+                disabled={loading}
+                onClick={() => submitLogin('socio')}
+              >
+                <UserRound size={18} />
+                Accedi all'Area Soci
+              </button>
+              {message && (
+                <div className="login-message login-message--error">
+                  {message}
+                </div>
+              )}
+              <button
+                type="button"
+                className="login-back-btn"
+                disabled={loading}
+                onClick={() => { setRoleChoice(false); setMessage(''); }}
+              >
+                <ArrowLeft size={15} />
+                Torna indietro
+              </button>
+            </div>
+          ) : (
           <form className="login-form" onSubmit={handleLogin}>
             <div className="form-group">
               <label className="form-label">Email</label>
@@ -123,6 +174,7 @@ function Login({ onLoginSuccess }) {
               {loading ? 'Accesso in corso…' : 'Accedi'}
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>
