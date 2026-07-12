@@ -71,8 +71,19 @@ export const AnnoProvider = ({ children }) => {
     );
 
     const annoOptions = useMemo(
-        () => [currentRefYear - 1, currentRefYear],
-        [currentRefYear]
+        () => {
+            const options = [currentRefYear - 1, currentRefYear];
+            // Mostra il prossimo anno associativo 15 giorni prima del suo inizio
+            // (soglia calcolata in base alla configurazione della società).
+            const nextStart = getAnnoDateRange(currentRefYear + 1, selectedSocieta).start;
+            const threshold = new Date(nextStart);
+            threshold.setDate(threshold.getDate() - 15);
+            if (new Date() >= threshold) {
+                options.push(currentRefYear + 1);
+            }
+            return options;
+        },
+        [currentRefYear, selectedSocieta]
     );
 
     // All'ingresso nel programma si parte sempre dall'anno associativo corrente
