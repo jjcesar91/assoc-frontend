@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, X, Send } from 'lucide-react';
+import SimpleEditor from './SimpleEditor';
 
 /**
  * Modal che chiede conferma per l'invio di una comunicazione email (stato CHIEDI).
  * Props:
  *  - isOpen
- *  - titolo            : titolo del modal
- *  - destinatario      : email del socio
- *  - oggetto           : oggetto email
- *  - testoHtml         : anteprima HTML del corpo (shortcode già risolti)
- *  - allegatoNome      : (opzionale) nome del file allegato (es. ricevuta PDF)
- *  - ccEmail           : (opzionale) mail anagrafica società per l'invio in CCn (copia conoscenza nascosta)
- *  - sending           : bool, invio in corso
- *  - onConfirm(ccn)    : callback conferma; riceve lo stato della spunta CCn
+ *  - titolo                  : titolo del modal
+ *  - destinatario            : email del socio
+ *  - oggetto                 : oggetto email
+ *  - testoHtml               : corpo HTML iniziale (shortcode già risolti), editabile via WYSIWYG
+ *  - allegatoNome            : (opzionale) nome del file allegato (es. ricevuta PDF)
+ *  - ccEmail                 : (opzionale) mail anagrafica società per l'invio in CCn (copia conoscenza nascosta)
+ *  - sending                 : bool, invio in corso
+ *  - onConfirm(ccn, testo)   : callback conferma; riceve lo stato della spunta CCn e il testo HTML (eventualmente modificato)
  *  - onClose
  */
 const ChiediInvioComunicazioneModal = ({
@@ -28,8 +29,16 @@ const ChiediInvioComunicazioneModal = ({
     onClose,
 }) => {
     const [ccn, setCcn] = useState(false);
-    // Reset della spunta ad ogni apertura del modal.
-    useEffect(() => { if (isOpen) setCcn(false); }, [isOpen]);
+    // Testo editabile: inizializzato dal testoHtml ricevuto. Permette all'utente
+    // di modificare la comunicazione prima dell'invio.
+    const [testo, setTesto] = useState(testoHtml || '');
+    // Reset della spunta e ricarica del testo ad ogni apertura del modal.
+    useEffect(() => {
+        if (isOpen) {
+            setCcn(false);
+            setTesto(testoHtml || '');
+        }
+    }, [isOpen, testoHtml]);
 
     if (!isOpen) return null;
 
@@ -61,10 +70,11 @@ const ChiediInvioComunicazioneModal = ({
                                 <div style={rowStyle}><span style={labelStyle}>Allegato</span><span>📎 {allegatoNome}</span></div>
                             )}
                             <div style={{ marginTop: 12 }}>
-                                <span style={labelStyle}>Anteprima messaggio</span>
-                                <div
-                                    style={previewStyle}
-                                    dangerouslySetInnerHTML={{ __html: testoHtml || '' }}
+                                <span style={labelStyle}>Anteprima messaggio (modificabile)</span>
+                                <SimpleEditor
+                                    value={testo}
+                                    onChange={(e) => setTesto(e.target.value)}
+                                    style={previewEditorStyle}
                                 />
                             </div>
                             {ccEmail && (
@@ -88,7 +98,7 @@ const ChiediInvioComunicazioneModal = ({
                         <X size={16} /> {noEmail ? 'Chiudi' : 'Non inviare'}
                     </button>
                     {!noEmail && (
-                        <button onClick={() => onConfirm(ccn)} disabled={sending} className="btn-contained" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button onClick={() => onConfirm(ccn, testo)} disabled={sending} className="btn-contained" style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Send size={16} /> {sending ? 'Invio in corso...' : 'Invia'}
                         </button>
                     )}
@@ -114,9 +124,8 @@ const closeBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', c
 const bodyStyle = { padding: '20px', overflowY: 'auto' };
 const rowStyle = { display: 'flex', gap: 12, padding: '4px 0', fontSize: '0.9rem' };
 const labelStyle = { minWidth: 110, color: 'var(--text-secondary)', fontWeight: 500, display: 'inline-block' };
-const previewStyle = {
-    border: '1px solid var(--border-color)', borderRadius: 6, padding: 12, marginTop: 6,
-    background: 'var(--surface-1)', maxHeight: 220, overflowY: 'auto', fontSize: '0.9rem',
+const previewEditorStyle = {
+    marginTop: 6, background: 'var(--surface)', fontSize: '0.9rem',
 };
 const footerStyle = {
     padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', gap: 12,

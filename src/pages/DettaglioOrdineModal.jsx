@@ -204,9 +204,11 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
             setChiediModal({ titolo, destinatario, oggetto, testoHtml, allegatoNome, sending: false });
         });
 
-    const handleChiediConfirm = async (ccn) => {
+    const handleChiediConfirm = async (ccn, testoModificato) => {
         setChiediModal(m => (m ? { ...m, sending: true } : m));
-        const res = await sendComunicazioneEmail({ ...sendDataRef.current, ccnSocieta: ccn });
+        const payload = { ...sendDataRef.current, ccnSocieta: ccn };
+        if (testoModificato != null) payload.testo = testoModificato;
+        const res = await sendComunicazioneEmail(payload);
         setChiediModal(null);
         if (res?.ok) showComFeedback(res.warning || 'Comunicazione inviata al socio', res.warning ? 'error' : 'success');
         else showComFeedback(res?.error || 'Errore invio comunicazione', 'error');
