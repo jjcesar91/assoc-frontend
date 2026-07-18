@@ -388,6 +388,8 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const [targetModuleName, setTargetModuleName] = useState(null);
     const [isCustomPrint, setIsCustomPrint] = useState(false);
     const [availableModules, setAvailableModules] = useState([]);
+    // Primi due moduli (per data di creazione) mostrati direttamente nel menu Azioni
+    const [quickModules, setQuickModules] = useState([]);
 
     // Attività (Corsi) State
     const [socioCorsi, setSocioCorsi] = useState([]);
@@ -436,6 +438,28 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         }
     }, []);
 
+    // Carica i primi due moduli della società corrente per il menu Azioni
+    useEffect(() => {
+        if (!selectedSocietaId) {
+            setQuickModules([]);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const response = await fetch(`/documents/api/moduli?societa_id=${selectedSocietaId}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (cancelled) return;
+                const sorted = [...data].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                setQuickModules(sorted.slice(0, 2));
+            } catch (e) {
+                console.error(e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedSocietaId]);
+
     const handlePrintRequest = async (moduleName) => {
         setPrintDate(new Date().toISOString().split('T')[0]);
         
@@ -443,7 +467,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             setIsCustomPrint(true);
             setTargetModuleName('');
             try {
-                const response = await fetch('/documents/api/moduli');
+                const response = await fetch(`/documents/api/moduli?societa_id=${selectedSocietaId}`);
                 if (response.ok) {
                     const data = await response.json();
                     setAvailableModules(data);
@@ -478,12 +502,13 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
 
             if (!modulo) {
                 // Fetch all modules to find the right one (fallback for standard actions)
-                const response = await fetch('/documents/api/moduli');
+                const response = await fetch(`/documents/api/moduli?societa_id=${selectedSocietaId}`);
                 if (!response.ok) throw new Error('Failed to fetch modules');
                 const moduli = await response.json();
                 
-                // Loose match by description (case insensitive)
-                modulo = moduli.find(m => m.descrizione.toLowerCase() === targetModuleName.toLowerCase().replace(/_/g, ' '));
+                // Exact match first, then loose match by description (case insensitive)
+                modulo = moduli.find(m => m.descrizione === targetModuleName)
+                    || moduli.find(m => m.descrizione.toLowerCase() === targetModuleName.toLowerCase().replace(/_/g, ' '));
             }
             
             if (!modulo) {
@@ -2179,10 +2204,10 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                         handleRevocaIscrizione();
                                     } else if (val === 'accetta_socio') {
                                         setShowAccettaSocioModal(true);
-                                    } else if (val === 'modulo_iscrizione') {
-                                        handlePrintRequest('MODULO ISCRIZIONE');
-                                    } else if (val === 'informativa_privacy') {
-                                        handlePrintRequest('INFORMATIVA PRIVACY');
+                                    } else if (val.startsWith('modulo:')) {
+                                        const id = val.slice('modulo:'.length);
+                                        const modulo = quickModules.find(m => String(m.id) === id);
+                                        if (modulo) handlePrintRequest(modulo.descrizione);
                                     } else if (val === 'altri_moduli') {
                                         handlePrintRequest('altri_moduli');
                                     } else {
@@ -2200,8 +2225,9 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                 <option value="nuovo_pagamento">Nuovo ordine</option>
                                 
                                 <optgroup label="Modulistica">
-                                    <option value="modulo_iscrizione">MODULO ISCRIZIONE</option>
-                                    <option value="informativa_privacy">INFORMATIVA PRIVACY</option>
+                                    {quickModules.map(m => (
+                                        <option key={m.id} value={`modulo:${m.id}`}>{m.descrizione}</option>
+                                    ))}
                                     <option value="altri_moduli">Altri moduli</option>
                                 </optgroup>
                             </select>
