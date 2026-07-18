@@ -4,6 +4,7 @@ import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import CorsoModal from './CorsoModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { getOrari } from '../utils/corsoUtils';
 import './Calendario.css';
 
 const GIORNI = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
@@ -227,8 +228,11 @@ const Calendario = () => {
         return true;
     });
 
+    // Un corso può avere più giorni/orari: appiattisce in una riga per ogni fascia
+    const slots = filteredCorsi.flatMap(c => getOrari(c).map(o => ({ corso: c, ...o })));
+
     // Unique start times sorted ascending
-    const timeSlots = [...new Set(filteredCorsi.map(c => c.oraInizio))].sort();
+    const timeSlots = [...new Set(slots.map(s => s.oraInizio))].sort();
 
     const handleOpenModal = (corso = null) => {
         setCurrentCorso(corso);
@@ -344,19 +348,19 @@ const Calendario = () => {
                     </div>
                 )}
                 {timeSlots.map(time => {
-                    const slotsForTime = filteredCorsi.filter(c => c.oraInizio === time);
+                    const slotsForTime = slots.filter(s => s.oraInizio === time);
                     return (
                         <div key={time} className="calendario-time-row">
                             <div className="calendario-time-badge-col">
                                 <span className="calendario-time-badge">{time}</span>
                             </div>
                             {GIORNI.map((_, dayIdx) => {
-                                const dayCorsi = slotsForTime.filter(c => c.giorno === dayIdx);
+                                const daySlots = slotsForTime.filter(s => s.giorno === dayIdx);
                                 return (
                                     <div key={dayIdx} className="calendario-day-cell">
-                                        {dayCorsi.map(c => (
+                                        {daySlots.map(({ corso: c }) => (
                                             <CorsoCard
-                                                key={c.id}
+                                                key={`${c.id}-${dayIdx}-${time}`}
                                                 corso={c}
                                                 onEdit={handleOpenModal}
                                                 onDelete={handleDelete}

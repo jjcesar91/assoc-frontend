@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, CalendarDays, Users, UserPlus, Trash2, AlertTriangle, ClipboardList, CheckCircle, Clock, Printer } from 'lucide-react';
+import { X, CalendarDays, Users, UserPlus, Trash2, AlertTriangle, ClipboardList, CheckCircle, Clock, Printer, Plus } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
 import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { getOrari, computeOraFine } from '../utils/corsoUtils';
 import './CorsoModal.css';
 
 const GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
@@ -38,6 +39,12 @@ const generateCourseDays = (giorno, createdAt) => {
     return days.reverse();
 };
 
+// Unione (senza duplicati) delle date di lezione di tutti i giorni del corso, dalla più recente
+const generateAllCourseDays = (corso) => {
+    const all = getOrari(corso).flatMap(o => generateCourseDays(o.giorno, corso.createdAt));
+    return [...new Set(all)].sort().reverse();
+};
+
 const formatDayLabel = (dateStr) => {
     // Parse as local date to avoid UTC offset shifts
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -53,11 +60,21 @@ const defaultForm = {
     areaId: '',
     staffId: '',
     abbonamentoId: '',
-    giorno: '0',
-    oraInizio: '08:00',
-    durataMinuti: 50,
+    orari: [{ giorno: '0', oraInizio: '08:00', durataMinuti: 50 }],
     maxSoci: 10,
     note: '',
+};
+
+const emptyOrario = () => ({ giorno: '0', oraInizio: '08:00', durataMinuti: 50 });
+
+// Orari del corso nel formato del form (valori stringa per i controlli)
+const toFormOrari = (corso) => {
+    const orari = getOrari(corso).map(o => ({
+        giorno: String(o.giorno ?? 0),
+        oraInizio: o.oraInizio || '08:00',
+        durataMinuti: o.durataMinuti ?? 50,
+    }));
+    return orari.length > 0 ? orari : [emptyOrario()];
 };
 
 // ── Iscritti helpers ──────────────────────────────────────────
@@ -108,9 +125,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                 areaId: corso?.areaId || '',
                 staffId: corso?.staffId || '',
                 abbonamentoId: corso?.abbonamentoId || '',
-                giorno: corso?.giorno !== undefined ? String(corso.giorno) : '0',
-                oraInizio: corso?.oraInizio || '08:00',
-                durataMinuti: corso?.durataMinuti ?? 50,
+                orari: toFormOrari(corso),
                 maxSoci: corso?.maxSoci ?? 10,
                 note: corso?.note || '',
             });
@@ -131,17 +146,44 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
     const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
     const handleStrutturaChange = (val) => setForm(prev => ({ ...prev, strutturaId: val, areaId: '' }));
 
+    // ── Giorni/orari multipli ────────────────────────────────────
+    const setOrario = (idx, key, val) => setForm(prev => ({
+        ...prev,
+        orari: prev.orari.map((o, i) => (i === idx ? { ...o, [key]: val } : o)),
+    }));
+    const addOrario = () => setForm(prev => ({
+        ...prev,
+        // il nuovo giorno eredita orario e durata dall'ultima riga
+        orari: [...prev.orari, { ...emptyOrario(), ...prev.orari[prev.orari.length - 1], giorno: '0' }],
+    }));
+    const removeOrario = (idx) => setForm(prev => ({
+        ...prev,
+        orari: prev.orari.length > 1 ? prev.orari.filter((_, i) => i !== idx) : prev.orari,
+    }));
+
     const handleSubmit = () => {
-        if (!form.oraInizio) return;
+        if (form.orari.some(o => !o.oraInizio)) {
+            setFormError('Indicare l\'ora di inizio per ogni giorno.');
+            return;
+        }
         if (!form.abbonamentoId) {
             setFormError('Selezionare un abbonamento obbligatorio.');
             return;
         }
+        const chiavi = form.orari.map(o => `${o.giorno}-${o.oraInizio}`);
+        if (new Set(chiavi).size !== chiavi.length) {
+            setFormError('Sono presenti due righe con lo stesso giorno e la stessa ora di inizio.');
+            return;
+        }
         setFormError('');
+        const orari = form.orari.map(o => ({
+            giorno: parseInt(o.giorno, 10),
+            oraInizio: o.oraInizio,
+            durataMinuti: parseInt(o.durataMinuti, 10) || 50,
+        }));
         const payload = {
             ...form,
-            giorno: parseInt(form.giorno, 10),
-            durataMinuti: parseInt(form.durataMinuti, 10),
+            orari,
             maxSoci: parseInt(form.maxSoci, 10),
             attivitaId: form.attivitaId || null,
             strutturaId: form.strutturaId || null,
@@ -166,8 +208,8 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
     const [presenzaSalvata, setPresenzaSalvata] = useState(null);
     const [presentiIds, setPresentiIds] = useState(new Set());
     const [loadingPresenza, setLoadingPresenza] = useState(false);
-    const courseDays = (corso?.id && corso?.giorno !== undefined && corso?.createdAt)
-        ? generateCourseDays(corso.giorno, corso.createdAt)
+    const courseDays = (corso?.id && corso?.createdAt)
+        ? generateAllCourseDays(corso)
         : [];
 
     const fetchIscritti = useCallback(async () => {
@@ -283,14 +325,19 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
         setShowPrintModal(false);
 
         const [year, month] = printMonth.split('-').map(Number);
-        const jsTarget = appGiornoToJsDay(corso.giorno);
-        const cursor = new Date(year, month - 1, 1);
-        while (cursor.getDay() !== jsTarget) cursor.setDate(cursor.getDate() + 1);
-        const days = [];
-        while (cursor.getMonth() === month - 1) {
-            days.push(cursor.toISOString().split('T')[0]);
-            cursor.setDate(cursor.getDate() + 7);
-        }
+        const orariCorso = getOrari(corso);
+        // Tutte le date del mese in cui il corso si tiene, su tutti i suoi giorni
+        const days = [...new Set(orariCorso.flatMap(o => {
+            const jsTarget = appGiornoToJsDay(o.giorno);
+            const cursor = new Date(year, month - 1, 1);
+            while (cursor.getDay() !== jsTarget) cursor.setDate(cursor.getDate() + 1);
+            const dates = [];
+            while (cursor.getMonth() === month - 1) {
+                dates.push(toLocalDateStr(cursor));
+                cursor.setDate(cursor.getDate() + 7);
+            }
+            return dates;
+        }))].sort();
 
         // Fetch presences for each day (skip if stampa vuoto)
         let presenceMap = {};
@@ -325,14 +372,9 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
         const luogoStr = [strutturaName, areaName].filter(Boolean).join(' - ');
 
         const GIORNI_SHORT = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
-        const dayShort = GIORNI_SHORT[jsTarget];
-        const oraFine = (() => {
-            if (!corso.oraInizio) return '';
-            const [h, m] = corso.oraInizio.split(':').map(Number);
-            const tot = h * 60 + m + (corso.durataMinuti || 0);
-            return `${String(Math.floor(tot / 60)).padStart(2,'0')}:${String(tot % 60).padStart(2,'0')}`;
-        })();
-        const orarioStr = `${dayShort} (${corso.oraInizio || ''}-${oraFine})`;
+        const orarioStr = orariCorso
+            .map(o => `${GIORNI_SHORT[appGiornoToJsDay(o.giorno)]} (${o.oraInizio || ''}-${computeOraFine(o.oraInizio, o.durataMinuti)})`)
+            .join(' &nbsp; ');
         const periodoStr = `${month}/${year}`;
 
         // Sort iscrizioni same as UI (expired first, then cognome)
@@ -571,34 +613,64 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                             </div>
                         </div>
 
+                        {form.orari.map((orario, idx) => (
+                            <div className="cm-form-row cm-orario-row" key={idx}>
+                                <div className="cm-form-field cm-col-1">
+                                    <label>{idx === 0 ? 'Giorno' : ''}</label>
+                                    <select
+                                        className="md-select"
+                                        value={orario.giorno}
+                                        onChange={e => setOrario(idx, 'giorno', e.target.value)}
+                                    >
+                                        {GIORNI.map((g, i) => (
+                                            <option key={i} value={i}>{g}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="cm-form-field cm-col-1">
+                                    <label>{idx === 0 ? 'Ora inizio' : ''}</label>
+                                    <input
+                                        className="md-input"
+                                        type="time"
+                                        value={orario.oraInizio}
+                                        onChange={e => setOrario(idx, 'oraInizio', e.target.value)}
+                                    />
+                                </div>
+                                <div className="cm-form-field cm-col-1">
+                                    <label>{idx === 0 ? 'Durata (min)' : ''}</label>
+                                    <input
+                                        className="md-input"
+                                        type="number"
+                                        min={1}
+                                        value={orario.durataMinuti}
+                                        onChange={e => setOrario(idx, 'durataMinuti', e.target.value)}
+                                    />
+                                </div>
+                                <div className="cm-form-field cm-col-1 cm-orario-remove-field">
+                                    <label>{idx === 0 ? ' ' : ''}</label>
+                                    <button
+                                        type="button"
+                                        className="cm-orario-remove-btn"
+                                        onClick={() => removeOrario(idx)}
+                                        disabled={form.orari.length === 1}
+                                        title={form.orari.length === 1 ? 'Il corso deve avere almeno un giorno' : 'Rimuovi giorno'}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
                         <div className="cm-form-row">
-                            <div className="cm-form-field cm-col-1">
-                                <label>Giorno</label>
-                                <select className="md-select" value={form.giorno} onChange={e => set('giorno', e.target.value)}>
-                                    {GIORNI.map((g, i) => (
-                                        <option key={i} value={i}>{g}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="cm-form-field cm-col-1">
-                                <label>Ora inizio</label>
-                                <input
-                                    className="md-input"
-                                    type="time"
-                                    value={form.oraInizio}
-                                    onChange={e => set('oraInizio', e.target.value)}
-                                />
-                            </div>
-                            <div className="cm-form-field cm-col-1">
-                                <label>Durata (min)</label>
-                                <input
-                                    className="md-input"
-                                    type="number"
-                                    min={1}
-                                    value={form.durataMinuti}
-                                    onChange={e => set('durataMinuti', e.target.value)}
-                                />
-                            </div>
+                            <button type="button" className="cm-orario-add-btn" onClick={addOrario}>
+                                <Plus size={14} /> Aggiungi giorno
+                            </button>
+                            {formError && form.abbonamentoId && (
+                                <span className="cm-error-text">{formError}</span>
+                            )}
+                        </div>
+
+                        <div className="cm-form-row">
                             <div className="cm-form-field cm-col-1">
                                 <label>Max soci</label>
                                 <input

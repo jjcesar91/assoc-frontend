@@ -12,6 +12,7 @@ import ComunicazioneModal from '../components/ComunicazioneModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { getOrari, formatOrari } from '../utils/corsoUtils';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -2061,7 +2062,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         socioCorsi.forEach(iscrizione => {
             const corso = iscrizione.corso;
             const attivita = corso?.attivita?.descrizione || 'Corso';
-            const orario = corso ? `${GIORNI_SETTIMANA[corso.giorno] || ''} ${corso.oraInizio || ''}`.trim() : '';
+            const orario = corso ? formatOrari(corso) : '';
             items.push({
                 id: `corso-${iscrizione.id}`,
                 tipo: 'iscrizione_attivita',
@@ -3334,8 +3335,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                     </div>
                                                 </div>
                                                 <div style={{color:'var(--text-secondary)'}}>
-                                                    <div>{GIORNI_SETTIMANA[corso.giorno] || '-'}</div>
-                                                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>{corso.oraInizio} · {corso.durataMinuti} min</div>
+                                                    {getOrari(corso).map((o, i) => (
+                                                        <div key={i}>
+                                                            <div>{GIORNI_SETTIMANA[o.giorno] || '-'}</div>
+                                                            <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>{o.oraInizio} · {o.durataMinuti} min</div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                                 <div style={{color:'var(--text-secondary)'}}>
                                                     <div>{corso.struttura?.descrizione || '-'}</div>
@@ -4130,20 +4135,16 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.descrizione || '-'}</div>
                                 </div>
                             </div>
-                            {/* Giorno + ora + durata */}
+                            {/* Giorni + orari + durata */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px'}}>
-                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Giorno</div>
-                                    <div style={{color:'var(--text-secondary)'}}>{GIORNI_SETTIMANA[corsoDettaglio.giorno] || '-'}</div>
-                                </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Ora inizio</div>
-                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.oraInizio || '-'}</div>
-                                </div>
-                                <div style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
-                                    <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Durata</div>
-                                    <div style={{color:'var(--text-secondary)'}}>{corsoDettaglio.durataMinuti ? `${corsoDettaglio.durataMinuti} min` : '-'}</div>
-                                </div>
+                                {getOrari(corsoDettaglio).map((o, i) => (
+                                    <div key={i} style={{backgroundColor:'#fff', border:'1px solid var(--border-color)', borderRadius:'6px', padding:'12px'}}>
+                                        <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>{GIORNI_SETTIMANA[o.giorno] || 'Giorno'}</div>
+                                        <div style={{color:'var(--text-secondary)'}}>
+                                            {o.oraInizio || '-'}{o.durataMinuti ? ` · ${o.durataMinuti} min` : ''}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                             {/* Struttura + Sala */}
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
@@ -4265,7 +4266,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                             <div style={{flex:1, minWidth:0}}>
                                                 <div style={{fontWeight:600, color:'var(--text-primary)', fontSize:'0.9rem'}}>{corso.attivita?.descrizione || 'Corso'}</div>
                                                 <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
-                                                    {GIORNI_SETTIMANA[corso.giorno]} · {corso.oraInizio} · {corso.durataMinuti} min
+                                                    {formatOrari(corso)}
                                                     {corso.struttura ? ` · ${corso.struttura.descrizione}` : ''}
                                                     {corso.area ? ` / ${corso.area.descrizione}` : ''}
                                                 </div>

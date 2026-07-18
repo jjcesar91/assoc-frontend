@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Users, UserPlus, Check, BookOpen, AlertTriangle } from 'lucide-react';
+import { formatOrari } from '../utils/corsoUtils';
 import './IscrizioneCorsoDopoModal.css';
-
-const GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 
 const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) => {
     const [selectedCorsoId, setSelectedCorsoId] = useState('');
@@ -134,7 +133,7 @@ const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) 
                             {corsi.length > 1 && <option value="">— Seleziona un corso —</option>}
                             {corsi.map(c => (
                                 <option key={c.id} value={c.id}>
-                                    {c.attivita?.descrizione || '—'} — {GIORNI[c.giorno] || ''} {c.oraInizio}
+                                    {c.attivita?.descrizione || '—'} — {formatOrari(c)}
                                     {c.struttura ? ` — ${c.struttura.descrizione}` : ''}
                                     {` (${c._iscrittiCount ?? 0}/${c.maxSoci})`}
                                 </option>
@@ -152,10 +151,9 @@ const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) 
                                         <span className="icdm-info-value">{selectedCorso.attivita?.descrizione || '—'}</span>
                                     </div>
                                     <div className="icdm-info-item">
-                                        <span className="icdm-info-label">Giorno e ora</span>
+                                        <span className="icdm-info-label">Giorni e orari</span>
                                         <span className="icdm-info-value">
-                                            {GIORNI[selectedCorso.giorno] || '—'} — {selectedCorso.oraInizio}
-                                            <span className="icdm-durata"> ({selectedCorso.durataMinuti} min)</span>
+                                            {formatOrari(selectedCorso) || '—'}
                                         </span>
                                     </div>
                                     {selectedCorso.struttura && (

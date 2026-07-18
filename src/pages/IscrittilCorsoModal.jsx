@@ -3,6 +3,7 @@ import { X, Users, UserPlus, Trash2, AlertTriangle, CheckCircle } from 'lucide-r
 import { useConfirm } from '../components/ConfirmModal';
 import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { formatOrari } from '../utils/corsoUtils';
 
 const today = () => {
     const d = new Date();
@@ -134,7 +135,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
 
                     {/* Sottotitolo corso */}
                     <div style={{ padding: '8px 20px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: '#555' }}>
-                        {corso?.attivita?.descrizione || '—'} — {corso?.struttura?.descrizione || ''} — {corso?.oraInizio}
+                        {corso?.attivita?.descrizione || '—'} — {corso?.struttura?.descrizione || ''} — {formatOrari(corso)}
                         {abbonamento && (
                             <span style={{ marginLeft: 12, color: 'var(--primary)', fontWeight: 500 }}>
                                 Abbonamento: {abbonamento.description}

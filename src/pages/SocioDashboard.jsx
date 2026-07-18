@@ -6,6 +6,7 @@ import {
     CalendarDays, Bell, User, Activity, MapPin, UserCheck, Timer,
     X, Mail, Smartphone, ArrowLeftCircle
 } from 'lucide-react';
+import { getOrari } from '../utils/corsoUtils';
 import './SocioDashboard.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -61,8 +62,7 @@ const CorsoCard = ({ iscrizione }) => {
 
     const colore = c.attivita?.colore || 'var(--success)';
     const attivitaNome = c.attivita?.descrizione || 'Corso';
-    const giornoLabel = c.giorno != null ? GIORNI_SETTIMANA[c.giorno] : null;
-    const oraFine = computeOraFine(c.oraInizio, c.durataMinuti);
+    const orari = getOrari(c);
     const istruttore = c.staff
         ? [c.staff.nome, c.staff.cognome].filter(Boolean).join(' ')
         : null;
@@ -75,25 +75,29 @@ const CorsoCard = ({ iscrizione }) => {
             <div className="sd-corso-content">
                 <div className="sd-corso-top">
                     <span className="sd-corso-nome">{attivitaNome}</span>
-                    {giornoLabel && (
+                    {[...new Set(orari.map(o => o.giorno))].map(g => (
                         <span
+                            key={g}
                             className="sd-corso-giorno-badge"
                             style={{ background: `${colore}18`, color: colore, borderColor: `${colore}40` }}
                         >
-                            {giornoLabel}
+                            {GIORNI_SETTIMANA[g]}
                         </span>
-                    )}
+                    ))}
                 </div>
                 <div className="sd-corso-details">
-                    {c.oraInizio && (
-                        <div className="sd-corso-detail">
-                            <Clock size={13} />
-                            <span>
-                                {c.oraInizio}{oraFine ? ` – ${oraFine}` : ''}
-                                {c.durataMinuti ? ` (${c.durataMinuti} min)` : ''}
-                            </span>
-                        </div>
-                    )}
+                    {orari.filter(o => o.oraInizio).map((o, i) => {
+                        const oraFine = computeOraFine(o.oraInizio, o.durataMinuti);
+                        return (
+                            <div className="sd-corso-detail" key={i}>
+                                <Clock size={13} />
+                                <span>
+                                    {GIORNI_SETTIMANA[o.giorno]} {o.oraInizio}{oraFine ? ` – ${oraFine}` : ''}
+                                    {o.durataMinuti ? ` (${o.durataMinuti} min)` : ''}
+                                </span>
+                            </div>
+                        );
+                    })}
                     {luogo && (
                         <div className="sd-corso-detail">
                             <MapPin size={13} />
