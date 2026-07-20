@@ -9,7 +9,7 @@ import DettaglioOrdineModal from './DettaglioOrdineModal';
 import ImportVociRicevutaModal from './ImportVociRicevutaModal';
 import ImportOrdiniOdooModal from './ImportOrdiniOdooModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
-import { getStatoOrdine } from '../utils/ordineUtils';
+import { getStatoOrdine, ETICHETTE_SISTEMA, getEtichettaSistema } from '../utils/ordineUtils';
 import { buildRicevutaHtml } from '../utils/ricevuta';
 import './Soci.css';
 
@@ -210,6 +210,8 @@ const Ordini = () => {
         return <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>{sort.dir === 'asc' ? '↑' : '↓'}</span>;
     };
 
+    // Etichette inserite dagli operatori: alimentano sia il filtro sia i
+    // suggerimenti dell'editor in DettaglioOrdineModal.
     const allEtichette = useMemo(() => {
         const set = new Set();
         payments.forEach(p => {
@@ -217,6 +219,13 @@ const Ordini = () => {
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
     }, [payments]);
+
+    // Etichette di sistema effettivamente presenti fra gli ordini caricati:
+    // filtrabili come le altre, ma non suggerite nell'editor.
+    const etichetteSistema = useMemo(
+        () => ETICHETTE_SISTEMA.filter(e => payments.some(e.match)).map(e => e.label),
+        [payments]
+    );
 
     const filteredPayments = payments.filter(p => {
         // Lista Pagamenti: solo entrate (importo >= 0) legate a un socio
@@ -228,8 +237,13 @@ const Ordini = () => {
         if (filters.dataDa && (p.data_ricevuta || p.data_pagamento) < filters.dataDa) return false;
         if (filters.dataA && (p.data_ricevuta || p.data_pagamento) > filters.dataA) return false;
         if (filters.etichetta) {
-            const tags = (p.etichette || '').split(',').map(t => t.trim());
-            if (!tags.includes(filters.etichetta)) return false;
+            const sistema = getEtichettaSistema(filters.etichetta);
+            if (sistema) {
+                if (!sistema.match(p)) return false;
+            } else {
+                const tags = (p.etichette || '').split(',').map(t => t.trim());
+                if (!tags.includes(filters.etichetta)) return false;
+            }
         }
         return true;
     }).sort((a, b) => {
@@ -444,9 +458,20 @@ const Ordini = () => {
                                     onChange={(e) => handleFilterChange('etichetta', e.target.value)}
                                 >
                                     <option value="">TUTTE</option>
-                                    {allEtichette.map(et => (
-                                        <option key={et} value={et}>{et}</option>
-                                    ))}
+                                    {etichetteSistema.length > 0 && (
+                                        <optgroup label="Di sistema">
+                                            {etichetteSistema.map(et => (
+                                                <option key={et} value={et}>{et}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    {allEtichette.length > 0 && (
+                                        <optgroup label="Etichette">
+                                            {allEtichette.map(et => (
+                                                <option key={et} value={et}>{et}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
                                 </select>
                             </div>
 
@@ -529,6 +554,16 @@ const Ordini = () => {
                                                                 display: 'inline-block', width: 'fit-content'
                                                             }}>
                                                                 PROFORMA
+                                                            </span>
+                                                        )}
+                                                        {p.origine === 'cliente' && (
+                                                            <span style={{
+                                                                border: '1px solid var(--warning)', color: 'var(--on-warning-container)',
+                                                                background: 'var(--warning-container)',
+                                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
+                                                                display: 'inline-block', width: 'fit-content'
+                                                            }} title="Ordine creato dal socio dall'area riservata">
+                                                                DA CLIENTE
                                                             </span>
                                                         )}
                                                     </div>

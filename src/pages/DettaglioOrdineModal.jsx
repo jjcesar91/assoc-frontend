@@ -479,6 +479,20 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                 </div>
                             </div>
                             <div className="dpm-field">
+                                <div className="dpm-fl">Origine</div>
+                                <div className="dpm-fv">
+                                    {pagamento.origine === 'cliente'
+                                        ? <span style={{
+                                            display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
+                                            fontSize: '0.75rem', fontWeight: 'bold',
+                                            background: 'var(--warning-container)', color: 'var(--on-warning-container)',
+                                            border: '1px solid var(--warning)',
+                                        }}>DA CLIENTE</span>
+                                        : 'Backoffice'
+                                    }
+                                </div>
+                            </div>
+                            <div className="dpm-field">
                                 <div className="dpm-fl">Data ordine</div>
                                 <div className="dpm-fv">{formatDate(pagamento.data_ricevuta || pagamento.data_pagamento) || '—'}</div>
                             </div>

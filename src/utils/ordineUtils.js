@@ -11,6 +11,26 @@ export function getStatoOrdine(record) {
     return 'pagato';
 }
 
+/**
+ * Etichette generate dal sistema: non sono salvate nel campo `etichette` del
+ * record (che contiene solo quelle inserite dagli operatori) ma derivano dallo
+ * stato dell'ordine, ed è così che vengono mostrate come badge in lista.
+ *
+ * Servono per poterci filtrare sopra insieme alle etichette manuali. Restano
+ * separate da queste ultime perché non devono finire fra i suggerimenti
+ * dell'editor di etichette: nessuno deve poterle scrivere o rimuovere a mano.
+ */
+export const ETICHETTE_SISTEMA = [
+    { label: 'PROFORMA', match: (p) => p.tipo_documento === 'proforma' },
+    { label: 'DA CLIENTE', match: (p) => p.origine === 'cliente' },
+    { label: 'ANNULLATO', match: (p) => !!p.stato_pagamento?.startsWith('3.') },
+];
+
+/** Restituisce la definizione dell'etichetta di sistema con quel nome, se esiste. */
+export function getEtichettaSistema(label) {
+    return ETICHETTE_SISTEMA.find(e => e.label === label) || null;
+}
+
 export const STATO_ORDINE_CONFIG = {
     proforma: {
         label: 'PROFORMA',

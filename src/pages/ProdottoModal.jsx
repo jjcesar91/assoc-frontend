@@ -311,8 +311,18 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     </select>
                                 </div>
                             </div>
+                            <div className="prodotto-form-col">
+                                <div className="prodotto-form-group">
+                                    {/* Determina se il prodotto compare nel negozio dell'area soci */}
+                                    <label>Vendibile online</label>
+                                    <select name="sellableOnline" value={formData.sellableOnline} onChange={handleChange} className="prodotto-form-control">
+                                        <option value={true}>Si</option>
+                                        <option value={false}>No</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        
+
                         {renderSpecificFields()}
                     </div>
                      <div className="prodotto-modal-footer">
