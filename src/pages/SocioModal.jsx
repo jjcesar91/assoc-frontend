@@ -13,6 +13,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari, formatOrari } from '../utils/corsoUtils';
+import { openRicevutaCaricata } from '../utils/ricevuta';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -2010,15 +2011,23 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const storicoTimeline = useMemo(() => {
         const items = [];
 
-        // DB storico (note e accessi frontend)
+        // DB storico (note, accessi frontend, ricevute caricate dal socio)
         storico.forEach(s => {
+            // Le ricevute non hanno un allegato proprio: il file resta sul
+            // payments-service e si apre per payment_id.
+            let allegato = null;
+            if (s.allegato_path) {
+                allegato = { storiciId: s.id, nome: s.allegato_nome || 'allegato' };
+            } else if (s.tipo === 'ricevuta' && s.dettagli?.payment_id) {
+                allegato = { paymentId: s.dettagli.payment_id, nome: s.dettagli.nome_file || 'ricevuta' };
+            }
             items.push({
                 id: `storico-${s.id}`,
                 tipo: s.tipo,
                 azione: s.azione,
                 owner: s.owner_label || 'Sistema',
                 data: new Date(s.data_evento),
-                allegato: s.allegato_path ? { storiciId: s.id, nome: s.allegato_nome || 'allegato' } : null,
+                allegato,
                 source: 'db',
             });
         });
@@ -2085,6 +2094,17 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         comunicazione: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Comunicazione', icon: <Mail size={14}/> },
         accesso_frontend: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Accesso', icon: <Globe size={14}/> },
         nota: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Nota', icon: <MessageSquare size={14}/> },
+        ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Ricevuta', icon: <Paperclip size={14}/> },
+    };
+
+    // Apertura della ricevuta caricata dal socio direttamente dalla riga di storico.
+    const [ricevutaBusyId, setRicevutaBusyId] = useState(null);
+    const handleApriRicevutaStorico = async (paymentId) => {
+        if (ricevutaBusyId) return;
+        setRicevutaBusyId(paymentId);
+        const r = await openRicevutaCaricata(paymentId);
+        setRicevutaBusyId(null);
+        if (!r.ok) showSnackbar(r.error || 'Impossibile aprire la ricevuta', 'error');
     };
 
     const handleSalvaNota = async () => {
@@ -2956,7 +2976,18 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                                     {item.owner === 'Sistema' ? '🤖' : '👤'} {item.owner}
                                                                 </span>
                                                             </span>
-                                                            {item.allegato && (
+                                                            {item.allegato?.paymentId ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApriRicevutaStorico(item.allegato.paymentId)}
+                                                                    disabled={ricevutaBusyId === item.allegato.paymentId}
+                                                                    title="Apri la ricevuta caricata dal socio"
+                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: ricevutaBusyId === item.allegato.paymentId ? 'wait' : 'pointer', textAlign: 'left' }}
+                                                                >
+                                                                    <Download size={12} />
+                                                                    {ricevutaBusyId === item.allegato.paymentId ? 'Apertura…' : item.allegato.nome}
+                                                                </button>
+                                                            ) : item.allegato && (
                                                                 <a
                                                                     href={`/users/api/soci/${formData.id}/storico/${item.allegato.storiciId}/allegato`}
                                                                     target="_blank"

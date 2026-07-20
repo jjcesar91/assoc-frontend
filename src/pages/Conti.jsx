@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
-import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign } from 'lucide-react';
+import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign, Star } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import ContoBonificoModal from './ContoBonificoModal';
+import ContoModal from './ContoModal';
 import './Soci.css';
 
 const API_GATEWAY = '/payments/api';
@@ -13,14 +14,17 @@ const Conti = () => {
     const [conti, setConti] = useState([]);
     const [loading, setLoading] = useState(false);
     
-    // Form state
+    // Form state (solo creazione: le modifiche avvengono tramite modal)
     const [descrizione, setDescrizione] = useState('');
     const [modalita, setModalita] = useState('');
-    const [editingId, setEditingId] = useState(null);
 
     // Modal dedicato per i conti di tipo Bonifico
     const [bonificoModalOpen, setBonificoModalOpen] = useState(false);
     const [bonificoConto, setBonificoConto] = useState(null);
+
+    // Modal di modifica per i conti non bonifico
+    const [contoModalOpen, setContoModalOpen] = useState(false);
+    const [contoInModifica, setContoInModifica] = useState(null);
 
     const [error, setError] = useState(null);
 
@@ -56,7 +60,6 @@ const Conti = () => {
     const resetForm = () => {
         setDescrizione('');
         setModalita('');
-        setEditingId(null);
     };
 
     const handleSubmit = async (e) => {
@@ -74,12 +77,10 @@ const Conti = () => {
         };
 
         const token = localStorage.getItem('token');
-        const url = editingId ? `${API_GATEWAY}/conti/${editingId}` : `${API_GATEWAY}/conti`;
-        const method = editingId ? 'PUT' : 'POST';
 
         try {
-            const res = await fetch(url, {
-                method,
+            const res = await fetch(`${API_GATEWAY}/conti`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -98,36 +99,65 @@ const Conti = () => {
 
     const handleEdit = (conto) => {
         // I conti di tipo Bonifico si modificano tramite modal dedicato
-        // (descrizione, IBAN e istruzioni di pagamento).
+        // (descrizione, IBAN e istruzioni di pagamento); gli altri con il modal generico.
         if (conto.modalita_pagamento?.toLowerCase() === 'bonifico') {
             setBonificoConto(conto);
             setBonificoModalOpen(true);
             return;
         }
-        setEditingId(conto.id);
-        setDescrizione(conto.descrizione);
-        setModalita(conto.modalita_pagamento || '');
+        setContoInModifica(conto);
+        setContoModalOpen(true);
+    };
+
+    const updateConto = async (conto, data) => {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_GATEWAY}/conti/${conto.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                societa_id: conto.societa_id,
+                modalita_pagamento: conto.modalita_pagamento,
+                ...data
+            })
+        });
+        if (!res.ok) throw new Error('Errore nel salvataggio del conto');
     };
 
     const handleSaveBonifico = async (data) => {
         if (!bonificoConto) return;
-        const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`${API_GATEWAY}/conti/${bonificoConto.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    societa_id: bonificoConto.societa_id,
-                    modalita_pagamento: bonificoConto.modalita_pagamento,
-                    ...data
-                })
-            });
-            if (!res.ok) throw new Error('Errore nel salvataggio del conto');
+            await updateConto(bonificoConto, data);
             setBonificoModalOpen(false);
             setBonificoConto(null);
+            fetchConti();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleSaveConto = async (data) => {
+        if (!contoInModifica) return;
+        try {
+            await updateConto(contoInModifica, data);
+            setContoModalOpen(false);
+            setContoInModifica(null);
+            fetchConti();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleSetPredefinito = async (id) => {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_GATEWAY}/conti/${id}/predefinito`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Errore nell'impostazione del conto predefinito");
             fetchConti();
         } catch (err) {
             setError(err.message);
@@ -169,7 +199,7 @@ const Conti = () => {
                 {/* Form Nuovo/Modifica Conto */}
                 <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch', marginBottom: '24px'}}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                        {editingId ? 'Modifica Conto' : 'Aggiungi Conto'}
+                        Aggiungi Conto
                     </h3>
                     
                     <form onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px'}}>
@@ -202,14 +232,9 @@ const Conti = () => {
                         </div>
 
                         <div style={{display:'flex', gap:'8px'}}>
-                            {editingId && (
-                                <button type="button" className="btn-outlined" onClick={resetForm} style={{ height: '42px' }}>
-                                    Annulla
-                                </button>
-                            )}
                             <button type="submit" className="btn-contained" style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {editingId ? <Edit2 size={16} /> : <Plus size={16} />}
-                                {editingId ? 'Aggiorna' : 'Crea'}
+                                <Plus size={16} />
+                                Crea
                             </button>
                         </div>
                     </form>
@@ -234,7 +259,15 @@ const Conti = () => {
                                 conti.map(c => (
                                     <tr key={c.id} style={{ borderBottom: '1px solid #eee' }} className="hover-row">
                                         <td style={{ padding: '12px 16px' }}>
-                                            <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{c.descrizione}</div>
+                                            <div style={{ fontWeight: '500', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {c.descrizione}
+                                                {c.predefinito && (
+                                                    <span title="Conto predefinito" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', backgroundColor: 'var(--success-container)', color: 'var(--success)', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500' }}>
+                                                        <Star size={12} fill="currentColor" />
+                                                        Predefinito
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
                                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: c.modalita_pagamento ? 'var(--info-container)' : 'var(--surface-1)', color: c.modalita_pagamento ? 'var(--primary)' : 'var(--text-tertiary)', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
@@ -243,6 +276,11 @@ const Conti = () => {
                                             </div>
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                            {!c.predefinito && (
+                                                <button className="btn-icon-small" title="Imposta come predefinito" onClick={() => handleSetPredefinito(c.id)}>
+                                                    <Star size={18} />
+                                                </button>
+                                            )}
                                             <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(c)}>
                                                 <Edit2 size={18} />
                                             </button>
@@ -264,6 +302,13 @@ const Conti = () => {
                 conto={bonificoConto}
                 onClose={() => { setBonificoModalOpen(false); setBonificoConto(null); }}
                 onSave={handleSaveBonifico}
+            />
+
+            <ContoModal
+                isOpen={contoModalOpen}
+                conto={contoInModifica}
+                onClose={() => { setContoModalOpen(false); setContoInModifica(null); }}
+                onSave={handleSaveConto}
             />
         </div>
     );

@@ -1,0 +1,99 @@
+.conto-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1300;
+}
+
+.conto-modal {
+    background-color: var(--surface);
+    border-radius: 8px;
+    width: 520px;
+    max-width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+}
+
+.conto-modal-header {
+    background: var(--surface);
+    color: var(--text-primary);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.conto-modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.conto-modal-header .close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.conto-modal-header .close-btn:hover {
+    background: var(--surface-2);
+}
+
+.conto-modal-body {
+    padding: 24px 28px 16px 28px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.conto-modal-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.conto-modal-field label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.conto-modal-field .field-hint {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+}
+
+.conto-modal-footer {
+    padding: 16px 28px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-1);
+    border-radius: 0 0 8px 8px;
+    flex-shrink: 0;
+}

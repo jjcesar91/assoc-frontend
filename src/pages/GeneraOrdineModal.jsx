@@ -3,6 +3,7 @@ import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar, FileTe
 import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { getRangeDataOrdine, validaDataOrdine, oggiStr } from '../utils/dataOrdineUtils';
 
 const GeneraOrdineModal = ({
     isOpen, 
@@ -21,7 +22,7 @@ const GeneraOrdineModal = ({
     );
     const [conti, setConti] = useState([]);
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = oggiStr();
     const defaultDataRicevuta = todayStr.split('-').reverse().join('/'); // basic parse to DD/MM/YYYY is visually confusing with normal input date, better keep YYYY-MM-DD for input type date
 
     const [modalita, setModalita] = useState('Contanti');
@@ -48,35 +49,30 @@ const GeneraOrdineModal = ({
         ? nextNumeroRicevuta.slice(nextNumeroRicevuta.indexOf('/'))
         : '';
 
-    // Estremo superiore selezionabile: oggi per l'anno corrente, ultimo giorno
-    // dell'anno associativo per gli anni passati.
-    const maxDataRicevuta = useMemo(() => {
-        if (!annoRicevuta) return todayStr;
-        const { end } = getAnnoDateRange(annoRicevuta, selectedSocieta);
-        const endStr = end.toISOString().split('T')[0];
-        return endStr < todayStr ? endStr : todayStr;
-    }, [annoRicevuta, selectedSocieta, todayStr]);
-
-    // Inizio dell'anno associativo selezionato (YYYY-MM-DD).
-    const annoStartStr = useMemo(() => {
-        if (!annoRicevuta) return '';
-        const { start } = getAnnoDateRange(annoRicevuta, selectedSocieta);
-        return start.toISOString().split('T')[0];
-    }, [annoRicevuta, selectedSocieta]);
-
-    // Estremo inferiore selezionabile: la data dell'ultima ricevuta dell'anno se
-    // esiste, altrimenti l'inizio dell'anno associativo.
-    const minDataRicevuta = useMemo(
-        () => lastPaymentDate || annoStartStr,
-        [lastPaymentDate, annoStartStr]
+    // Intervallo consentito per la data documento (regole condivise con la
+    // conversione proforma → pagamento, vedi utils/dataOrdineUtils).
+    const rangeData = useMemo(
+        () => getRangeDataOrdine(annoRicevuta, selectedSocieta, lastPaymentDate),
+        [annoRicevuta, selectedSocieta, lastPaymentDate]
     );
-    
+    const minDataRicevuta = rangeData.min;
+    const maxDataRicevuta = rangeData.max;
+
+    // Esito della validazione sulla data corrente: usato per l'avviso inline e
+    // per bloccare la conferma.
+    const esitoData = useMemo(
+        () => validaDataOrdine(dataRicevuta, rangeData),
+        [dataRicevuta, rangeData]
+    );
+
     const [codiceFiscale, setCodiceFiscale] = useState('');
     const [codiceFiscaleGenitore, setCodiceFiscaleGenitore] = useState('');
     const [partitaIva, setPartitaIva] = useState('');
     
     const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    // Errore sulla data mostrato dopo un tentativo di conferma.
+    const [dataError, setDataError] = useState('');
 
     // Al cambio dell'anno ricevuta posiziona la data documento sul default:
     // oggi per l'anno corrente, ultimo giorno dell'anno per gli anni passati.
@@ -85,14 +81,20 @@ const GeneraOrdineModal = ({
         setDataRicevuta(maxDataRicevuta);
     }, [annoRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Clamp difensivo: mantieni la data dentro l'intervallo consentito.
+    // Clamp difensivo: riporta la data dentro l'intervallo quando cambiano gli
+    // estremi (es. cambio anno o arrivo di lastPaymentDate dal backend).
+    // NB: non dipende da `dataRicevuta` di proposito — una data digitata a mano
+    // fuori range non viene riscritta sotto le dita dell'utente, ma segnalata
+    // dall'avviso inline e bloccata alla conferma.
     useEffect(() => {
-        if (dataRicevuta > maxDataRicevuta) {
-            setDataRicevuta(maxDataRicevuta);
-        } else if (minDataRicevuta && dataRicevuta < minDataRicevuta) {
-            setDataRicevuta(minDataRicevuta);
-        }
-    }, [maxDataRicevuta, minDataRicevuta]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (!isOpen) return;
+        setDataRicevuta(prev => {
+            if (!prev) return prev;
+            if (prev > maxDataRicevuta) return maxDataRicevuta;
+            if (minDataRicevuta && prev < minDataRicevuta) return minDataRicevuta;
+            return prev;
+        });
+    }, [isOpen, maxDataRicevuta, minDataRicevuta]);
 
     useEffect(() => {
         if (isOpen) {
@@ -194,6 +196,15 @@ const GeneraOrdineModal = ({
 
     const handleConfirm = (tipoDocumento = 'pagamento', progressivoIniziale = null) => {
         if (submitting) return;
+
+        // La data documento deve stare nell'intervallo consentito: gli attributi
+        // min/max dell'input sono solo indicativi e non impediscono di digitare
+        // un valore fuori range.
+        if (!esitoData.ok) {
+            setDataError(esitoData.error);
+            return;
+        }
+        setDataError('');
 
         // Prima ricevuta dell'anno: chiedi da quale numero far partire la numerazione
         // (solo per i pagamenti con ricevuta, non per le proforma).
@@ -401,14 +412,20 @@ const GeneraOrdineModal = ({
                                     min={minDataRicevuta || undefined}
                                     max={maxDataRicevuta}
                                     style={{ width: '100%', paddingRight: '35px' }}
-                                    onChange={(e) => setDataRicevuta(e.target.value)}
+                                    onChange={(e) => { setDataRicevuta(e.target.value); setDataError(''); }}
                                 />
-                                <Calendar 
-                                    size={18} 
-                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }} 
+                                <Calendar
+                                    size={18}
+                                    style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', cursor: 'pointer', zIndex: 5 }}
                                     onClick={(e) => e.currentTarget.previousElementSibling.showPicker?.()}
                                 />
                             </div>
+                            {(dataError || !esitoData.ok) && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', marginTop: '5px', fontSize: '0.78rem', color: 'var(--danger)', lineHeight: 1.35 }}>
+                                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                    <span>{dataError || esitoData.error}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -466,10 +483,10 @@ const GeneraOrdineModal = ({
 
                 </div>
                 <div className="gpm-footer">
-                    <button className="gpm-submit-btn gpm-submit-btn--proforma" onClick={() => handleConfirm('proforma')} disabled={submitting}>
+                    <button className="gpm-submit-btn gpm-submit-btn--proforma" onClick={() => handleConfirm('proforma')} disabled={submitting || !esitoData.ok} title={!esitoData.ok ? esitoData.error : undefined}>
                         <FileText size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Salva come Proforma'}
                     </button>
-                    <button className="gpm-submit-btn" onClick={() => handleConfirm('pagamento')} disabled={submitting}>
+                    <button className="gpm-submit-btn" onClick={() => handleConfirm('pagamento')} disabled={submitting || !esitoData.ok} title={!esitoData.ok ? esitoData.error : undefined}>
                         <Check size={18} strokeWidth={2}/> {submitting ? 'Elaborazione...' : 'Registra Pagamento'}
                     </button>
                 </div>

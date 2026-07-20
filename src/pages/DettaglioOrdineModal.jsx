@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Ban, Calendar, Check, Download, FileCheck, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
@@ -6,6 +6,7 @@ import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '.
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
 import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } from '../utils/comunicazioniOrdini';
 import { generateRicevutaPdfBase64, openRicevutaCaricata } from '../utils/ricevuta';
+import { getRangeDataOrdine, validaDataOrdine, oggiStr } from '../utils/dataOrdineUtils';
 import './DettaglioPagamentoModal.css';
 
 const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -17,6 +18,11 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [convertData, setConvertData] = useState('');
     const [convertNextNumero, setConvertNextNumero] = useState(null);
     const [convertNextRaw, setConvertNextRaw] = useState(null); // progressivo grezzo: ===1 → prima ricevuta
+    // Data dell'ultima ricevuta dell'anno selezionato: estremo inferiore per la
+    // data ricevuta (non si può retrodatare prima dell'ultimo ordine emesso).
+    const [convertLastPaymentDate, setConvertLastPaymentDate] = useState('');
+    // Errore sulla data mostrato dopo un tentativo di conferma.
+    const [convertDataError, setConvertDataError] = useState('');
     const [convertStartNumber, setConvertStartNumber] = useState('1'); // numero di partenza scelto
     const [converting, setConverting] = useState(false);
 
@@ -61,7 +67,31 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = oggiStr();
+
+    // Intervallo consentito per la data ricevuta in fase di conversione
+    // proforma → pagamento: stesse regole della creazione di un nuovo ordine
+    // (vedi utils/dataOrdineUtils).
+    const rangeConvertData = useMemo(
+        () => getRangeDataOrdine(convertAnno, societa, convertLastPaymentDate),
+        [convertAnno, societa, convertLastPaymentDate]
+    );
+    const esitoConvertData = useMemo(
+        () => validaDataOrdine(convertData, rangeConvertData),
+        [convertData, rangeConvertData]
+    );
+
+    // Clamp difensivo al variare degli estremi (cambio anno o arrivo di
+    // lastPaymentDate dal backend).
+    useEffect(() => {
+        if (!showConvertForm) return;
+        setConvertData(prev => {
+            if (!prev) return prev;
+            if (prev > rangeConvertData.max) return rangeConvertData.max;
+            if (rangeConvertData.min && prev < rangeConvertData.min) return rangeConvertData.min;
+            return prev;
+        });
+    }, [showConvertForm, rangeConvertData.min, rangeConvertData.max]);
 
     // Pulizia timer snackbar allo smontaggio
     useEffect(() => () => clearTimeout(comFeedbackTimerRef.current), []);
@@ -140,6 +170,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                     setConvertNextNumero(data.formatted);
                     setConvertNextRaw(data.nextNumero ?? null);
                     setConvertStartNumber(String(data.nextNumero ?? 1));
+                    setConvertLastPaymentDate(data.lastPaymentDate || '');
                 }
             } catch (e) { /* silenzioso */ }
         };
@@ -153,11 +184,21 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         setConvertAnno(selectedAnno);
         setConvertData(todayStr);
         setConvertNextNumero(null);
+        setConvertLastPaymentDate('');
+        setConvertDataError('');
         setShowConvertForm(true);
     };
 
     const handleConfermaConverti = async () => {
         if (converting) return;
+
+        // min/max sull'input sono solo indicativi: ricontrolla prima di inviare.
+        if (!esitoConvertData.ok) {
+            setConvertDataError(esitoConvertData.error);
+            return;
+        }
+        setConvertDataError('');
+
         setConverting(true);
         try {
             const token = localStorage.getItem('token');
@@ -669,13 +710,20 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                     <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Data ricevuta</label>
                                     <input
                                         type="date"
-                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                                        style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: `1px solid ${esitoConvertData.ok ? 'var(--border-color)' : 'var(--danger)'}`, fontSize: '0.9rem', boxSizing: 'border-box' }}
                                         value={convertData}
-                                        max={todayStr}
-                                        onChange={e => setConvertData(e.target.value)}
+                                        min={rangeConvertData.min || undefined}
+                                        max={rangeConvertData.max}
+                                        onChange={e => { setConvertData(e.target.value); setConvertDataError(''); }}
                                     />
                                 </div>
                             </div>
+                            {(convertDataError || !esitoConvertData.ok) && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', margin: '-8px 0 16px', fontSize: '0.82rem', color: 'var(--danger)', lineHeight: 1.35 }}>
+                                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                    <span>{convertDataError || esitoConvertData.error}</span>
+                                </div>
+                            )}
                             {convertNextRaw === 1 ? (
                                 <div style={{ background: 'var(--primary-container)', border: '1px solid var(--primary-container)', borderRadius: '6px', padding: '10px 14px', fontSize: '0.9rem', color: 'var(--primary)' }}>
                                     <div style={{ marginBottom: '8px' }}>
@@ -719,8 +767,9 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                             <button
                                 className="dpm-btn-converti"
                                 onClick={handleConfermaConverti}
-                                disabled={converting || !convertNextNumero || (convertNextRaw === 1 && (() => { const n = parseInt(convertStartNumber, 10); return isNaN(n) || n < 1; })())}
-                                style={{ opacity: (converting || !convertNextNumero) ? 0.6 : 1, cursor: (converting || !convertNextNumero) ? 'not-allowed' : 'pointer' }}
+                                disabled={converting || !convertNextNumero || !esitoConvertData.ok || (convertNextRaw === 1 && (() => { const n = parseInt(convertStartNumber, 10); return isNaN(n) || n < 1; })())}
+                                title={!esitoConvertData.ok ? esitoConvertData.error : undefined}
+                                style={{ opacity: (converting || !convertNextNumero || !esitoConvertData.ok) ? 0.6 : 1, cursor: (converting || !convertNextNumero || !esitoConvertData.ok) ? 'not-allowed' : 'pointer' }}
                             >
                                 <Check size={14} /> {converting ? 'Conversione…' : 'Conferma e converti'}
                             </button>
