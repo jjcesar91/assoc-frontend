@@ -313,6 +313,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         costo_tessera_completa: '',
         durata_consiglio_direttivo: '',
         scadenza_consiglio_direttivo: '',
+        scadenza_doc_presidente: '',
         etichette: '',
         runts: false,
         somministrazione: false,
@@ -917,6 +918,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 costo_tessera_completa: socioData.costo_tessera_completa ?? '',
                 durata_consiglio_direttivo: socioData.durata_consiglio_direttivo ?? '',
                 scadenza_consiglio_direttivo: socioData.scadenza_consiglio_direttivo || '',
+                scadenza_doc_presidente: socioData.scadenza_doc_presidente || '',
                 etichette: socioData.etichette || '',
                 runts: !!socioData.runts,
                 somministrazione: !!socioData.somministrazione,
@@ -3602,6 +3604,23 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     value={formData.scadenza_consiglio_direttivo}
                                     onChange={handleChange}
                                 />
+                            </div>
+
+                            {/* Sezione: Presidente */}
+                            <div className="form-group grid-span-12" style={{ marginBottom: '4px', marginTop: '8px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Presidente</span>
+                            </div>
+
+                            <div className="form-group grid-span-4">
+                                <label className="field-label">Scadenza documento presidente</label>
+                                <input
+                                    className="md-input"
+                                    type="date"
+                                    name="scadenza_doc_presidente"
+                                    value={formData.scadenza_doc_presidente}
+                                    onChange={handleChange}
+                                />
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '2px' }}>Compilare solo sul socio che ricopre la carica di presidente</span>
                             </div>
 
                         </div>

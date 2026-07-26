@@ -83,7 +83,6 @@ const Automazioni = () => {
                     tipo: r.tipo,
                     attiva: r.attiva,
                     giorni_anticipo: parseInt(r.giorni_anticipo, 10) || 0,
-                    data_riferimento: r.data_riferimento || null,
                     extra_config: r.extra_config || null,
                     oggetto_email: r.oggetto_email || null,
                     testo_email: r.testo_email || null,
@@ -221,15 +220,6 @@ const Automazioni = () => {
                                                                 />
                                                             </td>
                                                             <td>
-                                                                {r.richiedeDataRiferimento && (
-                                                                    <input
-                                                                        className="md-input"
-                                                                        type="date"
-                                                                        disabled={!r.applicabile}
-                                                                        value={r.data_riferimento || ''}
-                                                                        onChange={(e) => updateRule(r.tipo, { data_riferimento: e.target.value })}
-                                                                    />
-                                                                )}
                                                                 {r.richiedeExtraBiennale && (
                                                                     <div className="auto-biannual">
                                                                         <span>1ª:</span>
