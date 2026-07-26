@@ -17,6 +17,7 @@ import NuovoOrdine from './pages/NuovoOrdine';
 import Conti from './pages/Conti';
 import OrdiniComunicazioni from './pages/OrdiniComunicazioni';
 import Scadenziario from './pages/Scadenziario';
+import Automazioni from './pages/Automazioni';
 import Contabilita from './pages/Contabilita';
 import GruppiSottogruppi from './pages/GruppiSottogruppi';
 import FornitoriContabilita from './pages/FornitoriContabilita';
@@ -226,6 +227,11 @@ function App() {
           <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Scadenziario">
               <Scadenziario />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/comunicazioni/automazioni" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Automazioni">
+              <Automazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/contabilita/operazioni" element={isAuthenticated && !isSocio ? (

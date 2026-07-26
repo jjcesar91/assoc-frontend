@@ -1,0 +1,131 @@
+/* stili specifici della pagina Automazioni; base unificata in styles/design-system.css */
+
+.auto-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 4px;
+}
+
+.auto-tabs-header {
+    display: flex;
+    background-color: var(--surface-2);
+    padding: 8px 8px 0 8px;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.auto-tab-btn {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    margin-right: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.auto-tab-btn:hover {
+    background-color: var(--surface-3);
+}
+
+.auto-tab-btn.active {
+    background-color: var(--success);
+    color: white;
+}
+
+.auto-message {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+}
+
+.auto-message-success {
+    background: var(--success-container, #e6f4ea);
+    color: var(--success);
+}
+
+.auto-message-error {
+    background: var(--danger-container, #fdecea);
+    color: var(--danger);
+}
+
+.auto-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auto-section {
+    padding: 16px;
+}
+
+.auto-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.auto-table th, .auto-table td {
+    vertical-align: middle;
+}
+
+.auto-row-disabled {
+    opacity: 0.55;
+}
+
+.auto-row-note {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.auto-input-num {
+    width: 70px;
+    text-align: center;
+    padding: 6px 8px !important;
+}
+
+.auto-biannual {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+}
+
+.auto-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.auto-log-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.auto-badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: #fff;
+}
+
+.auto-badge-ok {
+    background-color: var(--success);
+}
+
+.auto-badge-error {
+    background-color: var(--danger);
+}

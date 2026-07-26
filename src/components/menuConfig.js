@@ -1,4 +1,4 @@
-import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck } from 'lucide-react';
+import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, Mail } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -70,6 +70,14 @@ export const MENU_STRUCTURE = [
         ],
     },
     { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
+    {
+        id: 'comunicazioni',
+        label: 'Comunicazioni',
+        Icon: Mail,
+        children: [
+            { id: 'comunicazioni-automazioni', label: 'Automazioni', path: '/comunicazioni/automazioni' },
+        ],
+    },
     {
         id: 'contabilita',
         label: 'Contabilità',

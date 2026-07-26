@@ -2456,6 +2456,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                         <select className="md-select" name="tipo_associazione" value={formData.tipo_associazione} onChange={handleChange}>
                                             <option value="">Seleziona...</option>
                                             <option value="ASD">Associazione Sportiva Dilettantistica (ASD)</option>
+                                            <option value="SSD">Società Sportiva Dilettantistica (SSD)</option>
                                             <option value="APS">Associazione di Promozione Sociale (APS)</option>
                                             <option value="ODV">Organizzazione di Volontariato (ODV)</option>
                                             <option value="ETS">Ente del Terzo Settore (ETS)</option>
