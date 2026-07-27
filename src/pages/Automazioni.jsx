@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Save, PlayCircle } from 'lucide-react';
+import { Mail, Save, PlayCircle, Info } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
+import { useConfirm } from '../components/ConfirmModal';
 import './Automazioni.css';
 
 const CATEGORIA_LABEL = {
@@ -10,6 +11,7 @@ const CATEGORIA_LABEL = {
 
 const Automazioni = () => {
     const { selectedSocietaId } = useSocieta();
+    const confirm = useConfirm();
     const [activeTab, setActiveTab] = useState('config');
 
     const [rules, setRules] = useState([]);
@@ -110,6 +112,12 @@ const Automazioni = () => {
 
     const handleRunNow = async () => {
         if (!selectedSocietaId) return;
+        const ok = await confirm(
+            'Verranno controllate subito tutte le automazioni attive di questa società e, per quelle risultate in scadenza, verrà inviata SUBITO la relativa email ai soci interessati (non è una simulazione). Le email già inviate in precedenza per la stessa scadenza non vengono duplicate. Procedere?',
+            'Esegui controllo ora',
+            { confirmLabel: 'Esegui e invia', confirmColor: 'var(--warning)' }
+        );
+        if (!ok) return;
         setRunningNow(true);
         setMessage(null);
         try {
@@ -174,6 +182,16 @@ const Automazioni = () => {
                         <p>Caricamento...</p>
                     ) : (
                         <>
+                            <div className="auto-info-note">
+                                <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span>
+                                    Il controllo delle scadenze e l'invio delle email vengono eseguiti automaticamente
+                                    <strong> una volta al giorno, alle 6:00</strong>. Il pulsante "Esegui controllo ora"
+                                    in fondo alla pagina forza subito lo stesso controllo, inviando immediatamente le
+                                    email eventualmente dovute (senza duplicare quelle già inviate).
+                                </span>
+                            </div>
+
                             {['ets_point', 'associazioni'].map(categoria => (
                                 grouped[categoria] && (
                                     <div key={categoria} className="auto-section card">
@@ -265,13 +283,22 @@ const Automazioni = () => {
             {activeTab === 'log' && (
                 <div className="auto-panel">
                     <div className="toolbar-card auto-log-filters">
-                        <select className="md-select" value={logFilters.tipo} onChange={(e) => setLogFilters(prev => ({ ...prev, tipo: e.target.value }))}>
-                            <option value="">Tutti i tipi</option>
-                            {rules.map(r => <option key={r.tipo} value={r.tipo}>{r.label}</option>)}
-                        </select>
-                        <input type="date" className="md-input" value={logFilters.dataDa} onChange={(e) => setLogFilters(prev => ({ ...prev, dataDa: e.target.value }))} />
-                        <input type="date" className="md-input" value={logFilters.dataA} onChange={(e) => setLogFilters(prev => ({ ...prev, dataA: e.target.value }))} />
-                        <button className="btn btn-secondary" onClick={fetchLog}>Filtra</button>
+                        <div className="auto-log-filter-group">
+                            <label className="field-label">Tipo</label>
+                            <select className="md-select" value={logFilters.tipo} onChange={(e) => setLogFilters(prev => ({ ...prev, tipo: e.target.value }))}>
+                                <option value="">Tutti i tipi</option>
+                                {rules.map(r => <option key={r.tipo} value={r.tipo}>{r.label}</option>)}
+                            </select>
+                        </div>
+                        <div className="auto-log-filter-group auto-log-filter-date">
+                            <label className="field-label">Data da</label>
+                            <input type="date" className="md-input" value={logFilters.dataDa} onChange={(e) => setLogFilters(prev => ({ ...prev, dataDa: e.target.value }))} />
+                        </div>
+                        <div className="auto-log-filter-group auto-log-filter-date">
+                            <label className="field-label">Data a</label>
+                            <input type="date" className="md-input" value={logFilters.dataA} onChange={(e) => setLogFilters(prev => ({ ...prev, dataA: e.target.value }))} />
+                        </div>
+                        <button className="btn btn-secondary auto-log-filter-btn" onClick={fetchLog}>Filtra</button>
                     </div>
 
                     <div className="card">

@@ -55,6 +55,18 @@
     color: var(--danger);
 }
 
+.auto-info-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
 .auto-panel {
     display: flex;
     flex-direction: column;
@@ -110,8 +122,28 @@
 .auto-log-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.auto-log-filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 220px;
+    min-width: 160px;
+}
+
+.auto-log-filter-group .field-label {
+    margin-bottom: 4px;
+}
+
+.auto-log-filter-group.auto-log-filter-date {
+    flex-basis: 160px;
+    min-width: 140px;
+}
+
+.auto-log-filter-btn {
+    flex: 0 0 auto;
 }
 
 .auto-badge {
