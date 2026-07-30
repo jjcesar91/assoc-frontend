@@ -14,10 +14,10 @@ version: '3.8'
 services:
   frontend:
     build: ..
-    container_name: assoc_frontend
+    container_name: assoc_frontend_prod
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "6173:5173"
     environment:
       - VITE_API_TARGET=http://nginx
       - CHOKIDAR_USEPOLLING=true

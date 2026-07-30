@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // Needed for Docker
-    allowedHosts: ['dev.etspoint.it'],
+    allowedHosts: ['dev.etspoint.it', 'app.nonprofitgest.it'],
     proxy: {
       '/auth': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',

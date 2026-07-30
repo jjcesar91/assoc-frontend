@@ -17,17 +17,17 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ secrets.DEPLOY_PATH_PROD }}
 
             # Builder classico: le immagini includono "ContainerConfig", evitando il
             # bug di docker-compose v1 "KeyError: 'ContainerConfig'" alla ricreazione.
             export DOCKER_BUILDKIT=0
             export COMPOSE_DOCKER_CLI_BUILD=0
-            # Progetto compose isolato (la cartella si chiama "docker" come nel backend).
-            export COMPOSE_PROJECT_NAME=frontend
-            # Rileva la rete del gateway API (fallback al nome standard del backend).
-            export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | head -1 || true)
-            export APP_NETWORK=${APP_NETWORK:-docker_app_network}
+            # Progetto compose isolato, distinto da dev (frontend) e dal backend prod.
+            export COMPOSE_PROJECT_NAME=frontend_prod
+            # Rete del gateway API creata dal compose backend_prod (COMPOSE_PROJECT_NAME
+            # li' e' backend_prod, quindi la rete si chiama backend_prod_app_network).
+            export APP_NETWORK=backend_prod_app_network
             echo "Rete API condivisa: $APP_NETWORK"
 
             git pull origin master
