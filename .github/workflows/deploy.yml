@@ -2,7 +2,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [master]
+    branches: [dev]
 
 jobs:
   deploy:
@@ -30,7 +30,7 @@ jobs:
             export APP_NETWORK=${APP_NETWORK:-docker_app_network}
             echo "Rete API condivisa: $APP_NETWORK"
 
-            git pull origin master
+            git pull origin dev
 
             cd docker
             # Build + ricreazione robusta (rm prima di up: evita l'ereditarieta' dei
