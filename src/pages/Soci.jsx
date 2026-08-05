@@ -77,15 +77,25 @@ const scadenzaPagamentoTesseramento = (p, societa) => {
     return getAnnoDateRange(anno, societa).end;
 };
 
-// Da una scadenza (timestamp) allo stato: REGOLARE / IN SCADENZA (entro 30 gg) / SCADUTO / NO.
-const statoDaScadenza = (scadTs) => {
+// Da una scadenza (timestamp) allo stato: REGOLARE / IN SCADENZA (entro N gg, default 30) / SCADUTO / NO.
+// giorniAvviso: soglia specifica del prodotto (es. tesseramento), se disponibile.
+const statoDaScadenza = (scadTs, giorniAvviso) => {
     if (scadTs == null) return 'NO';
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const s = new Date(scadTs); s.setHours(0, 0, 0, 0);
     if (s < today) return 'SCADUTO';
-    const limit = new Date(today); limit.setDate(limit.getDate() + 30);
+    const limit = new Date(today); limit.setDate(limit.getDate() + (giorniAvviso ?? 30));
     if (s <= limit) return 'IN SCADENZA';
     return 'REGOLARE';
+};
+
+// Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola).
+const getTesseramentoProductId = (p) => {
+    if (Array.isArray(p.payment_items)) {
+        const item = p.payment_items.find(i => i.quote_types === 'tesseramento');
+        return item?.product_id ?? p.product_id ?? null;
+    }
+    return p.product_id ?? null;
 };
 
 // Chip di stato (Iscrizione/Tesseramento)
@@ -103,6 +113,8 @@ const Soci = ({ onLogout }) => {
     const [soci, setSoci] = useState([]);
     // Pagamenti della società (grezzi): le scadenze vengono precalcolate una sola volta (vedi scadenzaMaps)
     const [payments, setPayments] = useState([]);
+    // Prodotti della società: servono a risolvere i giorni di avviso scadenza per tipo prodotto (es. tesseramento)
+    const [products, setProducts] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
@@ -164,6 +176,21 @@ const Soci = ({ onLogout }) => {
     useEffect(() => {
         fetchPayments();
     }, [selectedSocietaId]);
+
+    // Fetch dei prodotti della società (per i giorni di avviso scadenza per-prodotto).
+    useEffect(() => {
+        if (!selectedSocietaId) { setProducts([]); return; }
+        fetch(`/products/api?societaId=${selectedSocietaId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setProducts(Array.isArray(data) ? data : []))
+            .catch(() => setProducts([]));
+    }, [selectedSocietaId]);
+
+    const productsById = useMemo(() => {
+        const map = new Map();
+        products.forEach(p => map.set(p.id, p));
+        return map;
+    }, [products]);
 
     useEffect(() => {
         // Fetch current user info for the menu
@@ -243,6 +270,24 @@ const Soci = ({ onLogout }) => {
                 if (prev == null || ts > prev) mapCf.set(cf, ts);
             }
         };
+        // Come put(), ma porta con sé anche i giorni di avviso scadenza del prodotto
+        // (tesseramento): la mappa tiene la scadenza più lontana e i giorni di avviso
+        // del prodotto che l'ha generata.
+        const putTess = (mapId, mapCf, p, scad, giorniAvviso) => {
+            if (!scad) return;
+            const ts = scad.getTime();
+            if (isNaN(ts)) return;
+            const entry = { ts, giorniAvviso };
+            if (p.socio_id != null) {
+                const prev = mapId.get(p.socio_id);
+                if (prev == null || ts > prev.ts) mapId.set(p.socio_id, entry);
+            }
+            if (p.codice_fiscale) {
+                const cf = p.codice_fiscale.toUpperCase();
+                const prev = mapCf.get(cf);
+                if (prev == null || ts > prev.ts) mapCf.set(cf, entry);
+            }
+        };
         for (const p of payments) {
             // Ignora i pagamenti annullati/storni (stato "3. ...")
             if (typeof p.stato_pagamento === 'string' && p.stato_pagamento.startsWith('3.')) continue;
@@ -250,10 +295,14 @@ const Soci = ({ onLogout }) => {
             if (!p.quote_types) continue;
             const types = p.quote_types.split(',').map(t => t.trim().toLowerCase());
             if (types.includes('quota_associativa')) put(iscrBySocioId, iscrByCf, p, scadenzaPagamentoIscrizione(p, currentSocieta));
-            if (types.includes('tesseramento')) put(tessBySocioId, tessByCf, p, scadenzaPagamentoTesseramento(p, currentSocieta));
+            if (types.includes('tesseramento')) {
+                const productId = getTesseramentoProductId(p);
+                const giorniAvviso = productId != null ? productsById.get(productId)?.giorniAvvisoScadenza : null;
+                putTess(tessBySocioId, tessByCf, p, scadenzaPagamentoTesseramento(p, currentSocieta), giorniAvviso);
+            }
         }
         return { iscrBySocioId, iscrByCf, tessBySocioId, tessByCf };
-    }, [payments, currentSocieta]);
+    }, [payments, currentSocieta, productsById]);
 
     // Scadenza più favorevole (timestamp) per un socio, cercando per socio_id e per codice fiscale.
     const bestScadTs = (bySocioId, byCf, socio) => {
@@ -261,6 +310,16 @@ const Soci = ({ onLogout }) => {
         if (socio.id != null) { const v = bySocioId.get(socio.id); if (v != null) best = v; }
         const cf = (socio.codice_fiscale || '').toUpperCase();
         if (cf) { const v = byCf.get(cf); if (v != null && (best == null || v > best)) best = v; }
+        return best;
+    };
+
+    // Come bestScadTs, ma per le mappe tesseramento che portano anche i giorni di avviso
+    // del prodotto (vedi putTess in scadenzaMaps).
+    const bestScadTessTs = (socio) => {
+        let best = null;
+        if (socio.id != null) { const v = scadenzaMaps.tessBySocioId.get(socio.id); if (v != null) best = v; }
+        const cf = (socio.codice_fiscale || '').toUpperCase();
+        if (cf) { const v = scadenzaMaps.tessByCf.get(cf); if (v != null && (best == null || v.ts > best.ts)) best = v; }
         return best;
     };
 
@@ -281,8 +340,8 @@ const Soci = ({ onLogout }) => {
     const getTesseramentoStatus = (socio) => {
         // Opzione "Quota associativa e Tesseramento Unico": il tesseramento eredita lo stato dell'iscrizione
         if (currentSocieta?.quota_tesseramento_unico) return getIscrizioneStatus(socio);
-        const best = bestScadTs(scadenzaMaps.tessBySocioId, scadenzaMaps.tessByCf, socio);
-        return statoDaScadenza(best);
+        const best = bestScadTessTs(socio);
+        return statoDaScadenza(best?.ts ?? null, best?.giorniAvviso);
     };
 
     const formatDate = (d) => {

@@ -129,8 +129,16 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
             }
         }
 
-        if (formData.type === 'tesseramento' && !formData.periodicity) {
-            errors.periodicity = 'Selezionare la periodicità.';
+        if (formData.type === 'tesseramento') {
+            if (!formData.periodicity) {
+                errors.periodicity = 'Selezionare la periodicità.';
+            }
+            const avvisoTess = parseInt(formData.giorniAvvisoScadenza, 10);
+            if (isNaN(avvisoTess) || avvisoTess <= 1) {
+                errors.giorniAvvisoScadenza = 'Il valore deve essere un intero > 1.';
+            } else if (avvisoTess >= 365) {
+                errors.giorniAvvisoScadenza = 'Il valore deve essere inferiore a 365 giorni.';
+            }
         }
 
         if (Object.keys(errors).length > 0) {
@@ -247,14 +255,43 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                 );
             case 'tesseramento':
                 return (
-                    <div className="prodotto-form-group">
-                        <label>Periodicità</label>
-                        <select name="periodicity" value={formData.periodicity} onChange={handleChange} className={`prodotto-form-control${formErrors.periodicity ? ' prodotto-form-control-error' : ''}`}>
-                            <option value="">Seleziona...</option>
-                            <option value="anno_associativo">Anno Associativo</option>
-                            <option value="anno_solare">365 Giorni</option>
-                        </select>
-                        {formErrors.periodicity && <span className="prodotto-form-error">{formErrors.periodicity}</span>}
+                    <div className="prodotto-form-row">
+                        <div className="prodotto-form-col">
+                            <div className="prodotto-form-group">
+                                <label>Periodicità</label>
+                                <select name="periodicity" value={formData.periodicity} onChange={handleChange} className={`prodotto-form-control${formErrors.periodicity ? ' prodotto-form-control-error' : ''}`}>
+                                    <option value="">Seleziona...</option>
+                                    <option value="anno_associativo">Anno Associativo</option>
+                                    <option value="anno_solare">365 Giorni</option>
+                                </select>
+                                {formErrors.periodicity && <span className="prodotto-form-error">{formErrors.periodicity}</span>}
+                            </div>
+                        </div>
+                        <div className="prodotto-form-col">
+                            <div className="prodotto-form-group">
+                                <label>Giorni di avviso scadenza</label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    name="giorniAvvisoScadenza"
+                                    value={formData.giorniAvvisoScadenza}
+                                    onChange={(e) => {
+                                        if (/^\d*$/.test(e.target.value)) handleChange(e);
+                                    }}
+                                    onBlur={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (isNaN(val) || val <= 1) {
+                                            setFormData(prev => ({ ...prev, giorniAvvisoScadenza: 2 }));
+                                        } else if (val >= 365) {
+                                            setFormData(prev => ({ ...prev, giorniAvvisoScadenza: 364 }));
+                                        }
+                                    }}
+                                    className={`prodotto-form-control${formErrors.giorniAvvisoScadenza ? ' prodotto-form-control-error' : ''}`}
+                                    placeholder="es. 7"
+                                />
+                                {formErrors.giorniAvvisoScadenza && <span className="prodotto-form-error">{formErrors.giorniAvvisoScadenza}</span>}
+                            </div>
+                        </div>
                     </div>
                 );
             default:
