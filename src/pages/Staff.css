@@ -240,3 +240,7 @@
   background-color: var(--staff-warning);
   color: #fff;
 }
+.btn-icon-warning:hover {
+  background-color: var(--staff-warning);
+  filter: brightness(1.1);
+}

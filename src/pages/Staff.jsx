@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Shirt, Mail } from 'lucide-react';
+import { Plus, Shirt, Contact } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import StaffModal from './StaffModal';
 import './Staff.css';
@@ -36,8 +36,16 @@ const Staff = () => {
     useEffect(() => {
         setIsModalOpen(false);
         setCurrentStaff(null);
+    }, [selectedSocietaId]);
+
+    useEffect(() => {
         fetchStaff();
-    }, [selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [selectedSocietaId, filterImpiegato]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchStaff(), 400);
+        return () => clearTimeout(timer);
+    }, [filterCognome]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -184,7 +192,7 @@ const Staff = () => {
                                             title="Apri scheda"
                                             onClick={() => { setCurrentStaff(s); setIsModalOpen(true); }}
                                         >
-                                            <Mail size={15} />
+                                            <Contact size={15} />
                                         </button>
                                     </td>
                                 </tr>
@@ -199,6 +207,7 @@ const Staff = () => {
                 onClose={() => setIsModalOpen(false)}
                 staff={currentStaff}
                 onSave={handleSave}
+                societaId={selectedSocietaId}
             />
         </div>
     );
