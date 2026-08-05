@@ -1,4 +1,4 @@
-import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, Mail } from 'lucide-react';
+import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -34,20 +34,17 @@ export const getVisibleMenu = () => {
 };
 
 export const MENU_STRUCTURE = [
+    { id: 'soci',         label: 'Soci',          Icon: User,          path: '/soci' },
     {
-        id: 'societa',
-        label: 'Impostazioni',
-        Icon: Briefcase,
+        id: 'ricevute',
+        label: 'Ricevute',
+        Icon: CreditCard,
         children: [
-            { id: 'societa-anagrafica',     label: 'Anagrafica',      path: '/societa/anagrafica' },
-            { id: 'societa-anno',           label: 'Anno contabile',  path: '/societa/anno-contabile' },
-            { id: 'societa-impostazioni',   label: 'Società',         path: '/societa/impostazioni' },
-            { id: 'ricevute-conti',         label: 'Conti',           path: '/ricevute/conti' },
-            { id: 'ricevute-comunicazioni', label: 'Comunicazioni',   path: '/ricevute/comunicazioni' },
+            { id: 'ricevute-lista',    label: 'Lista ricevute', path: '/ricevute' },
+            { id: 'ricevute-template', label: 'Footer',         path: '/ricevute/template' },
         ],
     },
-    { id: 'soci',         label: 'Soci',          Icon: User,          path: '/soci' },
-    { id: 'prodotti',     label: 'Prodotti',       Icon: ShoppingBag,   path: '/prodotti' },
+    { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
     {
         id: 'attivita',
         label: 'Attività',
@@ -60,24 +57,6 @@ export const MENU_STRUCTURE = [
         ],
     },
     {
-        id: 'ricevute',
-        label: 'Ricevute',
-        Icon: CreditCard,
-        children: [
-            { id: 'ricevute-lista',    label: 'Lista ricevute', path: '/ricevute' },
-            { id: 'ricevute-template', label: 'Footer',         path: '/ricevute/template' },
-        ],
-    },
-    { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
-    {
-        id: 'comunicazioni',
-        label: 'Comunicazioni',
-        Icon: Mail,
-        children: [
-            { id: 'comunicazioni-automazioni', label: 'Automazioni', path: '/comunicazioni/automazioni' },
-        ],
-    },
-    {
         id: 'contabilita',
         label: 'Contabilità',
         Icon: BookOpen,
@@ -87,6 +66,7 @@ export const MENU_STRUCTURE = [
             { id: 'contabilita-fornitori',  label: 'Fornitori',            path: '/contabilita/fornitori' },
         ],
     },
+    { id: 'prodotti',     label: 'Prodotti',       Icon: ShoppingBag,   path: '/prodotti' },
     {
         id: 'modulistica',
         label: 'Modulistica',
@@ -94,6 +74,19 @@ export const MENU_STRUCTURE = [
         children: [
             { id: 'modulistica-moduli',    label: 'Moduli',             path: '/modulistica' },
             { id: 'modulistica-template',  label: 'Template di Stampa', path: '/modulistica/template' },
+        ],
+    },
+    {
+        id: 'societa',
+        label: 'Impostazioni',
+        Icon: Briefcase,
+        children: [
+            { id: 'societa-anagrafica',     label: 'Anagrafica',      path: '/societa/anagrafica' },
+            { id: 'societa-anno',           label: 'Anno contabile',  path: '/societa/anno-contabile' },
+            { id: 'societa-impostazioni',   label: 'Società',         path: '/societa/impostazioni' },
+            { id: 'ricevute-conti',         label: 'Conti',           path: '/ricevute/conti' },
+            { id: 'ricevute-comunicazioni', label: 'Comunicazioni',   path: '/ricevute/comunicazioni' },
+            { id: 'comunicazioni-automazioni', label: 'Automazioni',  path: '/comunicazioni/automazioni' },
         ],
     },
     {
