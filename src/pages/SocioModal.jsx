@@ -59,15 +59,25 @@ function computeScadenzaForPayment(p, societa) {
     return null;
 }
 
-function computeStatoPagamentoScadenza(scadenzaDate) {
+function computeStatoPagamentoScadenza(scadenzaDate, giorniAvvisoScadenza) {
     if (!scadenzaDate) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const limit = new Date(today);
-    limit.setDate(limit.getDate() + 30);
+    limit.setDate(limit.getDate() + (giorniAvvisoScadenza || 30));
     if (scadenzaDate < today) return 'SCADUTO';
     if (scadenzaDate <= limit) return 'IN SCADENZA';
     return 'VALIDO';
+}
+
+// Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola),
+// stesso pattern usato per gli abbonamenti (subscription) più sotto.
+function getTesseramentoProductId(p) {
+    if (Array.isArray(p.payment_items)) {
+        const item = p.payment_items.find(i => i.quote_types === 'tesseramento');
+        return item?.product_id ?? p.product_id ?? null;
+    }
+    return p.product_id ?? null;
 }
 
 function computeStatoAbbonamento(scadenzaDate, giorniAvvisoScadenza) {
@@ -1224,16 +1234,23 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             if (p.stato_pagamento?.startsWith('3.')) continue; // annullati
             const date = computeScadenzaForPayment(p, socioModalSocieta);
             if (date) {
+                const tipoKey = (p.quote_types || '').trim().toLowerCase();
+                let giorniAvviso;
+                if (tipoKey === 'tesseramento') {
+                    const productId = getTesseramentoProductId(p);
+                    const product = productId != null ? prodottiSocieta.find(pr => pr.id === productId) : null;
+                    giorniAvviso = product?.giorniAvvisoScadenza;
+                }
                 map[p.id] = {
                     scadenzaDate: date,
                     scadenzaStr: date.toISOString().split('T')[0],
-                    stato: computeStatoPagamentoScadenza(date),
-                    tipoKey: (p.quote_types || '').trim().toLowerCase(),
+                    stato: computeStatoPagamentoScadenza(date, giorniAvviso),
+                    tipoKey,
                 };
             }
         }
         return map;
-    }, [socioPagamenti, socioModalSocieta]);
+    }, [socioPagamenti, socioModalSocieta, prodottiSocieta]);
 
     const scadenzeAlertCount = useMemo(
         () => Object.values(scadenzaMap).filter(s => s.stato === 'SCADUTO' || s.stato === 'IN SCADENZA').length,
@@ -2441,7 +2458,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     </div>
                                     <div className="form-group grid-span-3">
                                         <label className="field-label">Comune</label>
-                                        <CityAutocomplete name="comune" value={formData.comune} onChange={handleChange} style={{ width: '100%' }} />
+                                        <CityAutocomplete name="comune" value={formData.comune} onChange={handleChange} onSelect={(c) => setFormData(prev => ({ ...prev, cap: c.cap || prev.cap }))} style={{ width: '100%' }} />
                                     </div>
                                     <div className="form-group grid-span-2">
                                         <label className="field-label">Cap</label>
@@ -2576,11 +2593,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                 </div>
                                 <div className="form-group grid-span-3">
                                     <label className="field-label">Comune</label>
-                                    <CityAutocomplete 
-                                        name="comune" 
-                                        value={formData.comune} 
-                                        onChange={handleChange} 
-                                        style={{width: '100%'}} 
+                                    <CityAutocomplete
+                                        name="comune"
+                                        value={formData.comune}
+                                        onChange={handleChange}
+                                        onSelect={(c) => setFormData(prev => ({ ...prev, cap: c.cap || prev.cap }))}
+                                        style={{width: '100%'}}
                                     />
                                 </div>
                                 <div className="form-group grid-span-2">
