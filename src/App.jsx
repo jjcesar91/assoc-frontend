@@ -224,7 +224,7 @@ function App() {
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/ricevute/template" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Template Ricevute">
+            <Layout onLogout={handleLogout} title="Footer">
               <TemplateRicevuta />
             </Layout>
           ) : <Navigate to="/login" />} />
@@ -249,7 +249,7 @@ function App() {
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/contabilita/operazioni" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Contabilità - Operazioni">
+            <Layout onLogout={handleLogout} title="Contabilità - Prima Nota">
               <Contabilita />
             </Layout>
           ) : <Navigate to="/login" />} />
