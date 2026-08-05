@@ -1326,9 +1326,9 @@ const Soci = ({ onLogout }) => {
                                     <tr key={socio.id}>
                                         <td>
                                             <div style={{
-                                                width:'40px', height:'40px', borderRadius:'50%', 
-                                                backgroundColor: socio.tipo_socio === 'associazione' ? 'var(--primary-container)' : (socio.sesso === 'F' ? 'var(--primary-container)' : 'var(--info-container)'),
-                                                color: socio.tipo_socio === 'associazione' ? 'var(--primary-hover)' : (socio.sesso === 'F' ? 'var(--primary)' : 'var(--primary)'),
+                                                width:'40px', height:'40px', borderRadius:'50%',
+                                                backgroundColor: socio.tipo_socio === 'associazione' ? 'var(--primary-container)' : (socio.sesso === 'F' ? 'var(--femminile-container)' : 'var(--maschile-container)'),
+                                                color: socio.tipo_socio === 'associazione' ? 'var(--primary-hover)' : (socio.sesso === 'F' ? 'var(--on-femminile-container)' : 'var(--on-maschile-container)'),
                                                 display:'flex', alignItems:'center', justifyContent:'center'
                                             }}>
                                                 {socio.tipo_socio === 'associazione' ? <Building2 size={20}/> : <User size={20}/>}

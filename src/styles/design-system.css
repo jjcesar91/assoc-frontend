@@ -57,6 +57,13 @@
   --info: #0277bd;
   --info-container: #e3f2fd;
   --on-info-container: #014a78;
+  /* ── Genere socio (avatar M/F) ── */
+  --maschile: var(--info);
+  --maschile-container: var(--info-container);
+  --on-maschile-container: var(--on-info-container);
+  --femminile: #d81b60;
+  --femminile-container: #fce4ec;
+  --on-femminile-container: #880e4f;
   /* alias legacy */
   --success-color: var(--success);
   --warning-color: var(--warning);

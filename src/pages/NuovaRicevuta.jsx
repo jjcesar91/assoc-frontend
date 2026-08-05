@@ -17,15 +17,19 @@ import {
 import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
+// NB: riguarda solo il certificato medico (scadenza_certificato), non lo stato di
+// iscrizione/tesseramento del socio (quello si calcola da tutt'altri dati, vedi
+// Soci.jsx/getIscrizioneStatus) — da qui le etichette "CERTIFICATO ..." e non "ISCRITTO",
+// per non essere confuse con lo stato di iscrizione mostrato in altre schermate.
 const getCertStatus = (scadenza) => {
-    if (!scadenza) return 'NON ISCRITTO';
+    if (!scadenza) return 'CERTIFICATO ASSENTE';
     // Calcola scadenza: data presentazione + 1 anno - 1 giorno
     const scadenzaDate = computeScadenzaCertificato(scadenza);
-    if (!scadenzaDate) return 'NON ISCRITTO';
+    if (!scadenzaDate) return 'CERTIFICATO ASSENTE';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (scadenzaDate < today) return 'SCADUTO';
-    return 'ISCRITTO';
+    if (scadenzaDate < today) return 'CERTIFICATO SCADUTO';
+    return 'CERTIFICATO VALIDO';
 };
 
 const NuovaRicevuta = () => {
@@ -724,17 +728,16 @@ const NuovaRicevuta = () => {
                                                 Data nascita {selectedSocio.data_nascita ? new Date(selectedSocio.data_nascita).toLocaleDateString('it-IT') : ''} - Codice fiscale {selectedSocio.codice_fiscale}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                <span className="np-badge np-badge-danger">
-                                                    {getCertStatus(selectedSocio.scadenza_certificato)}
+                                                <span className={`np-badge ${isSocioIscrittoOTesserato(selectedSocio) ? 'np-badge-success' : 'np-badge-danger'}`}>
+                                                    {isSocioIscrittoOTesserato(selectedSocio) ? 'ISCRITTO' : 'NON ISCRITTO'}
                                                 </span>
-                                                {selectedSocio.scadenza_certificato && (
-                                                    <span className="np-badge np-badge-danger">
-                                                        CERTIFICATO MEDICO {getCertStatus(selectedSocio.scadenza_certificato)} ({new Date(selectedSocio.scadenza_certificato).toLocaleDateString('it-IT')})
-                                                    </span>
-                                                )}
+                                                <span className={`np-badge ${getCertStatus(selectedSocio.scadenza_certificato) === 'CERTIFICATO VALIDO' ? 'np-badge-success' : 'np-badge-danger'}`}>
+                                                    {getCertStatus(selectedSocio.scadenza_certificato)}
+                                                    {selectedSocio.scadenza_certificato ? ` (${new Date(selectedSocio.scadenza_certificato).toLocaleDateString('it-IT')})` : ''}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div style={{ color: 'var(--primary)' }}>
+                                        <div style={{ color: selectedSocio.sesso === 'F' ? 'var(--femminile)' : selectedSocio.sesso === 'M' ? 'var(--maschile)' : 'var(--primary)' }}>
                                             <User size={64} strokeWidth={1.2}/>
                                         </div>
                                     </div>

@@ -458,7 +458,13 @@ export default function SocioDashboard({ onLogout }) {
                                     ))}
                             </select>
                         )}
-                        <div className="sd-avatar">
+                        <div
+                            className="sd-avatar"
+                            style={socio?.sesso ? {
+                                background: socio.sesso === 'F' ? 'var(--femminile-container)' : 'var(--maschile-container)',
+                                color: socio.sesso === 'F' ? 'var(--on-femminile-container)' : 'var(--on-maschile-container)',
+                            } : undefined}
+                        >
                             <User size={16} />
                         </div>
                         <span className="sd-username">
