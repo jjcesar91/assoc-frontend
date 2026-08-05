@@ -62,24 +62,24 @@ function parseFile(text) {
     const dataRows = allRecords.slice(1);
 
     // Raggruppa per Riferimento ordine: colleziona etichette da righe duplicate
-    const ordiniMap = new Map();
+    const ricevuteMap = new Map();
     for (const cells of dataRows) {
         const rif = g(cells, 'Riferimento ordine');
         if (!rif) continue;
 
         const etichettaRiga = g(cells, 'Etichette/Nome etichetta') || g(cells, 'Etichette');
 
-        if (ordiniMap.has(rif)) {
+        if (ricevuteMap.has(rif)) {
             // Riga aggiuntiva: aggiungi solo l'etichetta se non già presente
             if (etichettaRiga) {
-                const existing = ordiniMap.get(rif);
+                const existing = ricevuteMap.get(rif);
                 const labels = existing.etichette ? existing.etichette.split(',').map(s => s.trim()) : [];
                 if (!labels.includes(etichettaRiga)) {
                     existing.etichette = [...labels, etichettaRiga].join(', ');
                 }
             }
         } else {
-            ordiniMap.set(rif, {
+            ricevuteMap.set(rif, {
                 riferimento_ordine: rif,
                 cliente: g(cells, 'Cliente'),
                 stato_fattura: g(cells, 'Stato fattura'),
@@ -91,10 +91,10 @@ function parseFile(text) {
         }
     }
 
-    if (ordiniMap.size === 0) return { error: 'Nessun ordine trovato (colonna "Riferimento ordine" mancante o vuota).' };
+    if (ricevuteMap.size === 0) return { error: 'Nessuna ricevuta trovata (colonna "Riferimento ordine" mancante o vuota).' };
 
     // Valida formato riferimento ordine
-    const righe = Array.from(ordiniMap.values());
+    const righe = Array.from(ricevuteMap.values());
     const nonValidi = righe.filter(r => !/^[Ss]\d+$/.test(r.riferimento_ordine));
     if (nonValidi.length > 0) {
         return { error: `Formato riferimento ordine non valido: ${nonValidi.map(r => r.riferimento_ordine).join(', ')}. Atteso formato "S00217".` };
@@ -108,7 +108,7 @@ const STATO_BADGE = {
     'Interamente fatturato': { label: 'PAGATO', color: 'var(--success)', bg: 'var(--success-container)', border: 'var(--success)' },
 };
 
-const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
+const ImportRicevuteOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
     const fileRef = useRef(null);
     const [preview, setPreview] = useState(null); // { rows: [] } | null
     const [parseError, setParseError] = useState('');
@@ -183,7 +183,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Upload size={20} /> Importa ordini da Odoo
+                        <Upload size={20} /> Importa ricevute da Odoo
                     </h2>
                     <button onClick={handleClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                         <X size={22} />
@@ -215,7 +215,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 {result && (
                     result.success
                         ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', backgroundColor: 'var(--success-container)', border: '1px solid var(--success-container)', borderRadius: '8px', padding: '12px 16px', fontSize: '0.95rem', fontWeight: 600 }}>
-                            <Check size={20} /> {result.count} ordini importati con successo.
+                            <Check size={20} /> {result.count} ricevute importate con successo.
                         </div>
                         : <div style={{ backgroundColor: 'var(--danger-container)', border: '1px solid var(--danger-container)', borderRadius: '8px', padding: '12px 16px', fontSize: '0.9rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-danger-container)', fontWeight: 600, marginBottom: result.conflitti?.length ? '8px' : 0 }}>
@@ -233,7 +233,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                 {preview?.rows?.length > 0 && !result?.success && (
                     <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                         <div style={{ fontSize: '0.85rem', color: '#555', marginBottom: '8px', fontWeight: 600 }}>
-                            {preview.rows.length} ordini trovati — verranno importati come indicato:
+                            {preview.rows.length} ricevute trovate — verranno importate come indicato:
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                             <thead>
@@ -292,7 +292,7 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
                             disabled={loading}
                             style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', background: loading ? 'var(--info-container)' : 'var(--primary)', color: 'white', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
                         >
-                            {loading ? 'Importazione...' : `Importa ${preview.rows.length} ordini`}
+                            {loading ? 'Importazione...' : `Importa ${preview.rows.length} ricevute`}
                         </button>
                     )}
                 </div>
@@ -301,4 +301,4 @@ const ImportOrdiniOdooModal = ({ isOpen, onClose, societaId, onImported }) => {
     );
 };
 
-export default ImportOrdiniOdooModal;
+export default ImportRicevuteOdooModal;

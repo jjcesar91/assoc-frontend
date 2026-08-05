@@ -10,7 +10,7 @@ import SimpleEditor from './SimpleEditor';
  *  - destinatario            : email del socio
  *  - oggetto                 : oggetto email
  *  - testoHtml               : corpo HTML iniziale (shortcode già risolti), editabile via WYSIWYG
- *  - allegatoNome            : (opzionale) nome del file allegato (es. ricevuta PDF)
+ *  - allegatoNome            : (opzionale) nome del file allegato (es. ricevuta PDF, quietanza)
  *  - ccEmail                 : (opzionale) mail anagrafica società per l'invio in CCn (copia conoscenza nascosta)
  *  - sending                 : bool, invio in corso
  *  - onConfirm(ccn, testo)   : callback conferma; riceve lo stato della spunta CCn e il testo HTML (eventualmente modificato)
@@ -59,7 +59,7 @@ const ChiediInvioComunicazioneModal = ({
                 <div style={bodyStyle}>
                     {noEmail ? (
                         <div style={{ color: 'var(--danger)', background: 'var(--danger-container)', padding: 12, borderRadius: 6 }}>
-                            Il socio associato all'ordine non ha un indirizzo email registrato: impossibile inviare la comunicazione.
+                            Il socio associato alla ricevuta non ha un indirizzo email registrato: impossibile inviare la comunicazione.
                         </div>
                     ) : (
                         <>

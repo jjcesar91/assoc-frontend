@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css'
 import Login from './Login'
 import Soci from './pages/Soci'
@@ -12,10 +12,10 @@ import Modulistica from './pages/Modulistica'
 import TemplateStampa from './pages/TemplateStampa'
 import TemplateRicevuta from './pages/TemplateRicevuta'
 import Prodotti from './pages/Prodotti'
-import Ordini from './pages/Ordini';
-import NuovoOrdine from './pages/NuovoOrdine';
+import Ricevute from './pages/Ricevute';
+import NuovaRicevuta from './pages/NuovaRicevuta';
 import Conti from './pages/Conti';
-import OrdiniComunicazioni from './pages/OrdiniComunicazioni';
+import RicevuteComunicazioni from './pages/RicevuteComunicazioni';
 import Scadenziario from './pages/Scadenziario';
 import Automazioni from './pages/Automazioni';
 import Contabilita from './pages/Contabilita';
@@ -28,11 +28,19 @@ import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
 import SocioDashboard from './pages/SocioDashboard';
-import CaricaRicevuta from './pages/CaricaRicevuta';
+import CaricaQuietanza from './pages/CaricaQuietanza';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
 import { AlertProvider } from './components/AlertModal'
+
+// Redirect verso un nuovo percorso preservando la querystring (es. ?token=...).
+// Usato per /carica-ricevuta → /carica-quietanza: i link già inviati via email
+// contengono il vecchio percorso con il token nel query param.
+function RedirectPreserveQuery({ to }) {
+  const location = useLocation();
+  return <Navigate to={{ pathname: to, search: location.search }} replace />;
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -132,8 +140,9 @@ function App() {
       <AnnoProvider>
         <Router>
         <Routes>
-          {/* ── Route pubblica: caricamento ricevuta tramite token (nessuna autenticazione) ── */}
-          <Route path="/carica-ricevuta" element={<CaricaRicevuta />} />
+          {/* ── Route pubblica: caricamento quietanza tramite token (nessuna autenticazione) ── */}
+          <Route path="/carica-quietanza" element={<CaricaQuietanza />} />
+          <Route path="/carica-ricevuta" element={<RedirectPreserveQuery to="/carica-quietanza" />} />
 
           {/* Login: se autenticato come socio → dashboard, altrimenti → /soci */}
           <Route path="/login" element={
@@ -194,36 +203,41 @@ function App() {
               <Prodotti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/nuovo-ordine" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Nuovo Ordine">
-              <NuovoOrdine />
+          <Route path="/nuova-ricevuta" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Nuova Ricevuta">
+              <NuovaRicevuta />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/ordini" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Ordini">
-              <Ordini />
+          <Route path="/ricevute" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Ricevute">
+              <Ricevute />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/ordini/conti" element={isAuthenticated && !isSocio ? (
+          <Route path="/ricevute/conti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Configurazione Conti">
               <Conti />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/ordini/comunicazioni" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Comunicazioni Ordini">
-              <OrdiniComunicazioni />
+          <Route path="/ricevute/comunicazioni" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Comunicazioni Ricevute">
+              <RicevuteComunicazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/ordini/template" element={isAuthenticated && !isSocio ? (
+          <Route path="/ricevute/template" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Template Ricevute">
               <TemplateRicevuta />
             </Layout>
           ) : <Navigate to="/login" />} />
           {/* Redirect vecchi percorsi per compatibilità */}
-          <Route path="/pagamenti" element={<Navigate to="/ordini" replace />} />
-          <Route path="/pagamenti/conti" element={<Navigate to="/ordini/conti" replace />} />
-          <Route path="/pagamenti/template" element={<Navigate to="/ordini/template" replace />} />
-          <Route path="/nuovo-pagamento" element={<Navigate to="/nuovo-ordine" replace />} />
+          <Route path="/pagamenti" element={<Navigate to="/ricevute" replace />} />
+          <Route path="/pagamenti/conti" element={<Navigate to="/ricevute/conti" replace />} />
+          <Route path="/pagamenti/template" element={<Navigate to="/ricevute/template" replace />} />
+          <Route path="/nuovo-pagamento" element={<Navigate to="/nuova-ricevuta" replace />} />
+          <Route path="/ordini" element={<Navigate to="/ricevute" replace />} />
+          <Route path="/ordini/conti" element={<Navigate to="/ricevute/conti" replace />} />
+          <Route path="/ordini/comunicazioni" element={<Navigate to="/ricevute/comunicazioni" replace />} />
+          <Route path="/ordini/template" element={<Navigate to="/ricevute/template" replace />} />
+          <Route path="/nuovo-ordine" element={<Navigate to="/nuova-ricevuta" replace />} />
           <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Scadenziario">
               <Scadenziario />

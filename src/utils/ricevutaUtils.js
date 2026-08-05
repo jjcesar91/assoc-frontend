@@ -1,10 +1,10 @@
 /**
  * Mappa i campi backend (tipo_documento + stato_pagamento) nel
- * nuovo concetto unificato "stato_ordine" usato dal frontend.
+ * nuovo concetto unificato "stato_ricevuta" usato dal frontend.
  *
  * Il backend rimane invariato: i dati storici continuano a funzionare.
  */
-export function getStatoOrdine(record) {
+export function getStatoRicevuta(record) {
     if (!record) return null;
     if (record.stato_pagamento?.startsWith('3.')) return 'annullato';
     if (record.tipo_documento === 'proforma') return 'proforma';
@@ -14,7 +14,7 @@ export function getStatoOrdine(record) {
 /**
  * Etichette generate dal sistema: non sono salvate nel campo `etichette` del
  * record (che contiene solo quelle inserite dagli operatori) ma derivano dallo
- * stato dell'ordine, ed è così che vengono mostrate come badge in lista.
+ * stato della ricevuta, ed è così che vengono mostrate come badge in lista.
  *
  * Servono per poterci filtrare sopra insieme alle etichette manuali. Restano
  * separate da queste ultime perché non devono finire fra i suggerimenti
@@ -31,7 +31,7 @@ export function getEtichettaSistema(label) {
     return ETICHETTE_SISTEMA.find(e => e.label === label) || null;
 }
 
-export const STATO_ORDINE_CONFIG = {
+export const STATO_RICEVUTA_CONFIG = {
     proforma: {
         label: 'PROFORMA',
         color: '#7c3aed',
@@ -52,8 +52,8 @@ export const STATO_ORDINE_CONFIG = {
     },
 };
 
-export function getStatoOrdineBadgeStyle(stato) {
-    const cfg = STATO_ORDINE_CONFIG[stato] || STATO_ORDINE_CONFIG.pagato;
+export function getStatoRicevutaBadgeStyle(stato) {
+    const cfg = STATO_RICEVUTA_CONFIG[stato] || STATO_RICEVUTA_CONFIG.pagato;
     return {
         display: 'inline-block',
         padding: '3px 12px',

@@ -3,21 +3,21 @@ import {
     ShoppingCart, Plus, Minus, Trash2, Package, Landmark,
     CheckCircle, ArrowLeft, Upload, FileText,
 } from 'lucide-react';
-import UploadRicevuta from '../components/UploadRicevuta';
+import UploadQuietanza from '../components/UploadQuietanza';
 import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     formatImporto, sendComunicazioneEmail,
-} from '../utils/comunicazioniOrdini';
+} from '../utils/comunicazioniRicevute';
 
 // Negozio dell'area soci: catalogo dei prodotti vendibili online della società,
 // carrello e checkout con pagamento tramite bonifico.
 //
-// L'ordine nasce sempre come proforma lato backend: il socio non vede questa
-// distinzione, per lui l'ordine è "da completare" finché non carica la ricevuta.
+// La ricevuta nasce sempre come proforma lato backend: il socio non vede questa
+// distinzione, per lui la ricevuta è "da completare" finché non carica la quietanza.
 //
 // Dopo la conferma il socio riceve sempre la comunicazione con le istruzioni di
-// pagamento configurate sul conto, e può caricare la ricevuta subito oppure più
-// tardi dalla sezione "I miei ordini".
+// pagamento configurate sul conto, e può caricare la quietanza subito oppure più
+// tardi dalla sezione «Le mie ricevute».
 
 const TIPO_LABELS = {
     generic: 'Prodotto',
@@ -35,7 +35,7 @@ const nomeSocio = (s) => {
         : [s.nome, s.cognome].filter(Boolean).join(' ');
 };
 
-export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
+export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
     const [catalogo, setCatalogo] = useState([]);
     const [conti, setConti] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -46,7 +46,7 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
 
     const [inviando, setInviando] = useState(false);
     const [errore, setErrore] = useState('');
-    // Esito della conferma: { ordine, istruzioni, tokenRicevuta, avvisoEmail }
+    // Esito della conferma: { ricevuta, istruzioni, tokenQuietanza, avvisoEmail }
     const [esito, setEsito] = useState(null);
     const [mostraUpload, setMostraUpload] = useState(false);
 
@@ -96,9 +96,9 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
         });
     };
 
-    // Conferma dell'ordine: creazione lato backend, poi comunicazione con le
-    // istruzioni di pagamento e il link per il caricamento della ricevuta.
-    const confermaOrdine = async () => {
+    // Conferma della ricevuta: creazione lato backend, poi comunicazione con le
+    // istruzioni di pagamento e il link per il caricamento della quietanza.
+    const confermaRicevuta = async () => {
         if (righeCarrello.length === 0) { setErrore('Il carrello è vuoto.'); return; }
         if (!contoId) { setErrore('Seleziona un metodo di pagamento.'); return; }
         setInviando(true);
@@ -115,47 +115,47 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
             });
             const dati = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setErrore(dati.error || 'Errore durante la creazione dell\'ordine.');
+                setErrore(dati.error || 'Errore durante la creazione della ricevuta.');
                 return;
             }
 
-            // Token per il caricamento della ricevuta: serve sia per il link nella
+            // Token per il caricamento della quietanza: serve sia per il link nella
             // email sia per l'eventuale caricamento immediato in questa pagina.
-            let tokenRicevuta = '';
+            let tokenQuietanza = '';
             try {
                 const tr = await fetch(`/payments/api/socio/ordini/${dati.id}/ricevuta-token`, { method: 'POST' });
-                if (tr.ok) tokenRicevuta = (await tr.json()).token || '';
-            } catch { /* il socio potrà comunque caricarla da "I miei ordini" */ }
+                if (tr.ok) tokenQuietanza = (await tr.json()).token || '';
+            } catch { /* il socio potrà comunque caricarla da «Le mie ricevute» */ }
 
             const conto = conti.find(c => String(c.id) === String(contoId));
             const istruzioni = buildIstruzioniPagamento(conti, conto?.descrizione, 'Bonifico');
-            const avvisoEmail = await inviaIstruzioni(dati, istruzioni, tokenRicevuta);
+            const avvisoEmail = await inviaIstruzioni(dati, istruzioni, tokenQuietanza);
 
-            setEsito({ ordine: dati, istruzioni, tokenRicevuta, avvisoEmail });
+            setEsito({ ricevuta: dati, istruzioni, tokenQuietanza, avvisoEmail });
             setCarrello({});
             setNote('');
-            if (onOrdineCreato) onOrdineCreato();
+            if (onRicevutaCreata) onRicevutaCreata();
         } catch {
-            setErrore('Errore di rete durante la creazione dell\'ordine.');
+            setErrore('Errore di rete durante la creazione della ricevuta.');
         } finally {
             setInviando(false);
         }
     };
 
-    // Comunicazione delle istruzioni di pagamento: per gli ordini creati dal
+    // Comunicazione delle istruzioni di pagamento: per le ricevute create dal
     // cliente è sempre inviata, indipendentemente da com_proforma_stato, perché
-    // il socio non può restare senza IBAN e senza link per la ricevuta.
-    const inviaIstruzioni = async (ordine, istruzioni, tokenRicevuta) => {
+    // il socio non può restare senza IBAN e senza link per la quietanza.
+    const inviaIstruzioni = async (ricevuta, istruzioni, tokenQuietanza) => {
         const config = getComConfig(societa, 'proforma');
         const ctx = {
             nome: nomeSocio(socio),
-            importo: formatImporto(ordine.importo),
-            numeroOrdine: `#${ordine.id}`,
+            importo: formatImporto(ricevuta.importo),
+            numeroRiferimento: `#${ricevuta.id}`,
             numeroRicevuta: '',
             nomeAssociazione: societa?.denominazione || '',
             istruzioni,
-            linkRicevuta: tokenRicevuta
-                ? `${window.location.origin}/carica-ricevuta?token=${tokenRicevuta}`
+            linkQuietanza: tokenQuietanza
+                ? `${window.location.origin}/carica-quietanza?token=${tokenQuietanza}`
                 : '',
         };
         const esitoInvio = await sendComunicazioneEmail({
@@ -173,31 +173,31 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
         return (
             <div className="sd-section-card">
                 <div className="sd-section-body">
-                    <div className="sd-ordine-esito">
-                        <CheckCircle size={40} className="sd-ordine-esito-icon" />
-                        <h2>Ordine registrato</h2>
+                    <div className="sd-ricevuta-esito">
+                        <CheckCircle size={40} className="sd-ricevuta-esito-icon" />
+                        <h2>Ricevuta registrata</h2>
                         <p className="sd-muted">
-                            Ordine <strong>#{esito.ordine.id}</strong> per un totale di <strong>{euro(esito.ordine.importo)}</strong>.
+                            Ricevuta <strong>#{esito.ricevuta.id}</strong> per un totale di <strong>{euro(esito.ricevuta.importo)}</strong>.
                         </p>
                     </div>
 
                     {esito.avvisoEmail && (
-                        <div className="sd-ordine-avviso">{esito.avvisoEmail}</div>
+                        <div className="sd-ricevuta-avviso">{esito.avvisoEmail}</div>
                     )}
 
                     {esito.istruzioni && (
-                        <div className="sd-ordine-istruzioni">
-                            <div className="sd-ordine-istruzioni-titolo">
+                        <div className="sd-ricevuta-istruzioni">
+                            <div className="sd-ricevuta-istruzioni-titolo">
                                 <Landmark size={16} /> Istruzioni di pagamento
                             </div>
                             <div dangerouslySetInnerHTML={{ __html: esito.istruzioni }} />
                         </div>
                     )}
 
-                    <div className="sd-ordine-esito-azioni">
-                        {esito.tokenRicevuta && !mostraUpload && (
+                    <div className="sd-ricevuta-esito-azioni">
+                        {esito.tokenQuietanza && !mostraUpload && (
                             <button className="sd-btn sd-btn-primary" onClick={() => setMostraUpload(true)}>
-                                <Upload size={16} /> Carica ora la ricevuta
+                                <Upload size={16} /> Carica ora la quietanza
                             </button>
                         )}
                         <button className="sd-btn sd-btn-ghost" onClick={() => { setEsito(null); setMostraUpload(false); }}>
@@ -205,19 +205,19 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
                         </button>
                     </div>
 
-                    {mostraUpload && esito.tokenRicevuta && (
-                        <div className="sd-ordine-upload">
-                            <UploadRicevuta
-                                token={esito.tokenRicevuta}
-                                mostraOrdine={false}
-                                onUploaded={() => { if (onOrdineCreato) onOrdineCreato(); }}
+                    {mostraUpload && esito.tokenQuietanza && (
+                        <div className="sd-ricevuta-upload">
+                            <UploadQuietanza
+                                token={esito.tokenQuietanza}
+                                mostraRicevuta={false}
+                                onUploaded={() => { if (onRicevutaCreata) onRicevutaCreata(); }}
                             />
                         </div>
                     )}
 
                     {!mostraUpload && (
-                        <p className="sd-muted sd-ordine-nota">
-                            Puoi caricare la ricevuta anche in un secondo momento dalla sezione «I miei ordini».
+                        <p className="sd-muted sd-ricevuta-nota">
+                            Puoi caricare la quietanza anche in un secondo momento dalla sezione «Le mie ricevute».
                         </p>
                     )}
                 </div>
@@ -328,7 +328,7 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
                                     </span>
                                     {conti.length === 0 ? (
                                         <span className="sd-field-warning">
-                                            Nessun conto bonifico configurato dall'associazione: non è possibile completare l'ordine.
+                                            Nessun conto bonifico configurato dall'associazione: non è possibile completare la ricevuta.
                                         </span>
                                     ) : (
                                         <select
@@ -362,13 +362,13 @@ export default function SocioNegozio({ socio, societa, onOrdineCreato }) {
                                 <button
                                     className="sd-btn sd-btn-primary sd-btn-block"
                                     disabled={inviando || conti.length === 0}
-                                    onClick={confermaOrdine}
+                                    onClick={confermaRicevuta}
                                 >
-                                    {inviando ? 'Invio in corso…' : `Conferma ordine · ${euro(totale)}`}
+                                    {inviando ? 'Invio in corso…' : `Conferma ricevuta · ${euro(totale)}`}
                                 </button>
                                 <p className="sd-muted sd-checkout-nota">
                                     Riceverai via email le istruzioni per effettuare il bonifico.
-                                    L'ordine si completa con il caricamento della ricevuta, subito o in un secondo momento.
+                                    La ricevuta si completa con il caricamento della quietanza, subito o in un secondo momento.
                                 </p>
                             </div>
                         </>

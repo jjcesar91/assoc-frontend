@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Receipt, Upload, CheckCircle, Clock, XCircle, X, CalendarDays,
 } from 'lucide-react';
-import UploadRicevuta from '../components/UploadRicevuta';
+import UploadQuietanza from '../components/UploadQuietanza';
 
-// "I miei ordini" dell'area soci.
+// "Le mie ricevute" dell'area soci.
 //
-// Il socio non vede la distinzione proforma / ordine registrato: per lui un ordine
-// è "da completare" finché non ha caricato la ricevuta del bonifico, e "completato"
-// una volta caricata. La verifica e la registrazione restano compiti del backoffice
-// e non producono alcun cambiamento visibile qui.
+// Il socio non vede la distinzione proforma / ricevuta registrata: per lui una
+// ricevuta è "da completare" finché non ha caricato la quietanza del bonifico,
+// e "completata" una volta caricata. La verifica e la registrazione restano
+// compiti del backoffice e non producono alcun cambiamento visibile qui.
 //
-// Il caricamento riusa <UploadRicevuta/>, lo stesso componente della pagina
+// Il caricamento riusa <UploadQuietanza/>, lo stesso componente della pagina
 // pubblica raggiunta dal link inviato via email.
 
 const euro = (v) => `€ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
@@ -33,8 +33,8 @@ const formatData = (dt) => {
 
 // Descrizione delle righe: il backend non persiste il nome prodotto nelle righe,
 // va risolto dal catalogo tramite product_id (come fa il backoffice).
-const descriviRighe = (ordine, prodottiById) => {
-    const righe = Array.isArray(ordine.payment_items) ? ordine.payment_items : [];
+const descriviRighe = (ricevuta, prodottiById) => {
+    const righe = Array.isArray(ricevuta.payment_items) ? ricevuta.payment_items : [];
     if (righe.length === 0) return [];
     return righe.map(r => {
         const nome = prodottiById[r.product_id]?.description || 'Prodotto';
@@ -42,63 +42,63 @@ const descriviRighe = (ordine, prodottiById) => {
     });
 };
 
-const OrdineCard = ({ ordine, prodottiById, stato, onCaricaRicevuta, caricamentoInCorso }) => {
-    const righe = descriviRighe(ordine, prodottiById);
+const RicevutaCard = ({ ricevuta, prodottiById, stato, onCaricaQuietanza, caricamentoInCorso }) => {
+    const righe = descriviRighe(ricevuta, prodottiById);
     return (
-        <div className={`sd-ordine-card sd-ordine-card--${stato}`}>
-            <div className="sd-ordine-card-top">
-                <span className="sd-ordine-numero">Ordine #{ordine.id}</span>
+        <div className={`sd-ricevuta-card sd-ricevuta-card--${stato}`}>
+            <div className="sd-ricevuta-card-top">
+                <span className="sd-ricevuta-numero">Ricevuta #{ricevuta.id}</span>
                 {stato === 'da_completare' && (
-                    <span className="sd-ordine-badge sd-ordine-badge--attesa">
+                    <span className="sd-ricevuta-badge sd-ricevuta-badge--attesa">
                         <Clock size={12} /> DA COMPLETARE
                     </span>
                 )}
                 {stato === 'completato' && (
-                    <span className="sd-ordine-badge sd-ordine-badge--ok">
-                        <CheckCircle size={12} /> COMPLETATO
+                    <span className="sd-ricevuta-badge sd-ricevuta-badge--ok">
+                        <CheckCircle size={12} /> COMPLETATA
                     </span>
                 )}
                 {stato === 'annullato' && (
-                    <span className="sd-ordine-badge sd-ordine-badge--annullato">
-                        <XCircle size={12} /> ANNULLATO
+                    <span className="sd-ricevuta-badge sd-ricevuta-badge--annullato">
+                        <XCircle size={12} /> ANNULLATA
                     </span>
                 )}
-                <span className="sd-amount">{euro(ordine.importo)}</span>
+                <span className="sd-amount">{euro(ricevuta.importo)}</span>
             </div>
 
-            <div className="sd-ordine-card-meta">
+            <div className="sd-ricevuta-card-meta">
                 <CalendarDays size={13} />
-                <span>Del {formatData(ordine.createdAt || ordine.data_pagamento)}</span>
-                {ordine.conto_destinazione && <span>· Bonifico su {ordine.conto_destinazione}</span>}
+                <span>Del {formatData(ricevuta.createdAt || ricevuta.data_pagamento)}</span>
+                {ricevuta.conto_destinazione && <span>· Bonifico su {ricevuta.conto_destinazione}</span>}
             </div>
 
             {righe.length > 0 && (
-                <div className="sd-ordine-righe">
-                    {righe.map((r, i) => <span key={i} className="sd-ordine-riga">{r}</span>)}
+                <div className="sd-ricevuta-righe">
+                    {righe.map((r, i) => <span key={i} className="sd-ricevuta-riga">{r}</span>)}
                 </div>
             )}
 
-            {ordine.note && <div className="sd-ordine-note">{ordine.note}</div>}
+            {ricevuta.note && <div className="sd-ricevuta-note">{ricevuta.note}</div>}
 
             {stato === 'completato' && (
-                <div className="sd-ordine-ricevuta">
+                <div className="sd-ricevuta-quietanza">
                     <CheckCircle size={14} />
                     <span>
-                        Ricevuta <strong>{ordine.ricevuta_file_nome || 'caricata'}</strong>
-                        {' · '}{formatDataOra(ordine.ricevuta_uploaded_at)}
+                        Quietanza <strong>{ricevuta.ricevuta_file_nome || 'caricata'}</strong>
+                        {' · '}{formatDataOra(ricevuta.ricevuta_uploaded_at)}
                     </span>
                 </div>
             )}
 
             {stato === 'da_completare' && (
-                <div className="sd-ordine-card-azioni">
+                <div className="sd-ricevuta-card-azioni">
                     <button
                         className="sd-btn sd-btn-primary"
-                        onClick={() => onCaricaRicevuta(ordine)}
+                        onClick={() => onCaricaQuietanza(ricevuta)}
                         disabled={caricamentoInCorso}
                     >
                         <Upload size={15} />
-                        {caricamentoInCorso ? 'Apertura…' : 'Carica ricevuta'}
+                        {caricamentoInCorso ? 'Apertura…' : 'Carica quietanza'}
                     </button>
                 </div>
             )}
@@ -106,27 +106,27 @@ const OrdineCard = ({ ordine, prodottiById, stato, onCaricaRicevuta, caricamento
     );
 };
 
-export default function SocioOrdini({ socio, refreshKey = 0 }) {
-    const [ordini, setOrdini] = useState([]);
+export default function SocioRicevute({ socio, refreshKey = 0 }) {
+    const [ricevute, setRicevute] = useState([]);
     const [prodottiById, setProdottiById] = useState({});
     const [loading, setLoading] = useState(true);
 
-    // Modale di caricamento: { ordine, token } oppure { ordine, errore }
+    // Modale di caricamento: { ricevuta, token } oppure { ricevuta, errore }
     const [uploadModal, setUploadModal] = useState(null);
-    const [ordineInApertura, setOrdineInApertura] = useState(null);
+    const [ricevutaInApertura, setRicevutaInApertura] = useState(null);
 
-    const caricaOrdini = useCallback(() => {
+    const caricaRicevute = useCallback(() => {
         setLoading(true);
         fetch('/payments/api/socio/ordini')
             .then(r => r.ok ? r.json() : [])
-            .then(data => setOrdini(Array.isArray(data) ? data : []))
-            .catch(() => setOrdini([]))
+            .then(data => setRicevute(Array.isArray(data) ? data : []))
+            .catch(() => setRicevute([]))
             .finally(() => setLoading(false));
     }, []);
 
-    useEffect(() => { caricaOrdini(); }, [caricaOrdini, refreshKey]);
+    useEffect(() => { caricaRicevute(); }, [caricaRicevute, refreshKey]);
 
-    // Catalogo per risolvere i nomi dei prodotti nelle righe d'ordine.
+    // Catalogo per risolvere i nomi dei prodotti nelle righe della ricevuta.
     useEffect(() => {
         if (!socio?.societa_id) return;
         fetch(`/products/api?societaId=${socio.societa_id}`)
@@ -142,47 +142,47 @@ export default function SocioOrdini({ socio, refreshKey = 0 }) {
     const { daCompletare, conclusi } = useMemo(() => {
         const daCompletare = [];
         const conclusi = [];
-        for (const o of ordini) {
+        for (const o of ricevute) {
             if (!o.ricevuta_uploaded_at && !o.annullato) daCompletare.push(o);
             else conclusi.push(o);
         }
         return { daCompletare, conclusi };
-    }, [ordini]);
+    }, [ricevute]);
 
     // Il link pubblico di caricamento vale 3 giorni: ne generiamo uno nuovo al
-    // momento del click, così un ordine vecchio resta sempre completabile.
-    const apriCaricamento = async (ordine) => {
-        setOrdineInApertura(ordine.id);
+    // momento del click, così una ricevuta vecchia resta sempre completabile.
+    const apriCaricamento = async (ricevuta) => {
+        setRicevutaInApertura(ricevuta.id);
         try {
-            const res = await fetch(`/payments/api/socio/ordini/${ordine.id}/ricevuta-token`, { method: 'POST' });
+            const res = await fetch(`/payments/api/socio/ordini/${ricevuta.id}/ricevuta-token`, { method: 'POST' });
             const dati = await res.json().catch(() => ({}));
             if (!res.ok || !dati.token) {
-                setUploadModal({ ordine, errore: dati.error || 'Non è stato possibile aprire il caricamento della ricevuta.' });
+                setUploadModal({ ricevuta, errore: dati.error || 'Non è stato possibile aprire il caricamento della quietanza.' });
                 return;
             }
-            setUploadModal({ ordine, token: dati.token });
+            setUploadModal({ ricevuta, token: dati.token });
         } catch {
-            setUploadModal({ ordine, errore: 'Errore di rete. Riprova più tardi.' });
+            setUploadModal({ ricevuta, errore: 'Errore di rete. Riprova più tardi.' });
         } finally {
-            setOrdineInApertura(null);
+            setRicevutaInApertura(null);
         }
     };
 
     const chiudiModal = () => {
         setUploadModal(null);
-        caricaOrdini();
+        caricaRicevute();
     };
 
     const renderLista = (lista, stato) => (
-        <div className="sd-ordini-list">
+        <div className="sd-ricevute-list">
             {lista.map(o => (
-                <OrdineCard
+                <RicevutaCard
                     key={o.id}
-                    ordine={o}
+                    ricevuta={o}
                     prodottiById={prodottiById}
                     stato={stato === 'auto' ? (o.annullato ? 'annullato' : 'completato') : stato}
-                    onCaricaRicevuta={apriCaricamento}
-                    caricamentoInCorso={ordineInApertura === o.id}
+                    onCaricaQuietanza={apriCaricamento}
+                    caricamentoInCorso={ricevutaInApertura === o.id}
                 />
             ))}
         </div>
@@ -202,11 +202,11 @@ export default function SocioOrdini({ socio, refreshKey = 0 }) {
                     {loading ? (
                         <div className="sd-loading"><div className="sd-spinner" /><span>Caricamento…</span></div>
                     ) : daCompletare.length === 0 ? (
-                        <div className="sd-empty">Non hai ordini in attesa della ricevuta di pagamento.</div>
+                        <div className="sd-empty">Non hai ricevute in attesa della quietanza di pagamento.</div>
                     ) : (
                         <>
-                            <p className="sd-muted sd-ordini-nota">
-                                Effettua il bonifico secondo le istruzioni ricevute via email, poi carica qui la ricevuta per completare l'ordine.
+                            <p className="sd-muted sd-ricevute-nota">
+                                Effettua il bonifico secondo le istruzioni ricevute via email, poi carica qui la quietanza per completare la ricevuta.
                             </p>
                             {renderLista(daCompletare, 'da_completare')}
                         </>
@@ -226,7 +226,7 @@ export default function SocioOrdini({ socio, refreshKey = 0 }) {
                     {loading ? (
                         <div className="sd-loading"><div className="sd-spinner" /><span>Caricamento…</span></div>
                     ) : conclusi.length === 0 ? (
-                        <div className="sd-empty">Nessun ordine completato.</div>
+                        <div className="sd-empty">Nessuna ricevuta completata.</div>
                     ) : (
                         renderLista(conclusi, 'auto')
                     )}
@@ -239,7 +239,7 @@ export default function SocioOrdini({ socio, refreshKey = 0 }) {
                         <div className="sd-modal-header">
                             <div className="sd-modal-title">
                                 <span className="sd-modal-type-icon"><Upload size={16} /></span>
-                                <span>Ricevuta ordine #{uploadModal.ordine.id}</span>
+                                <span>Quietanza ricevuta #{uploadModal.ricevuta.id}</span>
                             </div>
                             <button className="sd-modal-close" onClick={chiudiModal}>
                                 <X size={20} />
@@ -249,7 +249,7 @@ export default function SocioOrdini({ socio, refreshKey = 0 }) {
                             {uploadModal.errore ? (
                                 <div className="sd-field-error">{uploadModal.errore}</div>
                             ) : (
-                                <UploadRicevuta token={uploadModal.token} mostraOrdine={false} />
+                                <UploadQuietanza token={uploadModal.token} mostraRicevuta={false} />
                             )}
                         </div>
                     </div>

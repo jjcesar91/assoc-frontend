@@ -7,7 +7,7 @@ import {
     applyShortcodes,
     buildIstruzioniPagamento,
     formatImporto,
-} from '../utils/comunicazioniOrdini';
+} from '../utils/comunicazioniRicevute';
 import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './ComunicazioneModal.css';
 
@@ -24,7 +24,7 @@ const nomeSocioFromRecord = (s) => {
         : [s.nome, s.cognome].filter(Boolean).join(' ');
 };
 
-const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, products }) => {
+const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, products }) => {
     const showAlert = useAlert();
     const [tipo, setTipo] = useState('EMAIL'); // 'SMS' or 'EMAIL'
     const [oggetto, setOggetto] = useState('');
@@ -37,7 +37,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
     const societaEmail = societa?.email || '';
 
     // Carica una comunicazione di default risolvendo i placeholder {{}} col
-    // contesto dell'ordine (nome socio, importo, numero, istruzioni pagamento).
+    // contesto della ricevuta (nome socio, importo, numero, istruzioni pagamento).
     const handleSelectTemplate = async (key) => {
         setTemplateKey(key);
         if (!key) return;
@@ -47,8 +47,8 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
             const config = getComConfig(societa, key);
 
             // Nominativo del destinatario: dal socio se disponibile, altrimenti
-            // dall'intestatario dell'ordine.
-            let nome = ordine?.intestatario || '';
+            // dall'intestatario della ricevuta.
+            let nome = ricevuta?.intestatario || '';
             if (socioId) {
                 try {
                     const token = localStorage.getItem('token');
@@ -64,7 +64,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
 
             // Istruzioni di pagamento: solo per proforma con bonifico.
             let istruzioni = '';
-            const modalita = ordine?.modalita_pagamento;
+            const modalita = ricevuta?.modalita_pagamento;
             if (key === 'proforma' && (modalita || '').toLowerCase() === 'bonifico') {
                 try {
                     const token = localStorage.getItem('token');
@@ -73,19 +73,19 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                     });
                     if (r.ok) {
                         const conti = await r.json();
-                        istruzioni = buildIstruzioniPagamento(conti, ordine?.conto_destinazione, modalita);
+                        istruzioni = buildIstruzioniPagamento(conti, ricevuta?.conto_destinazione, modalita);
                     }
                 } catch { /* ignore */ }
             }
 
             const ctx = {
                 nome,
-                importo: formatImporto(ordine?.importo),
-                numeroOrdine: ordine?.numero_ricevuta || `#${ordine?.id || ''}`,
-                numeroRicevuta: ordine?.numero_ricevuta || '',
+                importo: formatImporto(ricevuta?.importo),
+                numeroRiferimento: ricevuta?.numero_ricevuta || `#${ricevuta?.id || ''}`,
+                numeroRicevuta: ricevuta?.numero_ricevuta || '',
                 nomeAssociazione: societa?.denominazione || '',
                 istruzioni,
-                linkRicevuta: '',
+                linkQuietanza: '',
             };
             const testoRisolto = applyShortcodes(config.testo, ctx);
 
@@ -99,7 +99,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validation
         if (tipo === 'EMAIL' && !oggetto) {
             showAlert("L'oggetto è obbligatorio per le email", 'Campo mancante', 'warning');
@@ -115,12 +115,12 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
             // Se richiesto, genera la ricevuta in PDF e la allega alla email
             // (stessa implementazione della comunicazione "Proforma registrata").
             let allegati;
-            if (tipo === 'EMAIL' && allegaRicevuta && ordine) {
+            if (tipo === 'EMAIL' && allegaRicevuta && ricevuta) {
                 try {
-                    const base64 = await generateRicevutaPdfBase64(ordine, { societa, products });
+                    const base64 = await generateRicevutaPdfBase64(ricevuta, { societa, products });
                     if (base64) {
                         // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
-                        const safeNumero = String(ordine?.numero_ricevuta || ordine?.id || 'ricevuta').replace(/[\\/:*?"<>|]/g, '-');
+                        const safeNumero = String(ricevuta?.numero_ricevuta || ricevuta?.id || 'ricevuta').replace(/[\\/:*?"<>|]/g, '-');
                         allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
                     }
                 } catch (pdfErr) {
@@ -182,7 +182,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                 </div>
 
                 <div className="comunicazione-body">
-                    {ordine && (
+                    {ricevuta && (
                         <div className="comunicazione-field">
                             <label>Comunicazione predefinita</label>
                             <select
@@ -202,12 +202,12 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                     <div style={{textAlign: 'center', marginBottom: '10px'}}>
                         <label className="field-label" style={{display:'block', marginBottom:'8px'}}>Tipologia comunicazione</label>
                         <div style={{display:'inline-flex', borderRadius:'6px', overflow:'hidden', border:'1px solid var(--border-color)'}}>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className={`type-btn ${tipo === 'SMS' ? 'active' : ''}`}
                                 onClick={() => setTipo('SMS')}
                                 style={{
-                                    backgroundColor: tipo === 'SMS' ? 'var(--success)' : 'white', 
+                                    backgroundColor: tipo === 'SMS' ? 'var(--success)' : 'white',
                                     color: tipo === 'SMS' ? 'white' : 'var(--text-secondary)',
                                     border: 'none',
                                     padding: '8px 24px',
@@ -220,12 +220,12 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                             >
                                 <MessageSquare size={16} /> SMS
                             </button>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className={`type-btn ${tipo === 'EMAIL' ? 'active' : ''}`}
                                 onClick={() => setTipo('EMAIL')}
                                 style={{
-                                    backgroundColor: tipo === 'EMAIL' ? 'var(--success)' : 'white', 
+                                    backgroundColor: tipo === 'EMAIL' ? 'var(--success)' : 'white',
                                     color: tipo === 'EMAIL' ? 'white' : 'var(--text-secondary)',
                                     border: 'none',
                                     padding: '8px 24px',
@@ -245,10 +245,10 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                     {tipo === 'EMAIL' && (
                         <div className="comunicazione-field">
                             <label>Oggetto</label>
-                            <input 
-                                className="comunicazione-input" 
-                                value={oggetto} 
-                                onChange={(e) => setOggetto(e.target.value)} 
+                            <input
+                                className="comunicazione-input"
+                                value={oggetto}
+                                onChange={(e) => setOggetto(e.target.value)}
                                 placeholder="Oggetto della mail"
                             />
                         </div>
@@ -257,10 +257,10 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                     <div className="comunicazione-field" style={{flex: 1}}>
                         <label>{tipo === 'SMS' ? `Testo sms (caratteri rimanenti : ${160 - testo.length})` : 'Testo email'}</label>
                         {tipo === 'SMS' ? (
-                            <textarea 
-                                className="comunicazione-input comunicazione-textarea" 
-                                value={testo} 
-                                onChange={(e) => setTesto(e.target.value.substring(0, 160))} 
+                            <textarea
+                                className="comunicazione-input comunicazione-textarea"
+                                value={testo}
+                                onChange={(e) => setTesto(e.target.value.substring(0, 160))}
                                 placeholder="Scrivi il tuo messaggio..."
                                 style={{height: '150px'}}
                             />
@@ -272,7 +272,7 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ordine, societa, product
                         )}
                     </div>
 
-                    {tipo === 'EMAIL' && ordine && (
+                    {tipo === 'EMAIL' && ricevuta && (
                         <div className="comunicazione-field">
                             <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
                                 <input
