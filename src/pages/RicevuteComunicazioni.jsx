@@ -194,7 +194,7 @@ const RicevuteComunicazioni = () => {
                 </p>
 
                 <ComunicazioneCard
-                    titolo="Comunicazione nuova proforma"
+                    titolo="Invio Richiesta di Pagamento"
                     icon={<FileText size={18} />}
                     descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione della ricevuta e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
                     tipo="proforma"
@@ -206,7 +206,7 @@ const RicevuteComunicazioni = () => {
                 />
 
                 <ComunicazioneCard
-                    titolo="Comunicazione ricevuta pagata"
+                    titolo="Quietanza di pagamento ricevuta"
                     icon={<Mail size={18} />}
                     descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma la ricevuta, comunica la registrazione del pagamento e allega la ricevuta in PDF."
                     tipo="pagamento"

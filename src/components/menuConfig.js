@@ -36,13 +36,14 @@ export const getVisibleMenu = () => {
 export const MENU_STRUCTURE = [
     {
         id: 'societa',
-        label: 'Società',
+        label: 'Impostazioni',
         Icon: Briefcase,
         children: [
-            { id: 'societa-anagrafica',    label: 'Anagrafica',      path: '/societa/anagrafica' },
-            { id: 'societa-anno',          label: 'Anno contabile',  path: '/societa/anno-contabile' },
-            { id: 'societa-comunicazioni', label: 'Comunicazioni',   path: '/societa/comunicazioni' },
-            { id: 'societa-impostazioni',  label: 'Impostazioni',    path: '/societa/impostazioni' },
+            { id: 'societa-anagrafica',     label: 'Anagrafica',      path: '/societa/anagrafica' },
+            { id: 'societa-anno',           label: 'Anno contabile',  path: '/societa/anno-contabile' },
+            { id: 'societa-impostazioni',   label: 'Società',         path: '/societa/impostazioni' },
+            { id: 'ricevute-conti',         label: 'Conti',           path: '/ricevute/conti' },
+            { id: 'ricevute-comunicazioni', label: 'Comunicazioni',   path: '/ricevute/comunicazioni' },
         ],
     },
     { id: 'soci',         label: 'Soci',          Icon: User,          path: '/soci' },
@@ -63,10 +64,8 @@ export const MENU_STRUCTURE = [
         label: 'Ricevute',
         Icon: CreditCard,
         children: [
-            { id: 'ricevute-lista',         label: 'Lista ricevute',    path: '/ricevute' },
-            { id: 'ricevute-conti',         label: 'Conti',             path: '/ricevute/conti' },
-            { id: 'ricevute-comunicazioni', label: 'Comunicazioni',     path: '/ricevute/comunicazioni' },
-            { id: 'ricevute-template',      label: 'Template ricevute', path: '/ricevute/template' },
+            { id: 'ricevute-lista',    label: 'Lista ricevute', path: '/ricevute' },
+            { id: 'ricevute-template', label: 'Footer',         path: '/ricevute/template' },
         ],
     },
     { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
@@ -83,7 +82,7 @@ export const MENU_STRUCTURE = [
         label: 'Contabilità',
         Icon: BookOpen,
         children: [
-            { id: 'contabilita-operazioni', label: 'Operazioni',           path: '/contabilita/operazioni' },
+            { id: 'contabilita-operazioni', label: 'Prima Nota',           path: '/contabilita/operazioni' },
             { id: 'contabilita-gruppi',     label: 'Gruppi / Sottogruppi', path: '/contabilita/gruppi' },
             { id: 'contabilita-fornitori',  label: 'Fornitori',            path: '/contabilita/fornitori' },
         ],
@@ -104,6 +103,7 @@ export const MENU_STRUCTURE = [
         children: [
             { id: 'amministrazione-utenti',  label: 'Utenti',  path: '/amministrazione/utenti' },
             { id: 'amministrazione-societa', label: 'Società', path: '/amministrazione/societa', superuserOnly: true },
+            { id: 'societa-comunicazioni',   label: 'Parametri SMTP', path: '/societa/comunicazioni', superuserOnly: true },
         ],
     },
 ];
