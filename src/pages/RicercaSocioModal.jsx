@@ -212,7 +212,9 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                     <tr key={socio.id} style={isEnrolled ? { opacity: 0.5, background: 'var(--surface-1)' } : {}}>
                                         <td style={{width: abbonamentoId ? '35%' : '40%'}}>
                                             <div style={{display:'flex', alignItems:'center', gap:'8px', color: isEnrolled ? 'var(--text-tertiary)' : 'var(--primary)', fontWeight: 'bold'}}>
-                                                {socio.tipo_socio === 'associazione' ? <Building2 size={18}/> : <User size={18}/>}
+                                                {socio.tipo_socio === 'associazione'
+                                                    ? <Building2 size={18}/>
+                                                    : <User size={18} style={{ color: isEnrolled ? 'var(--text-tertiary)' : (socio.sesso === 'F' ? 'var(--femminile)' : 'var(--maschile)') }}/>}
                                                 <span
                                                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
                                                     onClick={() => window.open(`/soci?apriSocioPath=${socio.id}`, '_blank')}

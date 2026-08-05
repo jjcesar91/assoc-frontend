@@ -116,7 +116,14 @@ const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) 
                 <div className="icdm-body">
                     {/* Socio info */}
                     {socio && (
-                        <div className="icdm-socio-bar">
+                        <div
+                            className="icdm-socio-bar"
+                            style={socio.sesso === 'F' ? {
+                                backgroundColor: 'var(--femminile-container)',
+                                borderColor: 'var(--femminile-container)',
+                                color: 'var(--on-femminile-container)',
+                            } : undefined}
+                        >
                             <Users size={15} />
                             <span><strong>{socio.cognome} {socio.nome}</strong> — {socio.codice_fiscale}</span>
                         </div>

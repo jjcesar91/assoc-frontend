@@ -271,6 +271,9 @@
 .np-badge-danger {
     background-color: var(--danger);
 }
+.np-badge-success {
+    background-color: var(--success);
+}
 
 /* Snackbar */
 .np-snackbar {
