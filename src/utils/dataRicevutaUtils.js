@@ -1,10 +1,10 @@
 import { getAnnoDateRange } from '../data/AnnoContext';
 
 /**
- * Regole condivise sulla data documento/ricevuta di un ordine.
+ * Regole condivise sulla data documento/ricevuta di una ricevuta.
  *
- * Usate sia dalla creazione di un nuovo ordine (GeneraOrdineModal) sia dalla
- * conversione di una proforma in pagamento (DettaglioOrdineModal → "Registra
+ * Usate sia dalla creazione di una nuova ricevuta (GeneraRicevutaModal) sia dalla
+ * conversione di una proforma in pagamento (DettaglioRicevutaModal → "Registra
  * Pagamento"), così che le due schermate applichino gli stessi vincoli.
  *
  * Il controllo è volutamente solo lato client: il backend non valida la data.
@@ -26,7 +26,7 @@ export function formatDataIT(dateStr) {
 }
 
 /**
- * Intervallo selezionabile per la data di un ordine.
+ * Intervallo selezionabile per la data di una ricevuta.
  *
  * - massimo: il minore fra la fine dell'anno associativo scelto e oggi
  *   (nessuna data futura, e per gli anni passati non si esce dall'anno);
@@ -39,7 +39,7 @@ export function formatDataIT(dateStr) {
  * @param {string} lastPaymentDate data ultima ricevuta dell'anno (YYYY-MM-DD), opzionale
  * @returns {{min: string, max: string, minDaUltimaRicevuta: boolean}}
  */
-export function getRangeDataOrdine(anno, societa, lastPaymentDate) {
+export function getRangeDataRicevuta(anno, societa, lastPaymentDate) {
     const today = oggiStr();
     if (anno == null) {
         return { min: lastPaymentDate || '', max: today, minDaUltimaRicevuta: !!lastPaymentDate };
@@ -55,10 +55,10 @@ export function getRangeDataOrdine(anno, societa, lastPaymentDate) {
 }
 
 /**
- * Valida la data di un ordine contro l'intervallo consentito.
+ * Valida la data di una ricevuta contro l'intervallo consentito.
  * @returns {{ok: boolean, error?: string}} messaggio pronto da mostrare all'utente
  */
-export function validaDataOrdine(data, range) {
+export function validaDataRicevuta(data, range) {
     const { min, max, minDaUltimaRicevuta } = range || {};
     if (!data) {
         return { ok: false, error: 'Indica la data del documento.' };
@@ -78,7 +78,7 @@ export function validaDataOrdine(data, range) {
         return {
             ok: false,
             error: minDaUltimaRicevuta
-                ? `La data del documento non può essere precedente al ${formatDataIT(min)}, data dell'ultimo ordine registrato nell'anno.`
+                ? `La data del documento non può essere precedente al ${formatDataIT(min)}, data dell'ultima ricevuta registrata nell'anno.`
                 : `La data del documento non può essere precedente al ${formatDataIT(min)}, inizio dell'anno associativo selezionato.`,
         };
     }

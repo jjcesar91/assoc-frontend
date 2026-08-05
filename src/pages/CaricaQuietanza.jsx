@@ -1,21 +1,21 @@
 import { useSearchParams } from 'react-router-dom';
-import UploadRicevuta from '../components/UploadRicevuta';
+import UploadQuietanza from '../components/UploadQuietanza';
 
-// Pagina pubblica (senza autenticazione) per il caricamento della ricevuta di pagamento.
-// Accessibile tramite link con token: /carica-ricevuta?token=XXXX
+// Pagina pubblica (senza autenticazione) per il caricamento della quietanza di pagamento.
+// Accessibile tramite link con token: /carica-quietanza?token=XXXX
 //
-// La meccanica di upload vive in <UploadRicevuta/>, condivisa con l'area soci:
+// La meccanica di upload vive in <UploadQuietanza/>, condivisa con l'area soci:
 // qui restano solo il recupero del token dalla querystring e la cornice di pagina.
 
-export default function CaricaRicevuta() {
+export default function CaricaQuietanza() {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
 
     return (
         <div style={styles.page}>
             <div style={styles.card}>
-                <h1 style={styles.title}>Caricamento ricevuta di pagamento</h1>
-                <UploadRicevuta token={token} />
+                <h1 style={styles.title}>Caricamento quietanza di pagamento</h1>
+                <UploadQuietanza token={token} />
             </div>
         </div>
     );

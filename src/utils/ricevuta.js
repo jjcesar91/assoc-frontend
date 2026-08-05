@@ -1,5 +1,5 @@
 // Costruzione del documento ricevuta/proforma (stampa + generazione PDF allegato).
-// Estratto da Ordini.jsx per essere riusato sia per la stampa che per l'invio
+// Estratto da Ricevute.jsx per essere riusato sia per la stampa che per l'invio
 // della ricevuta come allegato PDF nelle comunicazioni email.
 
 const RICEVUTA_CSS = `
@@ -448,30 +448,4 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     );
     const b64 = await Promise.race([pdf.getBase64(), timeout]);
     return b64 || '';
-}
-
-/**
- * Scarica/apre la ricevuta di pagamento caricata dal socio per un ordine.
- * Usa l'endpoint autenticato del payments-service e apre il file in una nuova scheda.
- * @param {number|string} paymentId
- * @returns {Promise<{ ok: boolean, error?: string }>}
- */
-export async function openRicevutaCaricata(paymentId) {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`/payments/api/${paymentId}/ricevuta-file`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) {
-            return { ok: false, error: res.status === 404 ? 'Ricevuta non disponibile' : 'Impossibile aprire la ricevuta' };
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank', 'noopener');
-        // Rilascia l'oggetto URL dopo un breve intervallo (la scheda ha già caricato il blob).
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-        return { ok: true };
-    } catch (e) {
-        return { ok: false, error: e.message };
-    }
 }

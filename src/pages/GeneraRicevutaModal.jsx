@@ -3,14 +3,14 @@ import { X, Check, Euro, Coins, CreditCard, Banknote, Landmark, Calendar, FileTe
 import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
-import { getRangeDataOrdine, validaDataOrdine, oggiStr } from '../utils/dataOrdineUtils';
+import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 
-const GeneraOrdineModal = ({
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    totale, 
-    socio, 
+const GeneraRicevutaModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    totale,
+    socio,
     cart,
     subscriptionDates
 }) => {
@@ -21,13 +21,13 @@ const GeneraOrdineModal = ({
         [societaList, selectedSocietaId]
     );
     const [conti, setConti] = useState([]);
-    
+
     const todayStr = oggiStr();
     const defaultDataRicevuta = todayStr.split('-').reverse().join('/'); // basic parse to DD/MM/YYYY is visually confusing with normal input date, better keep YYYY-MM-DD for input type date
 
     const [modalita, setModalita] = useState('Contanti');
     const [contoDestinazione, setContoDestinazione] = useState('CASSA');
-    
+
     const [intestatario, setIntestatario] = useState('');
     const [emettiRicevuta, setEmettiRicevuta] = useState('SI');
     const [annoRicevuta, setAnnoRicevuta] = useState(null);
@@ -50,9 +50,9 @@ const GeneraOrdineModal = ({
         : '';
 
     // Intervallo consentito per la data documento (regole condivise con la
-    // conversione proforma → pagamento, vedi utils/dataOrdineUtils).
+    // conversione proforma → pagamento, vedi utils/dataRicevutaUtils).
     const rangeData = useMemo(
-        () => getRangeDataOrdine(annoRicevuta, selectedSocieta, lastPaymentDate),
+        () => getRangeDataRicevuta(annoRicevuta, selectedSocieta, lastPaymentDate),
         [annoRicevuta, selectedSocieta, lastPaymentDate]
     );
     const minDataRicevuta = rangeData.min;
@@ -61,14 +61,14 @@ const GeneraOrdineModal = ({
     // Esito della validazione sulla data corrente: usato per l'avviso inline e
     // per bloccare la conferma.
     const esitoData = useMemo(
-        () => validaDataOrdine(dataRicevuta, rangeData),
+        () => validaDataRicevuta(dataRicevuta, rangeData),
         [dataRicevuta, rangeData]
     );
 
     const [codiceFiscale, setCodiceFiscale] = useState('');
     const [codiceFiscaleGenitore, setCodiceFiscaleGenitore] = useState('');
     const [partitaIva, setPartitaIva] = useState('');
-    
+
     const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
     // Errore sulla data mostrato dopo un tentativo di conferma.
@@ -110,7 +110,7 @@ const GeneraOrdineModal = ({
                 setPartitaIva('');
             }
             setSubmitting(false);
-            
+
             const fetchConti = async () => {
                 if (!selectedSocietaId) return;
                 try {
@@ -121,7 +121,7 @@ const GeneraOrdineModal = ({
                     if (res.ok) {
                         const data = await res.json();
                         setConti(data);
-                        
+
                         // Default
                         const associati = data.filter(c => c.modalita_pagamento === 'Contanti');
                         if (associati.length > 0) {
@@ -305,7 +305,7 @@ const GeneraOrdineModal = ({
             <div className="gpm-modal">
                 <div className="gpm-header">
                     <div className="gpm-title">
-                        <Euro size={20} strokeWidth={2}/> Nuovo Ordine
+                        <Euro size={20} strokeWidth={2}/> Nuova Ricevuta
                     </div>
                     <button className="gpm-close-btn" onClick={onClose}>
                         <X size={20} />
@@ -322,7 +322,7 @@ const GeneraOrdineModal = ({
                         }}>
                             <AlertTriangle size={20} strokeWidth={2.2} style={{ flexShrink: 0 }} />
                             <span>
-                                Attenzione: stai creando un ordine per l'anno associativo <strong>{formatAnnoLabel(annoRicevuta)}</strong>,
+                                Attenzione: stai creando una ricevuta per l'anno associativo <strong>{formatAnnoLabel(annoRicevuta)}</strong>,
                                 diverso da quello corrente (<strong>{formatAnnoLabel(currentRefYear)}</strong>).
                             </span>
                         </div>
@@ -356,9 +356,9 @@ const GeneraOrdineModal = ({
 
                         <div className="gpm-field-group">
                             <label>Conto di destinazione</label>
-                            <select 
-                                className="gpm-select" 
-                                value={contoDestinazione} 
+                            <select
+                                className="gpm-select"
+                                value={contoDestinazione}
                                 onChange={(e) => setContoDestinazione(e.target.value)}
                             >
                                 {conti.length > 0 ? (
@@ -405,10 +405,10 @@ const GeneraOrdineModal = ({
                         <div className="gpm-field-group">
                             <label>Data documento</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <input 
-                                    type="date" 
-                                    className="gpm-input" 
-                                    value={dataRicevuta} 
+                                <input
+                                    type="date"
+                                    className="gpm-input"
+                                    value={dataRicevuta}
                                     min={minDataRicevuta || undefined}
                                     max={maxDataRicevuta}
                                     style={{ width: '100%', paddingRight: '35px' }}
@@ -450,10 +450,10 @@ const GeneraOrdineModal = ({
                         </div>
                         <div className="gpm-field-group">
                             <label>Partita IVA</label>
-                            <input 
-                                type="text" 
-                                className="gpm-input" 
-                                value={partitaIva} 
+                            <input
+                                type="text"
+                                className="gpm-input"
+                                value={partitaIva}
                                 onChange={(e) => setPartitaIva(e.target.value)}
                             />
                         </div>
@@ -473,9 +473,9 @@ const GeneraOrdineModal = ({
 
                     <div className="gpm-field-group full-width" style={{ marginTop: '15px' }}>
                         <label>Note</label>
-                        <textarea 
-                            className="gpm-textarea" 
-                            rows={3} 
+                        <textarea
+                            className="gpm-textarea"
+                            rows={3}
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                         />
@@ -551,4 +551,4 @@ const GeneraOrdineModal = ({
     );
 };
 
-export default GeneraOrdineModal;
+export default GeneraRicevutaModal;

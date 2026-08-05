@@ -1,20 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Meccanismo di caricamento della ricevuta di pagamento, indicizzato per token.
-// È usato sia dalla pagina pubblica /carica-ricevuta (link inviato via email)
-// sia dall'area soci, dove il socio genera un token per un proprio ordine:
+// Meccanismo di caricamento della quietanza di pagamento, indicizzato per token.
+// È usato sia dalla pagina pubblica /carica-quietanza (link inviato via email)
+// sia dall'area soci, dove il socio genera un token per una propria ricevuta:
 // in entrambi i casi il backend resta quello pubblico /payments/api/public/ricevuta/:token.
 //
 // Stati possibili:
 //   - loading      : verifica del token in corso
 //   - not_found    : token assente o non valido  → "404"
 //   - expired      : link scaduto (oltre 72 ore)
-//   - uploaded     : ricevuta già caricata (sola lettura: data + nome file)
+//   - uploaded     : quietanza già caricata (sola lettura: data + nome file)
 //   - ok           : caricabile (form di upload)
 //
 // Regola di modifica: dopo aver caricato e confermato, finché il componente resta
 // montato è possibile sostituire il file (PUT). Riaprendo il link in un secondo
-// momento la ricevuta risulta in sola lettura.
+// momento la quietanza risulta in sola lettura.
 
 export const ACCEPT = '.pdf,.doc,.docx,.odt,.rtf,image/*';
 export const ACCEPT_LABEL = 'PDF, Word, LibreOffice/OpenDocument o immagine';
@@ -34,12 +34,12 @@ function formatData(dt) {
 /**
  * @param {Object} props
  * @param {string|null} props.token - token del link di caricamento
- * @param {boolean} [props.mostraOrdine] - mostra il riepilogo ordine restituito dal backend
+ * @param {boolean} [props.mostraRicevuta] - mostra il riepilogo ricevuta restituito dal backend
  * @param {(evidenza: { nome_file: string, uploaded_at: string }) => void} [props.onUploaded]
  */
-export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded }) {
+export default function UploadQuietanza({ token, mostraRicevuta = true, onUploaded }) {
     const [stato, setStato] = useState('loading'); // loading|not_found|expired|uploaded|ok|error
-    const [ordine, setOrdine] = useState(null);
+    const [ricevuta, setRicevuta] = useState(null);
     const [evidenza, setEvidenza] = useState(null); // { nome_file, uploaded_at }
     const [editabileInSessione, setEditabileInSessione] = useState(false);
 
@@ -61,7 +61,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
                 return;
             }
             if (data.status === 'ok') {
-                setOrdine(data.ordine || null);
+                setRicevuta(data.ordine || null);
                 setStato('ok');
                 return;
             }
@@ -92,7 +92,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 if (data.status === 'uploaded') {
-                    // Qualcun altro ha già caricato la ricevuta nel frattempo
+                    // Qualcun altro ha già caricato la quietanza nel frattempo
                     setEvidenza({ nome_file: data.nome_file, uploaded_at: data.uploaded_at });
                     setEditabileInSessione(false);
                     setStato('uploaded');
@@ -102,7 +102,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
                 setErrore(data.error || 'Errore durante il caricamento.');
                 return;
             }
-            // Successo: ricevuta caricata, modificabile finché si resta in pagina
+            // Successo: quietanza caricata, modificabile finché si resta in pagina
             const nuovaEvidenza = { nome_file: data.nome_file, uploaded_at: data.uploaded_at };
             setEvidenza(nuovaEvidenza);
             setEditabileInSessione(true);
@@ -142,7 +142,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
         return (
             <div style={styles.boxWarn}>
                 <p><strong>Link scaduto.</strong></p>
-                <p>Questo link per il caricamento della ricevuta è valido 3 giorni e non è più attivo. Contatta l'associazione per riceverne uno nuovo.</p>
+                <p>Questo link per il caricamento della quietanza è valido 3 giorni e non è più attivo. Contatta l'associazione per riceverne uno nuovo.</p>
             </div>
         );
     }
@@ -151,7 +151,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
         return (
             <div>
                 <div style={styles.boxSuccess}>
-                    <p><strong>Ricevuta caricata correttamente.</strong></p>
+                    <p><strong>Quietanza caricata correttamente.</strong></p>
                     <ul style={styles.list}>
                         <li>File: <strong>{evidenza?.nome_file || '—'}</strong></li>
                         <li>Data caricamento: <strong>{formatData(evidenza?.uploaded_at)}</strong></li>
@@ -177,11 +177,11 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
                             disabled={submitting || !file}
                             onClick={() => invia('PUT')}
                         >
-                            {submitting ? 'Aggiornamento…' : 'Sostituisci ricevuta'}
+                            {submitting ? 'Aggiornamento…' : 'Sostituisci quietanza'}
                         </button>
                     </div>
                 ) : (
-                    <p style={styles.muted}>La ricevuta è stata registrata e non è più modificabile.</p>
+                    <p style={styles.muted}>La quietanza è stata registrata e non è più modificabile.</p>
                 )}
             </div>
         );
@@ -190,15 +190,15 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
     // stato === 'ok'
     return (
         <div>
-            {mostraOrdine && ordine && (
+            {mostraRicevuta && ricevuta && (
                 <div style={styles.boxInfo}>
-                    <div>Ordine: <strong>{ordine.numero}</strong></div>
-                    {ordine.intestatario && <div>Intestatario: <strong>{ordine.intestatario}</strong></div>}
-                    <div>Importo: <strong>{ordine.importo}</strong></div>
+                    <div>Ricevuta: <strong>{ricevuta.numero}</strong></div>
+                    {ricevuta.intestatario && <div>Intestatario: <strong>{ricevuta.intestatario}</strong></div>}
+                    <div>Importo: <strong>{ricevuta.importo}</strong></div>
                 </div>
             )}
             <p style={styles.muted}>
-                Carica la ricevuta del pagamento. Formati ammessi: {ACCEPT_LABEL}. Dimensione massima 10MB.
+                Carica la quietanza del pagamento. Formati ammessi: {ACCEPT_LABEL}. Dimensione massima 10MB.
             </p>
             <input
                 ref={fileInputRef}
@@ -213,7 +213,7 @@ export default function UploadRicevuta({ token, mostraOrdine = true, onUploaded 
                 disabled={submitting || !file}
                 onClick={() => invia('POST')}
             >
-                {submitting ? 'Caricamento…' : 'Carica ricevuta'}
+                {submitting ? 'Caricamento…' : 'Carica quietanza'}
             </button>
         </div>
     );

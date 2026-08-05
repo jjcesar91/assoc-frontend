@@ -2,14 +2,15 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Ban, Calendar, Check, Download, FileCheck, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
-import { getStatoOrdine, getStatoOrdineBadgeStyle, STATO_ORDINE_CONFIG } from '../utils/ordineUtils';
+import { getStatoRicevuta, getStatoRicevutaBadgeStyle, STATO_RICEVUTA_CONFIG } from '../utils/ricevutaUtils';
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
-import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } from '../utils/comunicazioniOrdini';
-import { generateRicevutaPdfBase64, openRicevutaCaricata } from '../utils/ricevuta';
-import { getRangeDataOrdine, validaDataOrdine, oggiStr } from '../utils/dataOrdineUtils';
-import './DettaglioPagamentoModal.css';
+import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } from '../utils/comunicazioniRicevute';
+import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
+import { openQuietanzaCaricata } from '../utils/quietanza';
+import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
+import './DettaglioRicevutaModal.css';
 
-const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
+const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
     const [showConferma, setShowConferma] = useState(false);
     const [showConvertForm, setShowConvertForm] = useState(false);
     const [showEliminaConferma, setShowEliminaConferma] = useState(false);
@@ -19,7 +20,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const [convertNextNumero, setConvertNextNumero] = useState(null);
     const [convertNextRaw, setConvertNextRaw] = useState(null); // progressivo grezzo: ===1 → prima ricevuta
     // Data dell'ultima ricevuta dell'anno selezionato: estremo inferiore per la
-    // data ricevuta (non si può retrodatare prima dell'ultimo ordine emesso).
+    // data ricevuta (non si può retrodatare prima dell'ultima ricevuta emessa).
     const [convertLastPaymentDate, setConvertLastPaymentDate] = useState('');
     // Errore sulla data mostrato dopo un tentativo di conferma.
     const [convertDataError, setConvertDataError] = useState('');
@@ -43,14 +44,14 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         comFeedbackTimerRef.current = setTimeout(() => setComFeedback(null), 3000);
     };
 
-    // Apertura/download della ricevuta di pagamento caricata dal socio
-    const [apriRicevutaBusy, setApriRicevutaBusy] = useState(false);
-    const handleApriRicevuta = async () => {
-        if (apriRicevutaBusy) return;
-        setApriRicevutaBusy(true);
-        const r = await openRicevutaCaricata(pagamento.id);
-        setApriRicevutaBusy(false);
-        if (!r.ok) showComFeedback(r.error || 'Impossibile aprire la ricevuta', 'error');
+    // Apertura/download della quietanza di pagamento caricata dal socio
+    const [apriQuietanzaBusy, setApriQuietanzaBusy] = useState(false);
+    const handleApriQuietanza = async () => {
+        if (apriQuietanzaBusy) return;
+        setApriQuietanzaBusy(true);
+        const r = await openQuietanzaCaricata(pagamento.id);
+        setApriQuietanzaBusy(false);
+        if (!r.ok) showComFeedback(r.error || 'Impossibile aprire la quietanza', 'error');
     };
 
     // Etichette
@@ -70,14 +71,14 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     const todayStr = oggiStr();
 
     // Intervallo consentito per la data ricevuta in fase di conversione
-    // proforma → pagamento: stesse regole della creazione di un nuovo ordine
-    // (vedi utils/dataOrdineUtils).
+    // proforma → pagamento: stesse regole della creazione di una nuova ricevuta
+    // (vedi utils/dataRicevutaUtils).
     const rangeConvertData = useMemo(
-        () => getRangeDataOrdine(convertAnno, societa, convertLastPaymentDate),
+        () => getRangeDataRicevuta(convertAnno, societa, convertLastPaymentDate),
         [convertAnno, societa, convertLastPaymentDate]
     );
     const esitoConvertData = useMemo(
-        () => validaDataOrdine(convertData, rangeConvertData),
+        () => validaDataRicevuta(convertData, rangeConvertData),
         [convertData, rangeConvertData]
     );
 
@@ -96,7 +97,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     // Pulizia timer snackbar allo smontaggio
     useEffect(() => () => clearTimeout(comFeedbackTimerRef.current), []);
 
-    // Sincronizza etichette locali all'apertura/cambio ordine
+    // Sincronizza etichette locali all'apertura/cambio ricevuta
     useEffect(() => {
         if (!pagamento) return;
         const tags = pagamento.etichette
@@ -293,7 +294,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
         const ctx = {
             nome,
             importo: formatImporto(updated?.importo),
-            numeroOrdine: updated?.numero_ricevuta || `#${updated?.id || ''}`,
+            numeroRiferimento: updated?.numero_ricevuta || `#${updated?.id || ''}`,
             numeroRicevuta: updated?.numero_ricevuta || '',
             nomeAssociazione: societa?.denominazione || '',
             istruzioni: '',
@@ -403,8 +404,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
 
     const scadenzaTess = getScadenzaTesseramento();
     const isAnnullato = pagamento.stato_pagamento?.startsWith('3.');
-    const statoOrdine = getStatoOrdine(pagamento);
-    const statoCfg = STATO_ORDINE_CONFIG[statoOrdine] || STATO_ORDINE_CONFIG.pagato;
+    const statoRicevuta = getStatoRicevuta(pagamento);
+    const statoCfg = STATO_RICEVUTA_CONFIG[statoRicevuta] || STATO_RICEVUTA_CONFIG.pagato;
 
     // Resolve quote items
     const getProductName = (productId) => {
@@ -438,7 +439,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 <div className="dpm-header">
                     <div className="dpm-title">
                         <Calendar size={17} />
-                        <span>Dettaglio ordine</span>
+                        <span>Dettaglio ricevuta</span>
                     </div>
                     <button className="dpm-close-btn" onClick={onClose}><X size={20} /></button>
                 </div>
@@ -454,8 +455,8 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                             )}
                         </div>
                         <div className="dpm-hero-right">
-                            <span style={getStatoOrdineBadgeStyle(statoOrdine)}>
-                                {statoOrdine?.toUpperCase()}
+                            <span style={getStatoRicevutaBadgeStyle(statoRicevuta)}>
+                                {statoRicevuta?.toUpperCase()}
                             </span>
                             <div className="dpm-hero-importo" style={{ color: statoCfg.color }}>
                                 € {formatCurrency(pagamento.importo)}
@@ -493,7 +494,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                 </div>
                             </div>
                             <div className="dpm-field">
-                                <div className="dpm-fl">Data ordine</div>
+                                <div className="dpm-fl">Data ricevuta</div>
                                 <div className="dpm-fv">{formatDate(pagamento.data_ricevuta || pagamento.data_pagamento) || '—'}</div>
                             </div>
                             <div className="dpm-field">
@@ -508,16 +509,16 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                         </div>
                     </div>
 
-                    {/* ── Ricevuta di pagamento caricata dal socio ── */}
+                    {/* ── Quietanza di pagamento caricata dal socio ── */}
                     {pagamento.ricevuta_uploaded_at && (
                         <div className="dpm-card">
                             <div className="dpm-card-label dpm-card-label-row">
-                                <span className="dpm-card-label-icon"><FileCheck size={11} /> Ricevuta di pagamento</span>
+                                <span className="dpm-card-label-icon"><FileCheck size={11} /> Quietanza di pagamento</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ fontWeight: 600, wordBreak: 'break-word' }}>
-                                        {pagamento.ricevuta_file_nome || 'Ricevuta caricata'}
+                                        {pagamento.ricevuta_file_nome || 'Quietanza caricata'}
                                     </div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                         Caricata il {new Date(pagamento.ricevuta_uploaded_at).toLocaleString('it-IT', {
@@ -528,11 +529,11 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                 <button
                                     type="button"
                                     className="dpm-btn-converti"
-                                    onClick={handleApriRicevuta}
-                                    disabled={apriRicevutaBusy}
+                                    onClick={handleApriQuietanza}
+                                    disabled={apriQuietanzaBusy}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                                 >
-                                    <Download size={15} /> {apriRicevutaBusy ? 'Apertura…' : 'Apri / Scarica'}
+                                    <Download size={15} /> {apriQuietanzaBusy ? 'Apertura…' : 'Apri / Scarica'}
                                 </button>
                             </div>
                         </div>
@@ -686,7 +687,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                             <Check size={15} /> Registra Pagamento
                         </button>
                         <button className="dpm-btn-elimina" onClick={() => setShowEliminaConferma(true)}>
-                            <Trash2 size={15} /> Elimina Ordine
+                            <Trash2 size={15} /> Elimina Ricevuta
                         </button>
                     </div>
                 )}
@@ -705,7 +706,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                             <Check size={20} /><span>Registra Pagamento</span>
                         </div>
                         <div className="dpm-confirm-body">
-                            <p>Stai per registrare il pagamento per l'ordine intestato a <strong>{pagamento.intestatario}</strong> e generare la relativa ricevuta.</p>
+                            <p>Stai per registrare il pagamento per la ricevuta intestata a <strong>{pagamento.intestatario}</strong> e generare la relativa ricevuta.</p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', margin: '16px 0' }}>
                                 <div>
                                     <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Anno ricevuta</label>
@@ -797,10 +798,10 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                 <div className="dpm-confirm-overlay">
                     <div className="dpm-confirm-modal">
                         <div className="dpm-confirm-header" style={{ background: 'var(--danger)' }}>
-                            <Trash2 size={20} /><span>Conferma eliminazione ordine</span>
+                            <Trash2 size={20} /><span>Conferma eliminazione ricevuta</span>
                         </div>
                         <div className="dpm-confirm-body">
-                            <p>Stai per eliminare definitivamente l'ordine intestato a <strong>{pagamento.intestatario}</strong> di <strong>€ {formatCurrency(pagamento.importo)}</strong>.</p>
+                            <p>Stai per eliminare definitivamente la ricevuta intestata a <strong>{pagamento.intestatario}</strong> di <strong>€ {formatCurrency(pagamento.importo)}</strong>.</p>
                             <p className="dpm-confirm-warning">Il record verrà cancellato dal database in modo permanente. Questa operazione non può essere annullata.</p>
                         </div>
                         <div className="dpm-confirm-footer">
@@ -813,7 +814,7 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
                                 disabled={deleting}
                                 style={{ opacity: deleting ? 0.6 : 1, cursor: deleting ? 'not-allowed' : 'pointer' }}
                             >
-                                <Trash2 size={14} /> {deleting ? 'Eliminazione…' : 'Sì, elimina ordine'}
+                                <Trash2 size={14} /> {deleting ? 'Eliminazione…' : 'Sì, elimina ricevuta'}
                             </button>
                         </div>
                     </div>
@@ -880,4 +881,4 @@ const DettaglioOrdineModal = ({ isOpen, onClose, ordine: pagamento, onAnnulla, o
     );
 };
 
-export default DettaglioOrdineModal;
+export default DettaglioRicevutaModal;

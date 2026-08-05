@@ -5,15 +5,15 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificato } from '../utils/certificatoUtils';
 import RicercaSocioModal from './RicercaSocioModal';
-import GeneraOrdineModal from './GeneraOrdineModal';
+import GeneraRicevutaModal from './GeneraRicevutaModal';
 import AbbonamentoDateModal from './AbbonamentoDateModal';
-import DettaglioOrdineModal from './DettaglioOrdineModal';
+import DettaglioRicevutaModal from './DettaglioRicevutaModal';
 import IscrizioneCorsoDopoModal from './IscrizioneCorsoDopoModal';
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
 import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     sendComunicazioneEmail, formatImporto,
-} from '../utils/comunicazioniOrdini';
+} from '../utils/comunicazioniRicevute';
 import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
@@ -28,7 +28,7 @@ const getCertStatus = (scadenza) => {
     return 'ISCRITTO';
 };
 
-const NuovoOrdine = () => {
+const NuovaRicevuta = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const { selectedAnno } = useAnno();
     const navigate = useNavigate();
@@ -123,7 +123,7 @@ const NuovoOrdine = () => {
         const isBonifico = (modalita || '').toLowerCase() === 'bonifico';
 
         let conti = [];
-        let linkRicevuta = '';
+        let linkQuietanza = '';
         if (isBonifico) {
             try {
                 const token = localStorage.getItem('token');
@@ -133,7 +133,7 @@ const NuovoOrdine = () => {
                 if (r.ok) conti = await r.json();
             } catch { /* ignore */ }
 
-            // Genera un token (valido 3 giorni) per il caricamento della ricevuta — solo per bonifico.
+            // Genera un token (valido 3 giorni) per il caricamento della quietanza — solo per bonifico.
             if (created?.id) {
                 try {
                     const token = localStorage.getItem('token');
@@ -146,9 +146,9 @@ const NuovoOrdine = () => {
                         body: JSON.stringify({ payment_id: created.id }),
                     });
                     if (tr.ok) {
-                        const { token: ricevutaToken } = await tr.json();
-                        if (ricevutaToken) {
-                            linkRicevuta = `${window.location.origin}/carica-ricevuta?token=${ricevutaToken}`;
+                        const { token: quietanzaToken } = await tr.json();
+                        if (quietanzaToken) {
+                            linkQuietanza = `${window.location.origin}/carica-quietanza?token=${quietanzaToken}`;
                         }
                     }
                 } catch { /* ignore */ }
@@ -159,11 +159,11 @@ const NuovoOrdine = () => {
         const ctx = {
             nome: nomeDestinatario,
             importo: formatImporto(created?.importo),
-            numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
+            numeroRiferimento: created?.numero_ricevuta || `#${created?.id || ''}`,
             numeroRicevuta: created?.numero_ricevuta || '',
             nomeAssociazione: societa?.denominazione || '',
             istruzioni,
-            linkRicevuta,
+            linkQuietanza,
         };
         const testo = applyShortcodes(config.testo, ctx);
         const oggetto = applyShortcodes(config.oggetto, ctx);
@@ -183,7 +183,7 @@ const NuovoOrdine = () => {
 
         // CHIEDI
         await askInvioComunicazione({
-            titolo: 'Comunicazione creazione ordine',
+            titolo: 'Comunicazione creazione ricevuta',
             destinatario: email,
             oggetto,
             testoHtml: testo,
@@ -218,7 +218,7 @@ const NuovoOrdine = () => {
         const ctx = {
             nome: nomeDestinatario,
             importo: formatImporto(created?.importo),
-            numeroOrdine: created?.numero_ricevuta || `#${created?.id || ''}`,
+            numeroRiferimento: created?.numero_ricevuta || `#${created?.id || ''}`,
             numeroRicevuta: created?.numero_ricevuta || '',
             nomeAssociazione: societa?.denominazione || '',
             istruzioni: '',
@@ -265,7 +265,7 @@ const NuovoOrdine = () => {
 
     const [recentPayments, setRecentPayments] = useState([]);
     const prevSocietaId = useRef(undefined);
-    
+
     // Iscrizione / Tesseramento CF sets (stessa logica di Soci.jsx)
     const [quotaPaymentCFs, setQuotaPaymentCFs] = useState(new Set());
     const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
@@ -276,7 +276,7 @@ const NuovoOrdine = () => {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [productSearch, setProductSearch] = useState('');
-    
+
     // Cart
     const [cart, setCart] = useState([]);
 
@@ -517,7 +517,7 @@ const NuovoOrdine = () => {
                 },
                 body: JSON.stringify(body)
             });
-            
+
             if (response.ok) {
                 setIsGeneraModalOpen(false);
 
@@ -559,7 +559,7 @@ const NuovoOrdine = () => {
                 }
 
                 setShowSuccessOverlay(true);
-                setTimeout(() => navigate('/ordini', { replace: true }), 1200);
+                setTimeout(() => navigate('/ricevute', { replace: true }), 1200);
             } else {
                 showSnackbar('Errore durante la generazione del pagamento', 'error');
             }
@@ -572,7 +572,7 @@ const NuovoOrdine = () => {
     const handleCorsoModalClose = () => {
         setIsCorsoIscrizioneModalOpen(false);
         setShowSuccessOverlay(true);
-        setTimeout(() => navigate('/ordini', { replace: true }), 1200);
+        setTimeout(() => navigate('/ricevute', { replace: true }), 1200);
     };
 
     const getItemUnitPrice = (item) => parseFloat((item.unitPriceStr || '0').replace(',', '.')) || 0;
@@ -598,14 +598,14 @@ const NuovoOrdine = () => {
                         }}>
                             <Check size={32} strokeWidth={2.5} color="var(--success)" />
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{lastPaymentType === 'proforma' ? 'Proforma creata' : 'Ordine registrato'}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{lastPaymentType === 'proforma' ? 'Proforma creata' : 'Ricevuta registrata'}</div>
                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Reindirizzamento in corso...</div>
                     </div>
                 </div>
             )}
-            <RicercaSocioModal 
-                isOpen={isRicercaModalOpen} 
-                onClose={() => setIsRicercaModalOpen(false)} 
+            <RicercaSocioModal
+                isOpen={isRicercaModalOpen}
+                onClose={() => setIsRicercaModalOpen(false)}
                 onSelect={handleSocioSelect}
                 societaId={selectedSocietaId}
             />
@@ -645,7 +645,7 @@ const NuovoOrdine = () => {
                     </div>
                 </div>
             )}
-            
+
             <AbbonamentoDateModal
                 isOpen={isAbbonamentoDateModalOpen}
                 onClose={() => setIsAbbonamentoDateModalOpen(false)}
@@ -653,7 +653,7 @@ const NuovoOrdine = () => {
                 duration={subscriptionDuration}
             />
 
-            <GeneraOrdineModal
+            <GeneraRicevutaModal
                 isOpen={isGeneraModalOpen}
                 onClose={() => setIsGeneraModalOpen(false)}
                 onConfirm={handleConfirmPayment}
@@ -663,10 +663,10 @@ const NuovoOrdine = () => {
                 subscriptionDates={subscriptionDates}
             />
 
-            <DettaglioOrdineModal
+            <DettaglioRicevutaModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                ordine={selectedPaymentDetail}
+                ricevuta={selectedPaymentDetail}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={products}
             />
@@ -693,14 +693,14 @@ const NuovoOrdine = () => {
             />
 
             <div className="np-grid">
-                
+
                 {/* LEFT COLUMN */}
                 <div className="np-col-left">
-                    
+
                     {/* INTESTATARIO BLOCK */}
                     <div className="np-card">
                         <div className="np-card-header np-header-default">
-                            Intestatario ordine
+                            Intestatario ricevuta
                         </div>
                         <div className="np-card-body">
                             {!selectedSocio ? (
@@ -754,8 +754,8 @@ const NuovoOrdine = () => {
                     {/* PRODOTTI DISPONIBILI */}
                     <div className="np-card">
                         <div className="np-card-header np-header-yellow">
-                            <List size={18} strokeWidth={2}/> 
-                            Prodotti disponibili 
+                            <List size={18} strokeWidth={2}/>
+                            Prodotti disponibili
                             <span style={{ fontSize: '12px', fontWeight: 400, opacity: 0.9, marginLeft: '6px' }}>
                                 - In evidenza i prodotti pagati in passato dal socio
                             </span>
@@ -769,10 +769,10 @@ const NuovoOrdine = () => {
                             ) : (
                             <>
                             <div className="np-search-group">
-                                <input 
-                                    type="text" 
-                                    placeholder="Prodotto" 
-                                    className="np-input" 
+                                <input
+                                    type="text"
+                                    placeholder="Prodotto"
+                                    className="np-input"
                                     value={productSearch}
                                     onChange={(e) => setProductSearch(e.target.value)}
                                 />
@@ -780,7 +780,7 @@ const NuovoOrdine = () => {
                                     <Search size={18} strokeWidth={1.5}/>
                                 </button>
                             </div>
-                            
+
                             <table className="np-table np-table-selectable">
                                 <tbody>
                                     {filteredProducts.map((p, idx) => (
@@ -795,7 +795,7 @@ const NuovoOrdine = () => {
                                     ))}
                                 </tbody>
                             </table>
-                            
+
                             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div className="np-pagination">
                                     <button className="np-page-btn">&lt;&lt;</button>
@@ -814,17 +814,17 @@ const NuovoOrdine = () => {
 
                 {/* RIGHT COLUMN */}
                 <div className="np-col-right">
-                    
-                    {/* ULTIMI 3 PAGAMENTI */}
+
+                    {/* ULTIME 3 RICEVUTE */}
                     <div className="np-card">
                         <div className="np-card-header np-header-default">
-                            Ultimi 3 ordini
+                            Ultime 3 ricevute
                         </div>
                         <div className="np-card-body">
                             {!selectedSocio || recentPayments.length === 0 ? (
                                 <div className="np-alert-red" style={{ padding: '30px 0' }}>
                                     <AlertTriangle size={18} strokeWidth={1.5}/>
-                                    Non sono presenti ordini per il socio selezionato
+                                    Non sono presenti ricevute per il socio selezionato
                                 </div>
                             ) : (
                                 <div>
@@ -837,7 +837,7 @@ const NuovoOrdine = () => {
                                             )}
                                             <span style={{ color: '#666' }}>{new Date(p.data_pagamento).toLocaleDateString('it-IT')}</span>
                                             <span style={{ fontWeight: 600 }}>€ {parseFloat(p.importo).toFixed(2).replace('.', ',')}</span>
-                                            <button 
+                                            <button
                                                 className="np-btn np-btn-outline-yellow"
                                                 onClick={() => setSelectedPaymentDetail(p)}
                                             >
@@ -854,7 +854,7 @@ const NuovoOrdine = () => {
                     <div className="np-card">
                         <div className="np-card-header np-header-green">
                             <CreditCard size={18} strokeWidth={2}/> Carrello prodotti (max. 5)
-                            
+
 
                         </div>
                         <div className="np-card-body">
@@ -881,7 +881,7 @@ const NuovoOrdine = () => {
                                             cart.map((item, i) => (
                                                 <tr key={i}>
                                                     <td style={{ fontWeight: 500, fontSize: '14px', color: '#333', borderRight: '1px solid var(--surface-1)' }}>
-                                                        {item.description || item.name} 
+                                                        {item.description || item.name}
                                                         <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', float: 'right' }}>
                                                             <X size={16}/>
                                                         </button>
@@ -911,7 +911,7 @@ const NuovoOrdine = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                                 <button className="np-btn np-btn-red" onClick={() => setCart([])}>
                                     <X size={16} strokeWidth={2}/> Annulla
@@ -938,4 +938,4 @@ const NuovoOrdine = () => {
     );
 };
 
-export default NuovoOrdine;
+export default NuovaRicevuta;

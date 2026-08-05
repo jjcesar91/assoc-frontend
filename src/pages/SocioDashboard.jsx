@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { getOrari } from '../utils/corsoUtils';
 import SocioNegozio from './SocioNegozio';
-import SocioOrdini from './SocioOrdini';
+import SocioRicevute from './SocioRicevute';
 import './SocioDashboard.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -227,13 +227,13 @@ export default function SocioDashboard({ onLogout }) {
     const [selectedComunicazione, setSelectedComunicazione] = useState(null);
     const [societaList, setSocietaList] = useState([]);
     const [switching, setSwitching] = useState(false);
-    // Sezione visualizzata: riepilogo, negozio online, elenco dei propri ordini.
+    // Sezione visualizzata: riepilogo, negozio online, elenco delle proprie ricevute.
     const [tab, setTab] = useState('home');
     // Anagrafica completa della società attiva: serve al negozio per i template
     // delle comunicazioni (com_proforma_*) e per il nome dell'associazione.
     const [societaAttiva, setSocietaAttiva] = useState(null);
-    // Incrementato dopo la creazione di un ordine, per ricaricare "I miei ordini".
-    const [ordiniRefresh, setOrdiniRefresh] = useState(0);
+    // Incrementato dopo la creazione di una ricevuta, per ricaricare «Le mie ricevute».
+    const [ricevuteRefresh, setRicevuteRefresh] = useState(0);
 
     // Carica le denominazioni delle società consentite (per la tendina).
     useEffect(() => {
@@ -489,7 +489,7 @@ export default function SocioDashboard({ onLogout }) {
                         Ciao, {socioFirstName}!
                     </h1>
                     <p className="sd-welcome-sub">
-                        Qui puoi consultare i tuoi abbonamenti e corsi, acquistare online e seguire i tuoi ordini.
+                        Qui puoi consultare i tuoi abbonamenti e corsi, acquistare online e seguire le tue ricevute.
                     </p>
                 </div>
             </div>
@@ -500,7 +500,7 @@ export default function SocioDashboard({ onLogout }) {
                     {[
                         { key: 'home', label: 'Home', icon: <Home size={16} /> },
                         { key: 'negozio', label: 'Negozio', icon: <ShoppingCart size={16} /> },
-                        { key: 'ordini', label: 'I miei ordini', icon: <Receipt size={16} /> },
+                        { key: 'ricevute', label: 'Le mie ricevute', icon: <Receipt size={16} /> },
                     ].map(t => (
                         <button
                             key={t.key}
@@ -522,12 +522,12 @@ export default function SocioDashboard({ onLogout }) {
                     <SocioNegozio
                         socio={socio}
                         societa={societaAttiva}
-                        onOrdineCreato={() => setOrdiniRefresh(n => n + 1)}
+                        onRicevutaCreata={() => setRicevuteRefresh(n => n + 1)}
                     />
                 )}
 
-                {tab === 'ordini' && (
-                    <SocioOrdini socio={socio} refreshKey={ordiniRefresh} />
+                {tab === 'ricevute' && (
+                    <SocioRicevute socio={socio} refreshKey={ricevuteRefresh} />
                 )}
 
                 {tab === 'home' && (<>

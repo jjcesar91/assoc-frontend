@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
-import DettaglioOrdineModal from './DettaglioOrdineModal';
-import { getStatoOrdine, getStatoOrdineBadgeStyle } from '../utils/ordineUtils';
+import DettaglioRicevutaModal from './DettaglioRicevutaModal';
+import { getStatoRicevuta, getStatoRicevutaBadgeStyle } from '../utils/ricevutaUtils';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
 import ComunicazioneModal from '../components/ComunicazioneModal';
@@ -13,7 +13,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari, formatOrari } from '../utils/corsoUtils';
-import { openRicevutaCaricata } from '../utils/ricevuta';
+import { openQuietanzaCaricata } from '../utils/quietanza';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -111,7 +111,7 @@ const ScadenzaBadge = ({ stato }) => {
 };
 // ---------------------------------------------------------------------------
 
-// Tag-input con suggerimento etichette (stesso meccanismo del modal ordine):
+// Tag-input con suggerimento etichette (stesso meccanismo del modal ricevuta):
 // pool globale + snapshot iniziale, filtro per sottostringa, dropdown a portale,
 // navigazione da tastiera e opzione "Crea".
 const EtichetteInput = ({ etichetteList, setEtichetteList, allEtichette = [], originalEtichette = [], getTagStyle }) => {
@@ -1291,7 +1291,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     }, [socioPagamenti, prodottiSocieta]);
 
     const handleRinnovaPagamento = (p) => {
-        navigate('/nuovo-ordine', {
+        navigate('/nuova-ricevuta', {
             state: {
                 socio: {
                     id: formData.id || p.socio_id || null,
@@ -1307,7 +1307,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     };
 
     const handleDeleteSocioPagamento = async (id) => {
-        if (!await confirm('Sei sicuro di voler eliminare questo ordine?')) return;
+        if (!await confirm('Sei sicuro di voler eliminare questa ricevuta?')) return;
         try {
             const pagamento = socioPagamenti.find(p => p.id === id);
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
@@ -1318,11 +1318,11 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 logToStorico('ordine',
                     isProforma
                         ? `Proforma eliminata${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`
-                        : `Ordine #${pagamento?.numero_ricevuta || id} eliminato${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`,
-                    { ordine_id: id, tipo_documento: pagamento?.tipo_documento }
+                        : `Ricevuta #${pagamento?.numero_ricevuta || id} eliminata${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`,
+                    { ricevuta_id: id, tipo_documento: pagamento?.tipo_documento }
                 );
             } else {
-                showAlert('Errore durante l\'eliminazione dell\'ordine', 'Errore');
+                showAlert('Errore durante l\'eliminazione della ricevuta', 'Errore');
             }
         } catch (e) {
             console.error(e);
@@ -1339,7 +1339,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 setSelectedPaymentDetail(updated);
                 logToStorico('ordine',
                     `Ricevuta #${updated.numero_ricevuta} annullata${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
-                    { ordine_id: id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
+                    { ricevuta_id: id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
                 );
             } else {
                 showAlert('Errore durante l\'annullamento della ricevuta', 'Errore');
@@ -2013,15 +2013,15 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const storicoTimeline = useMemo(() => {
         const items = [];
 
-        // DB storico (note, accessi frontend, ricevute caricate dal socio)
+        // DB storico (note, accessi frontend, quietanze caricate dal socio)
         storico.forEach(s => {
-            // Le ricevute non hanno un allegato proprio: il file resta sul
+            // Le quietanze non hanno un allegato proprio: il file resta sul
             // payments-service e si apre per payment_id.
             let allegato = null;
             if (s.allegato_path) {
                 allegato = { storiciId: s.id, nome: s.allegato_nome || 'allegato' };
             } else if (s.tipo === 'ricevuta' && s.dettagli?.payment_id) {
-                allegato = { paymentId: s.dettagli.payment_id, nome: s.dettagli.nome_file || 'ricevuta' };
+                allegato = { paymentId: s.dettagli.payment_id, nome: s.dettagli.nome_file || 'quietanza' };
             }
             items.push({
                 id: `storico-${s.id}`,
@@ -2034,7 +2034,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             });
         });
 
-        // Ordini e abbonamenti dai pagamenti
+        // Ricevute e abbonamenti dai pagamenti
         socioPagamenti.forEach(p => {
             const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
             const isAbb = types.includes('subscription');
@@ -2045,7 +2045,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 tipo: isAbb ? 'abbonamento' : 'ordine',
                 azione: isAbb
                     ? `Abbonamento: ${p.quote || 'Abbonamento'} — €${importoAbs}${statoLabel}`
-                    : `Ordine: ${p.quote || 'Pagamento'} — €${importoAbs}${statoLabel}`,
+                    : `Ricevuta: ${p.quote || 'Pagamento'} — €${importoAbs}${statoLabel}`,
                 owner: 'Sistema',
                 data: p.data_pagamento ? new Date(p.data_pagamento) : new Date(p.createdAt),
                 allegato: null,
@@ -2089,24 +2089,24 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     }, [storico, socioPagamenti, comunicazioni, socioCorsi]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const storicoTipoConfig = {
-        ordine: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Ordine', icon: <CreditCard size={14}/> },
+        ordine: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Ricevuta', icon: <CreditCard size={14}/> },
         abbonamento: { color: 'var(--primary-hover)', bg: 'var(--primary-container)', label: 'Abbonamento', icon: <BookOpen size={14}/> },
         iscrizione: { color: '#0d9488', bg: 'var(--primary-container)', label: 'Iscrizione', icon: <ClipboardList size={14}/> },
         iscrizione_attivita: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Attività', icon: <Activity size={14}/> },
         comunicazione: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Comunicazione', icon: <Mail size={14}/> },
         accesso_frontend: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Accesso', icon: <Globe size={14}/> },
         nota: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Nota', icon: <MessageSquare size={14}/> },
-        ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Ricevuta', icon: <Paperclip size={14}/> },
+        ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Quietanza', icon: <Paperclip size={14}/> },
     };
 
-    // Apertura della ricevuta caricata dal socio direttamente dalla riga di storico.
-    const [ricevutaBusyId, setRicevutaBusyId] = useState(null);
-    const handleApriRicevutaStorico = async (paymentId) => {
-        if (ricevutaBusyId) return;
-        setRicevutaBusyId(paymentId);
-        const r = await openRicevutaCaricata(paymentId);
-        setRicevutaBusyId(null);
-        if (!r.ok) showSnackbar(r.error || 'Impossibile aprire la ricevuta', 'error');
+    // Apertura della quietanza caricata dal socio direttamente dalla riga di storico.
+    const [quietanzaBusyId, setQuietanzaBusyId] = useState(null);
+    const handleApriQuietanzaStorico = async (paymentId) => {
+        if (quietanzaBusyId) return;
+        setQuietanzaBusyId(paymentId);
+        const r = await openQuietanzaCaricata(paymentId);
+        setQuietanzaBusyId(null);
+        if (!r.ok) showSnackbar(r.error || 'Impossibile aprire la quietanza', 'error');
     };
 
     const handleSalvaNota = async () => {
@@ -2160,7 +2160,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             { id: 'Contatti', icon: <Users size={18}/>, label: 'Contatti', count: contatti.length || undefined },
         ] : []),
         { id: 'Storico', icon: <ClipboardList size={18}/>, label: 'Storico' },
-        { id: 'Ordini', icon: <CreditCard size={18}/>, label: 'Ordini', count: socioPagamenti.length },
+        { id: 'Ricevute', icon: <CreditCard size={18}/>, label: 'Ricevute', count: socioPagamenti.length },
         ...(!isAssociazione ? [
             { id: 'Abbonamenti', icon: <BookOpen size={18}/>, label: 'Abbonamenti', count: abbonamenti.length },
             { id: 'Attività', icon: <Activity size={18}/>, label: 'Attività', count: socioCorsi.length },
@@ -2220,7 +2220,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     if (val === 'comunicazione') {
                                         setShowComunicazioneModal(true);
                                     } else if (val === 'nuovo_pagamento') {
-                                        navigate('/nuovo-ordine', { state: { socio: socioData } });
+                                        navigate('/nuova-ricevuta', { state: { socio: socioData } });
                                     } else if (val === 'iscrizione_senza_ricevuta') {
                                         setShowIscrizioneModal(true);
                                     } else if (val === 'revoca_iscrizione') {
@@ -2245,7 +2245,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                 <option value="comunicazione">Invia comunicazione</option>
                                 <option value="iscrizione_senza_ricevuta">Iscrizione senza ricevuta</option>
                                 <option value="revoca_iscrizione">Revoca iscrizione</option>
-                                <option value="nuovo_pagamento">Nuovo ordine</option>
+                                <option value="nuovo_pagamento">Nuova ricevuta</option>
                                 
                                 <optgroup label="Modulistica">
                                     {quickModules.map(m => (
@@ -2871,7 +2871,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                         <ClipboardList size={20} color="var(--text-secondary)" />
                                         <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Storico attività</h3>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Log completo di ordini, abbonamenti, comunicazioni e accessi del socio</p>
+                                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Log completo di ricevute, abbonamenti, comunicazioni e accessi del socio</p>
                                 </div>
                                 <button
                                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '7px', border: '1px solid var(--border-color)', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem', color: 'var(--text-secondary)' }}
@@ -2982,13 +2982,13 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                             {item.allegato?.paymentId ? (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleApriRicevutaStorico(item.allegato.paymentId)}
-                                                                    disabled={ricevutaBusyId === item.allegato.paymentId}
-                                                                    title="Apri la ricevuta caricata dal socio"
-                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: ricevutaBusyId === item.allegato.paymentId ? 'wait' : 'pointer', textAlign: 'left' }}
+                                                                    onClick={() => handleApriQuietanzaStorico(item.allegato.paymentId)}
+                                                                    disabled={quietanzaBusyId === item.allegato.paymentId}
+                                                                    title="Apri la quietanza caricata dal socio"
+                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: quietanzaBusyId === item.allegato.paymentId ? 'wait' : 'pointer', textAlign: 'left' }}
                                                                 >
                                                                     <Download size={12} />
-                                                                    {ricevutaBusyId === item.allegato.paymentId ? 'Apertura…' : item.allegato.nome}
+                                                                    {quietanzaBusyId === item.allegato.paymentId ? 'Apertura…' : item.allegato.nome}
                                                                 </button>
                                                             ) : item.allegato && (
                                                                 <a
@@ -3011,20 +3011,20 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                         </div>
                     )}
 
-                    {activeTab === 'Ordini' && (
+                    {activeTab === 'Ricevute' && (
                         <div>
                             <div style={{marginBottom: '12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)'}}>Ordini</h3>
+                                <h3 style={{margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)'}}>Ricevute</h3>
                                 <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                                     <span style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>
-                                        {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} ordin{filteredPagamenti.length === 1 ? 'e' : 'i'}
+                                        {filteredPagamenti.length}{filteredPagamenti.length !== socioPagamenti.length ? ` / ${socioPagamenti.length}` : ''} ricevut{filteredPagamenti.length === 1 ? 'a' : 'e'}
                                     </span>
                                     {isEditMode && formData.id && (
                                         <button
                                             style={{display:'flex', alignItems:'center', gap:'6px', padding:'5px 13px', fontSize:'0.85rem', fontWeight:600, background:'var(--accent, var(--primary))', color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer'}}
-                                            onClick={() => navigate('/nuovo-ordine', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
+                                            onClick={() => navigate('/nuova-ricevuta', { state: { socio: { id: formData.id, nome: formData.nome, cognome: formData.cognome, codice_fiscale: formData.codice_fiscale, cf_genitore: formData.cf_genitore, partita_iva: formData.partita_iva, data_nascita: formData.data_nascita, nome_genitore: formData.nome_genitore, cognome_genitore: formData.cognome_genitore } } })}
                                         >
-                                            <CreditCard size={15} /> Nuovo ordine
+                                            <CreditCard size={15} /> Nuova ricevuta
                                         </button>
                                     )}
                                 </div>
@@ -3109,7 +3109,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                         ) : filteredPagamenti.length === 0 ? (
                                             <tr>
                                                 <td colSpan="5" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
-                                                    {socioPagamenti.length === 0 ? 'Nessun ordine trovato' : 'Nessun ordine corrisponde ai filtri'}
+                                                    {socioPagamenti.length === 0 ? 'Nessuna ricevuta trovata' : 'Nessuna ricevuta corrisponde ai filtri'}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -3148,11 +3148,11 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                         </td>
                                                         <td style={{padding: '12px'}}>
                                                             <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                                                                <span style={getStatoOrdineBadgeStyle(getStatoOrdine(p))}>
-                                                                    {(() => { const s = getStatoOrdine(p); return s === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`); })()}
+                                                                <span style={getStatoRicevutaBadgeStyle(getStatoRicevuta(p))}>
+                                                                    {(() => { const s = getStatoRicevuta(p); return s === 'proforma' ? '—' : (p.numero_ricevuta || `#${p.id}`); })()}
                                                                 </span>
-                                                                <span style={getStatoOrdineBadgeStyle(getStatoOrdine(p))}>
-                                                                    {getStatoOrdine(p)?.toUpperCase()}
+                                                                <span style={getStatoRicevutaBadgeStyle(getStatoRicevuta(p))}>
+                                                                    {getStatoRicevuta(p)?.toUpperCase()}
                                                                 </span>
                                                             </div>
                                                         </td>
@@ -3429,7 +3429,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                         </div>
                     )}
 
-                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Ordini' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && activeTab !== 'Storico' && (
+                    {activeTab !== 'Anagrafica' && activeTab !== 'Comunicazioni' && activeTab !== 'Ricevute' && activeTab !== 'Attività' && activeTab !== 'AccessoFrontend' && activeTab !== 'Abbonamenti' && activeTab !== 'DatiAssociazione' && activeTab !== 'Contatti' && activeTab !== 'Storico' && (
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100%', color:'#aaa'}}>
                              Contenuto placeholder per {activeTab}
                         </div>
@@ -3984,17 +3984,17 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                  />
             )}
 
-            <DettaglioOrdineModal
+            <DettaglioRicevutaModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                ordine={selectedPaymentDetail}
+                ricevuta={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 onConvertProforma={(updated) => {
                     setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                     setSelectedPaymentDetail(updated);
                     logToStorico('ordine',
                         `Proforma convertita in pagamento — ricevuta #${updated.numero_ricevuta}${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
-                        { ordine_id: updated.id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
+                        { ricevuta_id: updated.id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
                     );
                 }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}

@@ -4,7 +4,7 @@ import { Eye, Euro, Printer, X, CalendarClock, User, Landmark, Banknote } from '
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import './Soci.css';
-import './DettaglioPagamentoModal.css';
+import './DettaglioRicevutaModal.css';
 
 // Calcola la data di scadenza per i pagamenti di tipo tesseramento
 function computeScadenzaTesseramento(p, societa) {
@@ -744,7 +744,7 @@ const Scadenziario = () => {
                                                     <button
                                                         title="Paga"
                                                         style={{ padding: 0, border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--success)', color: 'white' }}
-                                                        onClick={() => navigate('/nuovo-ordine', {
+                                                        onClick={() => navigate('/nuova-ricevuta', {
                                                             state: {
                                                                 socio: {
                                                                     id: p.socio_id || null,

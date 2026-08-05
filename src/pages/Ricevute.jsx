@@ -5,15 +5,15 @@ import { useAlert } from '../components/AlertModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PagamentoFastModal from './PagamentoFastModal';
-import DettaglioOrdineModal from './DettaglioOrdineModal';
+import DettaglioRicevutaModal from './DettaglioRicevutaModal';
 import ImportVociRicevutaModal from './ImportVociRicevutaModal';
-import ImportOrdiniOdooModal from './ImportOrdiniOdooModal';
+import ImportRicevuteOdooModal from './ImportRicevuteOdooModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
-import { getStatoOrdine, ETICHETTE_SISTEMA, getEtichettaSistema } from '../utils/ordineUtils';
+import { getStatoRicevuta, ETICHETTE_SISTEMA, getEtichettaSistema } from '../utils/ricevutaUtils';
 import { buildRicevutaHtml } from '../utils/ricevuta';
 import './Soci.css';
 
-const Ordini = () => {
+const Ricevute = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -29,7 +29,7 @@ const Ordini = () => {
     const [showImportOdoo, setShowImportOdoo] = useState(false);
     const [showComunicazioneModal, setShowComunicazioneModal] = useState(false);
     const [selectedSocioForComm, setSelectedSocioForComm] = useState(null);
-    const [selectedOrdineForComm, setSelectedOrdineForComm] = useState(null);
+    const [selectedRicevutaForComm, setSelectedRicevutaForComm] = useState(null);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -50,7 +50,7 @@ const Ordini = () => {
         dataDa: '',
         dataA: '',
         utente: 'TUTTI',
-        statoOrdine: 'TUTTI',
+        statoRicevuta: 'TUTTI',
         modalitaPagamento: 'TUTTI',
         etichetta: ''
     });
@@ -63,7 +63,7 @@ const Ordini = () => {
             dataDa: '',
             dataA: '',
             utente: 'TUTTI',
-            statoOrdine: 'TUTTI',
+            statoRicevuta: 'TUTTI',
             modalitaPagamento: 'TUTTI',
             etichetta: ''
         });
@@ -211,7 +211,7 @@ const Ordini = () => {
     };
 
     // Etichette inserite dagli operatori: alimentano sia il filtro sia i
-    // suggerimenti dell'editor in DettaglioOrdineModal.
+    // suggerimenti dell'editor in DettaglioRicevutaModal.
     const allEtichette = useMemo(() => {
         const set = new Set();
         payments.forEach(p => {
@@ -220,7 +220,7 @@ const Ordini = () => {
         return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
     }, [payments]);
 
-    // Etichette di sistema effettivamente presenti fra gli ordini caricati:
+    // Etichette di sistema effettivamente presenti fra le ricevute caricate:
     // filtrabili come le altre, ma non suggerite nell'editor.
     const etichetteSistema = useMemo(
         () => ETICHETTE_SISTEMA.filter(e => payments.some(e.match)).map(e => e.label),
@@ -233,7 +233,7 @@ const Ordini = () => {
         if (!p.socio_id) return false;
         if (filters.intestatario && !p.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
         if (filters.modalitaPagamento !== 'TUTTI' && p.modalita_pagamento !== filters.modalitaPagamento) return false;
-        if (filters.statoOrdine !== 'TUTTI' && getStatoOrdine(p) !== filters.statoOrdine.toLowerCase()) return false;
+        if (filters.statoRicevuta !== 'TUTTI' && getStatoRicevuta(p) !== filters.statoRicevuta.toLowerCase()) return false;
         if (filters.dataDa && (p.data_ricevuta || p.data_pagamento) < filters.dataDa) return false;
         if (filters.dataA && (p.data_ricevuta || p.data_pagamento) > filters.dataA) return false;
         if (filters.etichetta) {
@@ -289,18 +289,18 @@ const Ordini = () => {
                 {/* Filters Toolbar */}
                 <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch'}}>
                     <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px'}}>
-                        
+
                         <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
                             <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Intestatario</label>
-                            <input 
-                                className="md-input" 
-                                placeholder="Intestatario" 
-                                style={{width: '100%', padding: '6px 12px'}} 
+                            <input
+                                className="md-input"
+                                placeholder="Intestatario"
+                                style={{width: '100%', padding: '6px 12px'}}
                                 value={filters.intestatario}
                                 onChange={(e) => handleFilterChange('intestatario', e.target.value)}
                             />
                         </div>
-                        
+
                         {/* Toggle filtri a scomparsa */}
                         <button
                             type="button"
@@ -314,7 +314,7 @@ const Ordini = () => {
 
                         <div style={{display:'flex', gap:'8px', marginLeft: 'auto'}}>
                             <button
-                                className="btn-contained" 
+                                className="btn-contained"
                                 style={{backgroundColor: 'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
                             >
                                 <Printer size={14}/> Esporta elenco
@@ -334,12 +334,12 @@ const Ordini = () => {
                                 <FileInput size={14}/> Importa da Odoo
                             </button>
                             <div style={{ position: 'relative' }} ref={menuRef}>
-                                <button 
-                                    className="btn-contained" 
+                                <button
+                                    className="btn-contained"
                                     style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
-                                    onClick={() => navigate('/nuovo-ordine')}
+                                    onClick={() => navigate('/nuova-ricevuta')}
                                 >
-                                    <Plus size={14}/> Nuovo Ordine
+                                    <Plus size={14}/> Nuova Ricevuta
                                 </button>
                                 {/* Payment type dropdown hidden - keep code for future use
                                 onClick={() => setShowPaymentMenu(!showPaymentMenu)}
@@ -360,7 +360,7 @@ const Ordini = () => {
                                         flexDirection: 'column',
                                         padding: '5px 0'
                                     }}>
-                                        <button onClick={() => { setShowPaymentMenu(false); navigate('/nuovo-ordine'); }}>
+                                        <button onClick={() => { setShowPaymentMenu(false); navigate('/nuova-ricevuta'); }}>
                                             <span>€</span> Normale
                                         </button>
                                         <button onClick={() => { setShowPaymentMenu(false); setIsFastModalOpen(true); }}>
@@ -414,14 +414,14 @@ const Ordini = () => {
                                 </select>
                             </div>
 
-                            {/* Stato ordine */}
+                            {/* Stato ricevuta */}
                             <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '120px'}}>
-                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato ordine</label>
+                                <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Stato ricevuta</label>
                                 <select
                                     className="md-select"
                                     style={{width: '100%', padding: '6px 12px'}}
-                                    value={filters.statoOrdine}
-                                    onChange={(e) => handleFilterChange('statoOrdine', e.target.value)}
+                                    value={filters.statoRicevuta}
+                                    onChange={(e) => handleFilterChange('statoRicevuta', e.target.value)}
                                 >
                                     <option value="TUTTI">TUTTI</option>
                                     <option value="PROFORMA">PROFORMA</option>
@@ -511,7 +511,7 @@ const Ordini = () => {
                                         const amount = parseFloat(p.importo);
                                         const isAnnullato = p.stato_pagamento?.startsWith('3.');
                                         const isEntrata = amount >= 0 && !isAnnullato;
-                                        
+
                                         return (
                                             <tr key={p.id} style={{
                                                 backgroundColor: isAnnullato ? 'var(--danger-container)' : (isEntrata ? '#fff' : 'var(--danger-container)'),
@@ -540,7 +540,7 @@ const Ordini = () => {
                                                 <td style={{padding: '12px'}}>
                                                     <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
                                                         <span style={{
-                                                            border: `1px solid ${isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)')}`, 
+                                                            border: `1px solid ${isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)')}`,
                                                             color: isAnnullato ? 'var(--danger)' : (isEntrata ? 'var(--success)' : 'var(--danger)'),
                                                             padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
                                                             textDecoration: isAnnullato ? 'line-through' : 'none'
@@ -562,7 +562,7 @@ const Ordini = () => {
                                                                 background: 'var(--warning-container)',
                                                                 padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
                                                                 display: 'inline-block', width: 'fit-content'
-                                                            }} title="Ordine creato dal socio dall'area riservata">
+                                                            }} title="Ricevuta creata dal socio dall'area riservata">
                                                                 DA CLIENTE
                                                             </span>
                                                         )}
@@ -606,15 +606,15 @@ const Ordini = () => {
                                                 </td>
                                                 <td style={{padding: '12px', textAlign:'right', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>
                                                     <div style={{display:'flex', justifyContent:'flex-end', gap:'5px'}}>
-                                                        <button 
-                                                            style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--warning)', color:'white'}} 
+                                                        <button
+                                                            style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--warning)', color:'white'}}
                                                             title="Dettaglio"
                                                             onClick={() => setSelectedPaymentDetail(p)}
                                                         >
                                                             <Folder size={16} />
                                                         </button>
                                                         <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setSelectedOrdineForComm(p); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
+                                                        <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white', opacity: p.socio_id ? 1 : 0.4}} title="Invia email" disabled={!p.socio_id} onClick={() => { setSelectedSocioForComm(p.socio_id); setSelectedRicevutaForComm(p); setShowComunicazioneModal(true); }}><Mail size={16} /></button>
 
                                                     </div>
                                                 </td>
@@ -625,7 +625,7 @@ const Ordini = () => {
                             </tbody>
                         </table>
                     </div>
-                    
+
                     {/* Pagination Footer */}
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'15px', borderTop:'1px solid #eee', marginTop:'auto'}}>
                         <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
@@ -645,16 +645,16 @@ const Ordini = () => {
 
             </div>
 
-            <PagamentoFastModal 
-                isOpen={isFastModalOpen} 
-                onClose={() => setIsFastModalOpen(false)} 
-                societaId={selectedSocietaId} 
+            <PagamentoFastModal
+                isOpen={isFastModalOpen}
+                onClose={() => setIsFastModalOpen(false)}
+                societaId={selectedSocietaId}
             />
 
-            <DettaglioOrdineModal
+            <DettaglioRicevutaModal
                 isOpen={selectedPaymentDetail !== null}
                 onClose={() => setSelectedPaymentDetail(null)}
-                ordine={selectedPaymentDetail}
+                ricevuta={selectedPaymentDetail}
                 onAnnulla={handleAnnullaRicevuta}
                 onConvertProforma={(updated) => {
                     setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -680,7 +680,7 @@ const Ordini = () => {
                 onImported={fetchPayments}
             />
 
-            <ImportOrdiniOdooModal
+            <ImportRicevuteOdooModal
                 isOpen={showImportOdoo}
                 onClose={() => setShowImportOdoo(false)}
                 societaId={selectedSocietaId}
@@ -690,14 +690,14 @@ const Ordini = () => {
             {showComunicazioneModal && selectedSocioForComm && (
                 <ComunicazioneModal
                     socioId={selectedSocioForComm}
-                    ordine={selectedOrdineForComm}
+                    ricevuta={selectedRicevutaForComm}
                     products={products}
                     societa={societaList?.find(s => s.id == selectedSocietaId)}
-                    onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); setSelectedOrdineForComm(null); }}
+                    onClose={() => { setShowComunicazioneModal(false); setSelectedSocioForComm(null); setSelectedRicevutaForComm(null); }}
                 />
             )}
         </div>
     );
 };
 
-export default Ordini;
+export default Ricevute;

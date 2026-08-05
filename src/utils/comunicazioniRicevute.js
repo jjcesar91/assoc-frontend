@@ -1,6 +1,6 @@
-// Configurazione e logica delle comunicazioni automatiche legate agli ordini.
+// Configurazione e logica delle comunicazioni automatiche legate alle ricevute.
 // Due tipologie:
-//   - 'proforma'  : alla creazione di una proforma (ordine)
+//   - 'proforma'  : alla creazione di una proforma (ricevuta provvisoria)
 //   - 'pagamento' : alla conferma/registrazione del pagamento di una proforma
 //
 // Ogni comunicazione ha uno stato: 'NON_ATTIVA' | 'CHIEDI' | 'AUTOMATICA'.
@@ -14,27 +14,30 @@ export const STATO_LABELS = {
 };
 
 // Shortcode disponibili nel WYSIWYG (inseribili dai pulsanti della toolbar).
+// NOTA: i valori dei token sono persistiti nei testi salvati dagli operatori
+// (societa.com_proforma_testo / com_pagamento_testo, conto.istruzioni_pagamento):
+// non vanno rinominati, pena la rottura della sostituzione nei testi già salvati.
 export const SHORTCODE_ISTRUZIONI = '{{ISTRUZIONI_PAGAMENTO}}';
-export const SHORTCODE_LINK_RICEVUTA = '{{LINK_RICEVUTA}}';
+export const SHORTCODE_LINK_QUIETANZA = '{{LINK_RICEVUTA}}';
 export const SHORTCODE_NOME_ASSOCIAZIONE = '{{NOME_ASSOCIAZIONE}}';
 export const SHORTCODE_NUMERO_RICEVUTA = '{{NUMERO_RICEVUTA}}';
 
 export const SHORTCODE_FIELDS_COMUNI = [
     { label: 'Nome', token: '{{NOME}}', title: 'Inserisci il nome del destinatario' },
-    { label: 'Importo', token: '{{IMPORTO}}', title: "Inserisci l'importo totale dell'ordine" },
-    { label: 'N. Ordine', token: '{{NUMERO_ORDINE}}', title: 'Inserisci il numero del documento' },
+    { label: 'Importo', token: '{{IMPORTO}}', title: "Inserisci l'importo totale della ricevuta" },
+    { label: 'N. Riferimento', token: '{{NUMERO_ORDINE}}', title: 'Inserisci il numero del documento' },
 ];
 
 export const SHORTCODE_FIELDS_PROFORMA = [
     ...SHORTCODE_FIELDS_COMUNI,
     { label: 'Istruzioni pagamento', token: SHORTCODE_ISTRUZIONI, title: 'Inserisce le istruzioni di pagamento del conto (solo per conti Bonifico)' },
-    { label: 'Link ricevuta', token: SHORTCODE_LINK_RICEVUTA, title: 'Inserisce il link per il caricamento della ricevuta (solo per pagamenti con bonifico, valido 3 giorni)' },
+    { label: 'Link quietanza', token: SHORTCODE_LINK_QUIETANZA, title: 'Inserisce il link per il caricamento della quietanza (solo per pagamenti con bonifico, valido 3 giorni)' },
 ];
 
 // Placeholder disponibili nel WYSIWYG dell'oggetto (unica funzione: inserire i campi dinamici).
 export const SUBJECT_FIELDS_PROFORMA = [
-    { label: 'Importo', token: '{{IMPORTO}}', title: "Inserisci l'importo totale dell'ordine" },
-    { label: 'N. Ordine', token: '{{NUMERO_ORDINE}}', title: 'Inserisci il numero del documento' },
+    { label: 'Importo', token: '{{IMPORTO}}', title: "Inserisci l'importo totale della ricevuta" },
+    { label: 'N. Riferimento', token: '{{NUMERO_ORDINE}}', title: 'Inserisci il numero del documento' },
     { label: 'Nome socio', token: '{{NOME}}', title: 'Inserisci il nome del socio destinatario' },
     { label: 'Nome associazione', token: SHORTCODE_NOME_ASSOCIAZIONE, title: "Inserisci il nome dell'associazione" },
 ];
@@ -47,10 +50,10 @@ export const SUBJECT_FIELDS_PAGAMENTO = [
 // Testi di default già pronti all'uso.
 export const DEFAULTS = {
     proforma: {
-        oggetto: 'Conferma ordine e istruzioni di pagamento',
+        oggetto: 'Conferma ricevuta e istruzioni di pagamento',
         testo:
             '<p>Gentile {{NOME}},</p>' +
-            '<p>abbiamo registrato il tuo ordine per un importo di <strong>{{IMPORTO}}</strong>.</p>' +
+            '<p>abbiamo registrato la tua ricevuta per un importo di <strong>{{IMPORTO}}</strong>.</p>' +
             `<p>${SHORTCODE_ISTRUZIONI}</p>` +
             '<p>Grazie,<br>Lo staff</p>',
     },
@@ -58,7 +61,7 @@ export const DEFAULTS = {
         oggetto: 'Pagamento registrato {{NOME_ASSOCIAZIONE}} - Ricevuta n. {{NUMERO_RICEVUTA}}',
         testo:
             '<p>Gentile {{NOME}},</p>' +
-            '<p>confermiamo il tuo ordine: il pagamento di <strong>{{IMPORTO}}</strong> è stato registrato correttamente.</p>' +
+            '<p>confermiamo la tua ricevuta: il pagamento di <strong>{{IMPORTO}}</strong> è stato registrato correttamente.</p>' +
             '<p>In allegato trovi la ricevuta del pagamento.</p>' +
             '<p>Grazie,<br>Lo staff</p>',
     },
@@ -87,28 +90,28 @@ export function getComConfig(societa, tipo) {
 /**
  * Sostituisce gli shortcode nel testo HTML (usato anche per l'oggetto).
  * @param {string} html
- * @param {{ nome?: string, importo?: string, numeroOrdine?: string, numeroRicevuta?: string, nomeAssociazione?: string, istruzioni?: string, linkRicevuta?: string }} ctx
+ * @param {{ nome?: string, importo?: string, numeroRiferimento?: string, numeroRicevuta?: string, nomeAssociazione?: string, istruzioni?: string, linkQuietanza?: string }} ctx
  */
 export function applyShortcodes(html, ctx = {}) {
     if (!html) return '';
     let out = html
         .replaceAll('{{NOME}}', ctx.nome || '')
         .replaceAll('{{IMPORTO}}', ctx.importo || '')
-        .replaceAll('{{NUMERO_ORDINE}}', ctx.numeroOrdine || '')
+        .replaceAll('{{NUMERO_ORDINE}}', ctx.numeroRiferimento || '')
         .replaceAll(SHORTCODE_NUMERO_RICEVUTA, ctx.numeroRicevuta || '')
         .replaceAll(SHORTCODE_NOME_ASSOCIAZIONE, ctx.nomeAssociazione || '')
         .replaceAll(SHORTCODE_ISTRUZIONI, ctx.istruzioni || '');
 
-    // Link ricevuta: solo per bonifico. Se assente, rimuovo l'eventuale paragrafo che lo contiene.
-    const tokenRe = SHORTCODE_LINK_RICEVUTA.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (ctx.linkRicevuta) {
-        const anchor = `<a href="${ctx.linkRicevuta}">${ctx.linkRicevuta}</a>`;
-        out = out.replaceAll(SHORTCODE_LINK_RICEVUTA, anchor);
+    // Link quietanza: solo per bonifico. Se assente, rimuovo l'eventuale paragrafo che lo contiene.
+    const tokenRe = SHORTCODE_LINK_QUIETANZA.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (ctx.linkQuietanza) {
+        const anchor = `<a href="${ctx.linkQuietanza}">${ctx.linkQuietanza}</a>`;
+        out = out.replaceAll(SHORTCODE_LINK_QUIETANZA, anchor);
     } else {
         // rimuove un intero blocco <p>...{{LINK_RICEVUTA}}...</p>, poi eventuali token residui
         out = out
             .replace(new RegExp(`<p[^>]*>(?:(?!</p>).)*${tokenRe}(?:(?!</p>).)*</p>`, 'gi'), '')
-            .replaceAll(SHORTCODE_LINK_RICEVUTA, '');
+            .replaceAll(SHORTCODE_LINK_QUIETANZA, '');
     }
     return out;
 }
@@ -123,8 +126,8 @@ export function formatImporto(value) {
  * Costruisce il testo delle istruzioni di pagamento per i conti Bonifico.
  * Sostituisce {{IBAN}} con l'IBAN del conto. Per conti non Bonifico ritorna ''.
  * @param {Array} conti - elenco conti della società
- * @param {string} contoDestinazione - descrizione del conto legato all'ordine
- * @param {string} modalita - modalità di pagamento dell'ordine
+ * @param {string} contoDestinazione - descrizione del conto legato alla ricevuta
+ * @param {string} modalita - modalità di pagamento della ricevuta
  */
 export function buildIstruzioniPagamento(conti, contoDestinazione, modalita) {
     if ((modalita || '').toLowerCase() !== 'bonifico') return '';

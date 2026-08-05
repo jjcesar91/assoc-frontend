@@ -704,7 +704,7 @@
     color: var(--success);
 }
 
-/* ── Tabs (Home / Negozio / I miei ordini) ────────────────────────────── */
+/* ── Tabs (Home / Negozio / Le mie ricevute) ──────────────────────────── */
 .sd-tabs {
     max-width: 900px;
     margin: -24px auto 0;
@@ -754,7 +754,7 @@
     color: #fff;
 }
 
-/* ── Elementi comuni negozio / ordini ─────────────────────────────────── */
+/* ── Elementi comuni negozio / ricevute ───────────────────────────────── */
 .sd-muted {
     color: var(--text-tertiary);
     font-size: 0.85rem;
@@ -975,8 +975,8 @@
     margin: 0;
 }
 
-/* ── Esito ordine ─────────────────────────────────────────────────────── */
-.sd-ordine-esito {
+/* ── Esito ricevuta ───────────────────────────────────────────────────── */
+.sd-ricevuta-esito {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -985,17 +985,17 @@
     text-align: center;
 }
 
-.sd-ordine-esito-icon {
+.sd-ricevuta-esito-icon {
     color: var(--success);
 }
 
-.sd-ordine-esito h2 {
+.sd-ricevuta-esito h2 {
     margin: 0;
     font-size: 1.15rem;
     color: var(--text-primary);
 }
 
-.sd-ordine-avviso {
+.sd-ricevuta-avviso {
     margin: 0 22px 12px;
     padding: 10px 12px;
     border-radius: 9px;
@@ -1004,7 +1004,7 @@
     font-size: 0.83rem;
 }
 
-.sd-ordine-istruzioni {
+.sd-ricevuta-istruzioni {
     margin: 12px 22px;
     padding: 16px;
     border: 1px solid var(--border-color);
@@ -1015,7 +1015,7 @@
     color: var(--text-secondary);
 }
 
-.sd-ordine-istruzioni-titolo {
+.sd-ricevuta-istruzioni-titolo {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1024,11 +1024,11 @@
     color: var(--text-primary);
 }
 
-.sd-ordine-istruzioni p {
+.sd-ricevuta-istruzioni p {
     margin: 0 0 8px;
 }
 
-.sd-ordine-esito-azioni {
+.sd-ricevuta-esito-azioni {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -1036,24 +1036,24 @@
     padding: 8px 22px 4px;
 }
 
-.sd-ordine-upload,
-.sd-ordine-nota {
+.sd-ricevuta-upload,
+.sd-ricevuta-nota {
     padding: 16px 22px 22px;
 }
 
-/* ── I miei ordini ────────────────────────────────────────────────────── */
-.sd-ordini-nota {
+/* ── Le mie ricevute ──────────────────────────────────────────────────── */
+.sd-ricevute-nota {
     padding: 16px 22px 0;
 }
 
-.sd-ordini-list {
+.sd-ricevute-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 16px 22px 22px;
 }
 
-.sd-ordine-card {
+.sd-ricevuta-card {
     display: flex;
     flex-direction: column;
     gap: 9px;
@@ -1064,38 +1064,38 @@
     background: var(--surface-1);
 }
 
-.sd-ordine-card--da_completare {
+.sd-ricevuta-card--da_completare {
     border-left-color: var(--warning);
 }
 
-.sd-ordine-card--completato {
+.sd-ricevuta-card--completato {
     border-left-color: var(--success);
 }
 
-.sd-ordine-card--annullato {
+.sd-ricevuta-card--annullato {
     border-left-color: var(--danger);
     opacity: 0.75;
 }
 
-.sd-ordine-card-top {
+.sd-ricevuta-card-top {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-.sd-ordine-numero {
+.sd-ricevuta-numero {
     font-weight: 700;
     color: var(--text-primary);
 }
 
-.sd-ordine-card-top .sd-amount {
+.sd-ricevuta-card-top .sd-amount {
     margin-left: auto;
     font-size: 1rem;
     color: var(--text-primary);
 }
 
-.sd-ordine-badge {
+.sd-ricevuta-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -1106,25 +1106,25 @@
     letter-spacing: 0.3px;
 }
 
-.sd-ordine-badge--attesa {
+.sd-ricevuta-badge--attesa {
     background: var(--warning-container);
     color: var(--on-warning-container);
     border: 1px solid var(--warning);
 }
 
-.sd-ordine-badge--ok {
+.sd-ricevuta-badge--ok {
     background: var(--success-container);
     color: var(--on-success-container);
     border: 1px solid var(--success-container);
 }
 
-.sd-ordine-badge--annullato {
+.sd-ricevuta-badge--annullato {
     background: var(--danger-container);
     color: var(--on-danger-container);
     border: 1px solid var(--danger-container);
 }
 
-.sd-ordine-card-meta {
+.sd-ricevuta-card-meta {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -1133,13 +1133,13 @@
     color: var(--text-tertiary);
 }
 
-.sd-ordine-righe {
+.sd-ricevuta-righe {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.sd-ordine-riga {
+.sd-ricevuta-riga {
     padding: 3px 10px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -1148,13 +1148,13 @@
     color: var(--text-secondary);
 }
 
-.sd-ordine-note {
+.sd-ricevuta-note {
     font-size: 0.82rem;
     color: var(--text-tertiary);
     font-style: italic;
 }
 
-.sd-ordine-ricevuta {
+.sd-ricevuta-quietanza {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1162,7 +1162,7 @@
     color: var(--on-success-container);
 }
 
-.sd-ordine-card-azioni {
+.sd-ricevuta-card-azioni {
     display: flex;
     gap: 10px;
 }

@@ -11,7 +11,7 @@ import {
     SHORTCODE_FIELDS_COMUNI,
     SUBJECT_FIELDS_PROFORMA,
     SUBJECT_FIELDS_PAGAMENTO,
-} from '../utils/comunicazioniOrdini';
+} from '../utils/comunicazioniRicevute';
 import './Soci.css';
 
 const StatoSelector = ({ value, onChange }) => (
@@ -111,7 +111,7 @@ const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig,
     );
 };
 
-const OrdiniComunicazioni = () => {
+const RicevuteComunicazioni = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
 
     const [proforma, setProforma] = useState({ stato: 'NON_ATTIVA', oggetto: '', testo: '', ccn: false });
@@ -190,13 +190,13 @@ const OrdiniComunicazioni = () => {
                 )}
 
                 <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 20 }}>
-                    Configura le email automatiche inviate al socio nei momenti chiave del ciclo di un ordine.
+                    Configura le email automatiche inviate al socio nei momenti chiave del ciclo di una ricevuta.
                 </p>
 
                 <ComunicazioneCard
                     titolo="Comunicazione nuova proforma"
                     icon={<FileText size={18} />}
-                    descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione dell'ordine e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
+                    descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione della ricevuta e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
                     tipo="proforma"
                     config={proforma}
                     setConfig={setProforma}
@@ -206,9 +206,9 @@ const OrdiniComunicazioni = () => {
                 />
 
                 <ComunicazioneCard
-                    titolo="Comunicazione ordine pagato"
+                    titolo="Comunicazione ricevuta pagata"
                     icon={<Mail size={18} />}
-                    descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma l'ordine, comunica la registrazione del pagamento e allega la ricevuta in PDF."
+                    descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma la ricevuta, comunica la registrazione del pagamento e allega la ricevuta in PDF."
                     tipo="pagamento"
                     config={pagamento}
                     setConfig={setPagamento}
@@ -227,4 +227,4 @@ const OrdiniComunicazioni = () => {
     );
 };
 
-export default OrdiniComunicazioni;
+export default RicevuteComunicazioni;

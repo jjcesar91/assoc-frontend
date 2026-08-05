@@ -10,13 +10,13 @@ import './Soci.css';
 export const NOTIFICHE_TIPI = [
     {
         key: 'ricevuta_caricata',
-        label: 'Ricevuta caricata',
-        descrizione: 'Un socio carica la ricevuta di pagamento di un ordine.',
+        label: 'Quietanza caricata',
+        descrizione: 'Un socio carica la quietanza di pagamento di una ricevuta.',
     },
     {
         key: 'nuovo_ordine',
-        label: 'Nuovo ordine',
-        descrizione: 'Un socio crea un nuovo ordine.',
+        label: 'Nuova ricevuta',
+        descrizione: 'Un socio crea una nuova ricevuta.',
     },
 ];
 

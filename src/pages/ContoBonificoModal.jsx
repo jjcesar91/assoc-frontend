@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Landmark, X, Check } from 'lucide-react';
 import SimpleEditor from '../components/SimpleEditor';
+import { SHORTCODE_LINK_QUIETANZA } from '../utils/comunicazioniRicevute';
 import './ContoBonificoModal.css';
 
 const IBAN_TOKEN = '{{IBAN}}';
-const LINK_RICEVUTA_TOKEN = '{{LINK_RICEVUTA}}';
+const LINK_QUIETANZA_TOKEN = SHORTCODE_LINK_QUIETANZA;
 
 // Messaggio di istruzioni predefinito per i conti di tipo bancario (bonifico).
 // Precaricato quando il conto non ha ancora istruzioni; modificabile liberamente nel WYSIWYG.
 export const DEFAULT_ISTRUZIONI_BONIFICO =
-    `<p>Per completare l'ordine effettua un bonifico bancario sul seguente IBAN: ${IBAN_TOKEN}.</p>` +
-    `<p>Ti chiediamo di indicare nella causale il nome e cognome dell'intestatario e il numero dell'ordine.</p>` +
-    `<p>Una volta effettuato il pagamento, carica la ricevuta a questo link (valido 3 giorni): ${LINK_RICEVUTA_TOKEN}</p>`;
+    `<p>Per completare la ricevuta effettua un bonifico bancario sul seguente IBAN: ${IBAN_TOKEN}.</p>` +
+    `<p>Ti chiediamo di indicare nella causale il nome e cognome dell'intestatario e il numero della ricevuta.</p>` +
+    `<p>Una volta effettuato il pagamento, carica la quietanza a questo link (valido 3 giorni): ${LINK_QUIETANZA_TOKEN}</p>`;
 
 const ContoBonificoModal = ({ isOpen, onClose, onSave, conto }) => {
     const [descrizione, setDescrizione] = useState('');
@@ -79,14 +80,14 @@ const ContoBonificoModal = ({ isOpen, onClose, onSave, conto }) => {
                                 onChange={(e) => setIstruzioni(e.target.value)}
                                 insertFields={[
                                     { label: 'IBAN', token: IBAN_TOKEN, title: "Inserisci il campo IBAN nel punto in cui si trova il cursore" },
-                                    { label: 'Link ricevuta', token: LINK_RICEVUTA_TOKEN, title: "Inserisce il link per il caricamento della ricevuta (valido 3 giorni)" },
+                                    { label: 'Link quietanza', token: LINK_QUIETANZA_TOKEN, title: "Inserisce il link per il caricamento della quietanza (valido 3 giorni)" },
                                 ]}
                             />
                             <div className="field-hint">
                                 Usa il pulsante <strong>IBAN</strong> nella barra degli strumenti per inserire il campo
                                 nel punto desiderato: il segnaposto <code>{IBAN_TOKEN}</code> verrà sostituito automaticamente
-                                con l'IBAN configurato qui sopra. Con <strong>Link ricevuta</strong> inserisci il segnaposto
-                                <code>{LINK_RICEVUTA_TOKEN}</code>, sostituito con il link per il caricamento della ricevuta.
+                                con l'IBAN configurato qui sopra. Con <strong>Link quietanza</strong> inserisci il segnaposto
+                                <code>{LINK_QUIETANZA_TOKEN}</code>, sostituito con il link per il caricamento della quietanza.
                             </div>
                         </div>
 
