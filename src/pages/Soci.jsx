@@ -123,23 +123,6 @@ const Soci = ({ onLogout }) => {
     const navigate = useNavigate();
     const [hasOpenedFromUrl, setHasOpenedFromUrl] = useState(false);
 
-    const canReadPayments = (() => {
-        const role = (localStorage.getItem('user_role') || 'user').toLowerCase();
-        if (role === 'superuser') {
-            return true;
-        }
-
-        try {
-            const features = JSON.parse(localStorage.getItem('user_features'));
-            if (features === null || features === undefined) {
-                return true;
-            }
-            return Array.isArray(features) && features.includes('pagamenti');
-        } catch {
-            return true;
-        }
-    })();
-
     useEffect(() => {
         if (soci && soci.length > 0 && !hasOpenedFromUrl) {
             const params = new URLSearchParams(location.search);
@@ -158,8 +141,12 @@ const Soci = ({ onLogout }) => {
 
     // Fetch dei pagamenti della società: le scadenze
     // Iscrizione/Tesseramento vengono poi precalcolate in scadenzaMaps.
+    // NB: non è gated da nessuna feature — lo stato di iscrizione è una
+    // funzionalità core della sezione "Soci" e deve essere visibile anche a chi
+    // non ha accesso alla sezione "Ricevute" (il backend non applica comunque
+    // alcuna restrizione su questo endpoint per gli utenti autenticati della società).
     const fetchPayments = async () => {
-        if (!selectedSocietaId || !canReadPayments) {
+        if (!selectedSocietaId) {
             setPayments([]);
             return;
         }
@@ -176,7 +163,7 @@ const Soci = ({ onLogout }) => {
 
     useEffect(() => {
         fetchPayments();
-    }, [selectedSocietaId, canReadPayments]);
+    }, [selectedSocietaId]);
 
     useEffect(() => {
         // Fetch current user info for the menu
@@ -1367,7 +1354,7 @@ const Soci = ({ onLogout }) => {
                                             >
                                                 <Mail size={18}/>
                                             </button>
-                                            <button className="btn-icon-small" title="Nuovo pagamento" onClick={() => navigate('/nuovo-ordine', { state: { socio } })}><Euro size={18}/></button>
+                                            <button className="btn-icon-small" title="Nuovo pagamento" onClick={() => navigate('/nuova-ricevuta', { state: { socio } })}><Euro size={18}/></button>
                                         </td>
                                     </tr>
                                 ))}

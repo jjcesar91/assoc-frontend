@@ -47,14 +47,24 @@ function hasFeatureAccess(featureId) {
 
 function hasApiAccess(requestUrl) {
   if (requestUrl.includes('/payments/')) {
-    return hasFeatureAccess('pagamenti');
+    // payments è una API condivisa usata da ricevute, soci (stato iscrizione/tesseramento),
+    // scadenziario, contabilità, attività (abbonamenti/corsi) e societa (anno contabile):
+    // basta che l'utente abbia almeno una delle feature che la utilizzano.
+    return (
+      hasFeatureAccess('ricevute') ||
+      hasFeatureAccess('soci') ||
+      hasFeatureAccess('scadenziario') ||
+      hasFeatureAccess('contabilita') ||
+      hasFeatureAccess('attivita') ||
+      hasFeatureAccess('societa')
+    );
   }
   if (requestUrl.includes('/products/')) {
-    // products è una API condivisa usata da pagamenti, soci, attività, scadenziario, prodotti
+    // products è una API condivisa usata da ricevute, soci, attività, scadenziario, prodotti
     // basta che l'utente abbia almeno una delle feature che la utilizzano
     return (
       hasFeatureAccess('prodotti') ||
-      hasFeatureAccess('pagamenti') ||
+      hasFeatureAccess('ricevute') ||
       hasFeatureAccess('soci') ||
       hasFeatureAccess('attivita') ||
       hasFeatureAccess('scadenziario') ||
