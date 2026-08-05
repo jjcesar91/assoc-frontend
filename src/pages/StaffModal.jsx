@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shirt, AlertTriangle } from 'lucide-react';
+import { X, Shirt, AlertTriangle, UserSearch } from 'lucide-react';
 import CodiceFiscale from 'codice-fiscale-js';
 import CityAutocomplete from '../components/CityAutocomplete';
+import RicercaSocioModal from './RicercaSocioModal';
 import './SocioModal.css';
 import './Soci.css';
 
@@ -22,16 +23,18 @@ const EMPTY = {
     iban: '',
 };
 
-const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
+const StaffModal = ({ isOpen, onClose, staff, onSave, societaId }) => {
     const [form, setForm] = useState(EMPTY);
     const [warningMessage, setWarningMessage] = useState(null);
     const [highlightCF, setHighlightCF] = useState(false);
+    const [isSocioSearchOpen, setIsSocioSearchOpen] = useState(false);
 
     // Reset warning/highlight when modal opens or closes
     useEffect(() => {
         if (!isOpen) {
             setWarningMessage(null);
             setHighlightCF(false);
+            setIsSocioSearchOpen(false);
         }
     }, [isOpen]);
 
@@ -227,6 +230,25 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
         setForm(prev => ({ ...prev, comune: city.nome, cap: city.cap || prev.cap }));
     };
 
+    const handleImportFromSocio = (socio) => {
+        setForm(prev => ({
+            ...prev,
+            cognome: (socio.cognome || '').toUpperCase(),
+            nome: (socio.nome || '').toUpperCase(),
+            sesso: socio.sesso || prev.sesso,
+            dataNascita: socio.data_nascita || prev.dataNascita,
+            luogoNascita: (socio.luogo_nascita || '').toUpperCase() || prev.luogoNascita,
+            codiceFiscale: (socio.codice_fiscale || '').toUpperCase(),
+            email: socio.email || prev.email,
+            telefono: socio.telefono || prev.telefono,
+            indirizzo: (socio.indirizzo || '').toUpperCase() || prev.indirizzo,
+            comune: (socio.comune || '').toUpperCase() || prev.comune,
+            cap: socio.cap || prev.cap,
+        }));
+        setWarningMessage(null);
+        setIsSocioSearchOpen(false);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         const payload = {
@@ -268,6 +290,20 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                         <X size={22} />
                     </button>
                 </div>
+
+                {/* Importa da anagrafica socio */}
+                {!staff && (
+                    <div style={{ padding: '16px 24px 0' }}>
+                        <button
+                            type="button"
+                            className="btn-outlined"
+                            onClick={() => setIsSocioSearchOpen(true)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}
+                        >
+                            <UserSearch size={16} /> Importa da anagrafica socio
+                        </button>
+                    </div>
+                )}
 
                 {/* Warning CF */}
                 {warningMessage && (
@@ -398,6 +434,13 @@ const StaffModal = ({ isOpen, onClose, staff, onSave }) => {
                     </button>
                 </div>
             </div>
+
+            <RicercaSocioModal
+                isOpen={isSocioSearchOpen}
+                onClose={() => setIsSocioSearchOpen(false)}
+                onSelect={handleImportFromSocio}
+                societaId={societaId}
+            />
         </div>
     );
 };
