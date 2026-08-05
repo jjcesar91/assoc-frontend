@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings } from 'lucide-react';
+import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -596,6 +596,19 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                                     textTransform: 'uppercase',
                                                 }}>
                                                     {sottotitolo}
+                                                </div>
+                                            )}
+                                            {(p.socio_id || p.fornitore_id) && p.intestatario && (
+                                                <div style={{
+                                                    fontSize: '0.78rem',
+                                                    color: 'var(--text-secondary)',
+                                                    marginTop: '2px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                }}>
+                                                    {p.socio_id ? <User size={11} /> : <Truck size={11} />}
+                                                    {p.intestatario}
                                                 </div>
                                             )}
                                         </td>
