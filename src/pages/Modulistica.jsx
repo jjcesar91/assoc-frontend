@@ -3,6 +3,7 @@ import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, 
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
+import { formatDateIT } from '../utils/dateUtils';
 
 const Modulistica = () => {
     const { selectedSocietaId, societaList } = useSocieta();
@@ -115,7 +116,7 @@ const Modulistica = () => {
         const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
         const cf = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
         const footerText = societa ? (societa.footer_text || '') : '';
-        const today = new Date(dateToPrint).toLocaleDateString('it-IT');
+        const today = formatDateIT(dateToPrint);
 
         // Helper to convert image to base64 to avoid CORS/Loading issues in PDF
         const getBase64Image = (url) => {

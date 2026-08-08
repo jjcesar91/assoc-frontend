@@ -1,4 +1,5 @@
 import { getAnnoDateRange } from '../data/AnnoContext';
+import { formatDateIT } from './dateUtils';
 
 /**
  * Regole condivise sulla data documento/ricevuta di una ricevuta.
@@ -19,11 +20,7 @@ export function oggiStr() {
 }
 
 /** Converte una data YYYY-MM-DD nel formato italiano GG/MM/AAAA. */
-export function formatDataIT(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-}
+export const formatDataIT = formatDateIT;
 
 /**
  * Intervallo selezionabile per la data di una ricevuta.

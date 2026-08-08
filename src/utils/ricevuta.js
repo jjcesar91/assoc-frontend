@@ -2,6 +2,8 @@
 // Estratto da Ricevute.jsx per essere riusato sia per la stampa che per l'invio
 // della ricevuta come allegato PDF nelle comunicazioni email.
 
+import { formatDateIT } from './dateUtils';
+
 const RICEVUTA_CSS = `
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
         .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
@@ -184,7 +186,7 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
         <tr>
             <td>${isProforma ? 'PROFORMA' : 'RICEVUTA'}</td>
             <td>${isProforma ? '' : (p.numero_ricevuta || '')}</td>
-            <td>${(p.data_ricevuta || p.data_pagamento || '') ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
+            <td>${formatDateIT(p.data_ricevuta || p.data_pagamento)}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
@@ -225,9 +227,7 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
     <div class="footer-text">${footerText}</div>
     <div class="separator">_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _</div>`;
 
-    const dataDocumento = (p.data_ricevuta || p.data_pagamento)
-        ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        : '';
+    const dataDocumento = formatDateIT(p.data_ricevuta || p.data_pagamento);
 
     return {
         css: RICEVUTA_CSS,

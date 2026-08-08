@@ -14,6 +14,7 @@ import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
+import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -96,8 +97,7 @@ const GIORNI_SETTIMANA = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Vene
 
 const formatDateIT = (dateStr) => {
     if (!dateStr) return '-';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('it-IT');
+    return formatDateITShared(dateStr);
 };
 
 const ScadenzaBadge = ({ stato }) => {
@@ -547,7 +547,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             const denomination = societa ? societa.denominazione : 'Nome Società';
             const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
             const cfInfo = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
-            const today = new Date(printDate).toLocaleDateString('it-IT');
+            const today = formatDateITShared(printDate);
 
             // Helper to convert image to base64
             const getBase64Image = (url) => {
@@ -573,15 +573,9 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 element.style.maxWidth = '800px';
                 
                 // Format birth date for display
-                let birthDateDisplay = '';
-                if (formData.data_nascita) {
-                    const d = new Date(formData.data_nascita);
-                    if (!isNaN(d.getTime())) {
-                        birthDateDisplay = d.toLocaleDateString('it-IT');
-                    } else {
-                        birthDateDisplay = formData.data_nascita;
-                    }
-                }
+                let birthDateDisplay = formData.data_nascita
+                    ? (formatDateITShared(formData.data_nascita) || formData.data_nascita)
+                    : '';
 
                 element.innerHTML = `
                 <div style="padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
@@ -1501,7 +1495,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             <td>${isProforma ? 'PROFORMA' : 'RICEVUTA'}</td>
             <td>${isProforma ? '' : (p.numero_ricevuta || '')}</td>
             <td>${isProforma ? '' : (p.progressivo_stagione || '')}</td>
-            <td>${(p.data_ricevuta || p.data_pagamento) ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
+            <td>${formatDateITShared(p.data_ricevuta || p.data_pagamento)}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
@@ -2801,7 +2795,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                         display: 'flex',
                                                         flexDirection: 'column'
                                                     }}>
-                                                        <span>{new Date(com.data_invio || com.createdAt).toLocaleDateString()}</span>
+                                                        <span>{formatDateITShared(com.data_invio || com.createdAt)}</span>
                                                         <span style={{color: 'var(--text-tertiary)', fontSize: '0.75rem'}}>{new Date(com.data_invio || com.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                                     </div>
                                                     <div>
@@ -2983,7 +2977,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                                 </span>
                                                             </div>
                                                             <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                                                {item.data.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                                {formatDateITShared(item.data)}
                                                                 {' '}
                                                                 {item.data.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
@@ -3159,7 +3153,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                                 <div>
                                                                     <div style={{fontWeight:'600', color: 'var(--text-primary)'}}>{p.intestatario}</div>
                                                                     <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
-                                                                        {p.data_pagamento} <User size={12}/> {p.utente_nome || 'ADMIN'}
+                                                                        {formatDateITShared(p.data_pagamento)} <User size={12}/> {p.utente_nome || 'ADMIN'}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -3193,7 +3187,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                                             {scad.stato}
                                                                         </span>
                                                                         <span style={{fontSize:'0.72rem', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
-                                                                            scad. {new Date(scad.scadenzaStr).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})}
+                                                                            scad. {formatDateITShared(scad.scadenzaStr)}
                                                                         </span>
                                                                     </div>
                                                                 )}
@@ -3298,7 +3292,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                         </td>
                                                         <td style={{padding: '12px 14px', fontSize: '0.88rem', color: 'var(--text-secondary)'}}>
                                                             {abb.scadenzaDate
-                                                                ? abb.scadenzaDate.toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit', year: 'numeric'})
+                                                                ? formatDateITShared(abb.scadenzaDate)
                                                                 : '-'}
                                                         </td>
                                                         <td style={{padding: '12px 14px', borderTopRightRadius: '4px', borderBottomRightRadius: '4px'}}>

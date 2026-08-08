@@ -4,6 +4,7 @@ import './GeneraPagamentoModal.css';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
+import { formatDateIT } from '../utils/dateUtils';
 
 const GeneraRicevutaModal = ({
     isOpen,
@@ -188,12 +189,6 @@ const GeneraRicevutaModal = ({
 
     const hasSubscription = cart.some(i => i.type === 'subscription');
 
-    const formatDateIT = (dateStr) => {
-        if (!dateStr) return '';
-        const [y, m, d] = dateStr.split('-');
-        return `${d}/${m}/${y}`;
-    };
-
     const handleConfirm = (tipoDocumento = 'pagamento', progressivoIniziale = null) => {
         if (submitting) return;
 
@@ -231,7 +226,7 @@ const GeneraRicevutaModal = ({
                 const scad = new Date(d);
                 scad.setFullYear(scad.getFullYear() + 1);
                 scad.setDate(scad.getDate() - 1);
-                return scad.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                return formatDateIT(scad);
             }
             if (periodicity === 'anno_associativo') {
                 const tipo = selectedSocieta?.tipo_anno_associativo || 'solare';
@@ -247,7 +242,7 @@ const GeneraRicevutaModal = ({
                     if (m < cMonth || (m === cMonth && day < cDay)) anno = d.getFullYear() - 1;
                 }
                 const { end } = getAnnoDateRange(anno, selectedSocieta);
-                return end.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                return formatDateIT(end);
             }
             return '';
         };

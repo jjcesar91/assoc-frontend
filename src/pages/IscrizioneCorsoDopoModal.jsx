@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Users, UserPlus, Check, BookOpen, AlertTriangle } from 'lucide-react';
 import { formatOrari } from '../utils/corsoUtils';
+import { formatDateIT } from '../utils/dateUtils';
 import './IscrizioneCorsoDopoModal.css';
 
 const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) => {
@@ -232,7 +233,7 @@ const IscrizioneCorsoDopoModal = ({ isOpen, onClose, corsi, socio, societaId }) 
                                                         </td>
                                                         <td>
                                                             {i.dataIscrizione
-                                                                ? new Date(i.dataIscrizione).toLocaleDateString('it-IT')
+                                                                ? formatDateIT(i.dataIscrizione)
                                                                 : '—'}
                                                         </td>
                                                     </tr>

@@ -11,6 +11,7 @@ import ImportRicevuteOdooModal from './ImportRicevuteOdooModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import { getStatoRicevuta, ETICHETTE_SISTEMA, getEtichettaSistema } from '../utils/ricevutaUtils';
 import { buildRicevutaHtml } from '../utils/ricevuta';
+import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 
 const Ricevute = () => {
@@ -531,7 +532,7 @@ const Ricevute = () => {
                                                                 ) : p.intestatario}
                                                             </div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
-                                                                {new Date(p.updatedAt || p.createdAt).toLocaleDateString('it-IT')} {(p.updatedAt || p.createdAt) ? `- h ${new Date(p.updatedAt || p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''} <User size={12}/> {p.modificato_da || p.utente_nome || 'ADMIN'}
+                                                                {formatDateIT(p.updatedAt || p.createdAt)} {(p.updatedAt || p.createdAt) ? `- h ${new Date(p.updatedAt || p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''} <User size={12}/> {p.modificato_da || p.utente_nome || 'ADMIN'}
                                                                 {isAnnullato && <span style={{color:'var(--danger)', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>

@@ -7,6 +7,7 @@ import {
     X, Mail, Smartphone, ArrowLeftCircle, Home, ShoppingCart, Receipt
 } from 'lucide-react';
 import { getOrari } from '../utils/corsoUtils';
+import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
 import SocioNegozio from './SocioNegozio';
 import SocioRicevute from './SocioRicevute';
 import './SocioDashboard.css';
@@ -23,8 +24,7 @@ const computeOraFine = (oraInizio, durataMinuti) => {
 
 const formatDateIT = (str) => {
     if (!str) return '—';
-    const [y, m, d] = str.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('it-IT');
+    return formatDateITShared(str);
 };
 
 const computeStatoAbbonamento = (dateStr, giorniAvviso) => {
@@ -181,7 +181,7 @@ const ComunicazioneDetailModal = ({ comunicazione, onClose }) => {
                 <div className="sd-modal-meta">
                     <span className="sd-modal-meta-item">
                         <CalendarDays size={13} />
-                        {data.toLocaleDateString('it-IT')} alle {data.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                        {formatDateITShared(data)} alle {data.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {comunicazione.mittente_nome && (
                         <span className="sd-modal-meta-item">
@@ -599,7 +599,7 @@ export default function SocioDashboard({ onLogout }) {
                             const isEmail = c.tipo === 'EMAIL';
                             const tipoKey = c.tipo?.toLowerCase() || 'default';
                             const dateStr = c.createdAt
-                                ? new Date(c.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+                                ? formatDateITShared(c.createdAt)
                                 : '';
                             const preview = stripHtml(c.testo);
                             return (
