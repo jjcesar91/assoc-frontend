@@ -15,6 +15,7 @@ import {
     sendComunicazioneEmail, formatImporto,
 } from '../utils/comunicazioniRicevute';
 import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
+import { formatDateIT } from '../utils/dateUtils';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
 // NB: riguarda solo il certificato medico (scadenza_certificato), non lo stato di
@@ -725,7 +726,7 @@ const NuovaRicevuta = () => {
                                         <div>
                                             <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{selectedSocio.cognome} {selectedSocio.nome}</h3>
                                             <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-                                                Data nascita {selectedSocio.data_nascita ? new Date(selectedSocio.data_nascita).toLocaleDateString('it-IT') : ''} - Codice fiscale {selectedSocio.codice_fiscale}
+                                                Data nascita {formatDateIT(selectedSocio.data_nascita)} - Codice fiscale {selectedSocio.codice_fiscale}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <span className={`np-badge ${isSocioIscrittoOTesserato(selectedSocio) ? 'np-badge-success' : 'np-badge-danger'}`}>
@@ -733,7 +734,7 @@ const NuovaRicevuta = () => {
                                                 </span>
                                                 <span className={`np-badge ${getCertStatus(selectedSocio.scadenza_certificato) === 'CERTIFICATO VALIDO' ? 'np-badge-success' : 'np-badge-danger'}`}>
                                                     {getCertStatus(selectedSocio.scadenza_certificato)}
-                                                    {selectedSocio.scadenza_certificato ? ` (${new Date(selectedSocio.scadenza_certificato).toLocaleDateString('it-IT')})` : ''}
+                                                    {selectedSocio.scadenza_certificato ? ` (${formatDateIT(selectedSocio.scadenza_certificato)})` : ''}
                                                 </span>
                                             </div>
                                         </div>
@@ -838,7 +839,7 @@ const NuovaRicevuta = () => {
                                             ) : (
                                                 <span style={{ fontWeight: 100, color: '#888' }}>NO RIC</span>
                                             )}
-                                            <span style={{ color: '#666' }}>{new Date(p.data_pagamento).toLocaleDateString('it-IT')}</span>
+                                            <span style={{ color: '#666' }}>{formatDateIT(p.data_pagamento)}</span>
                                             <span style={{ fontWeight: 600 }}>€ {parseFloat(p.importo).toFixed(2).replace('.', ',')}</span>
                                             <button
                                                 className="np-btn np-btn-outline-yellow"

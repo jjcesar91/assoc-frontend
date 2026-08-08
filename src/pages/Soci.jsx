@@ -8,6 +8,7 @@ import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { formatDateIT } from '../utils/dateUtils';
 import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -346,9 +347,7 @@ const Soci = ({ onLogout }) => {
 
     const formatDate = (d) => {
         if (!d) return '';
-        const dt = new Date(d);
-        if (isNaN(dt)) return d;
-        return dt.toLocaleDateString('it-IT');
+        return formatDateIT(d) || d;
     };
 
     const exportToExcel = () => {
@@ -1350,7 +1349,7 @@ const Soci = ({ onLogout }) => {
                                             )}
                                         </td>
                                         <td>
-                                            {socio.data_nascita}
+                                            {formatDate(socio.data_nascita)}
                                         </td>
                                         <td>
                                             {(() => {
@@ -1371,7 +1370,7 @@ const Soci = ({ onLogout }) => {
                                                 const status = getCertStatus(socio.scadenza_certificato);
                                                 let color = 'inherit';
                                                 const scadenzaStr = computeScadenzaCertificatoStr(socio.scadenza_certificato);
-                                                let text = scadenzaStr || socio.scadenza_certificato;
+                                                let text = formatDate(scadenzaStr || socio.scadenza_certificato);
 
                                                 if (status === 'MISSING') {
                                                     color = 'var(--danger-color)';

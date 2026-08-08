@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { X, Upload, ChevronRight, ChevronLeft, Check, AlertTriangle, Info } from 'lucide-react';
+import { formatDateIT } from '../utils/dateUtils';
 
 // ---------------------------------------------------------------------------
 // Lazy-load xlsx from CDN (bypasses Vite module resolution — works even when
@@ -972,7 +973,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                             <option key={s.id} value={s.id}>
                                                                 {s.cognome} {s.nome}
                                                                 {s.codice_fiscale ? ` — CF: ${s.codice_fiscale}` : ''}
-                                                                {s.data_nascita ? ` — nato: ${s.data_nascita}` : ''}
+                                                                {s.data_nascita ? ` — nato: ${formatDateIT(s.data_nascita)}` : ''}
                                                             </option>
                                                         ))}
                                                         <option value="SKIP">— nessuno (importa senza collegamento) —</option>
@@ -1089,7 +1090,7 @@ const ImportPrimaNotaModal = ({ isOpen, onClose, societaId, onImported }) => {
                                                                     <option key={s.id} value={s.id}>
                                                                         {s.cognome} {s.nome}
                                                                         {s.codice_fiscale ? ` — CF: ${s.codice_fiscale}` : ''}
-                                                                        {s.data_nascita ? ` — nato: ${s.data_nascita}` : ''}
+                                                                        {s.data_nascita ? ` — nato: ${formatDateIT(s.data_nascita)}` : ''}
                                                                     </option>
                                                                 ))}
                                                             </select>

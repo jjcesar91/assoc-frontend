@@ -9,6 +9,7 @@ import ComunicazioniModal, { NOTIFICHE_TIPI } from './ComunicazioniModal';
 import './SocioModal.css';
 import './Soci.css';
 import { getPasswordValidationErrors } from '../utils/passwordValidation';
+import { formatDateTimeIT } from '../utils/dateUtils';
 
 const PAGE_SIZE = 15;
 
@@ -21,8 +22,7 @@ const ROLE_LABEL = {
 
 const formatDateTime = (iso) => {
     if (!iso) return '';
-    const d = new Date(iso);
-    return `${d.toLocaleDateString('it-IT')} - ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+    return formatDateTimeIT(iso);
 };
 
 const ToggleSwitch = ({ checked, onChange }) => (

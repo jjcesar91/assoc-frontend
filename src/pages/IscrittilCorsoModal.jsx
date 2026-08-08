@@ -4,6 +4,7 @@ import { useConfirm } from '../components/ConfirmModal';
 import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { formatOrari } from '../utils/corsoUtils';
+import { formatDateIT } from '../utils/dateUtils';
 
 const today = () => {
     const d = new Date();
@@ -223,7 +224,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                                 <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                                                     {socio?.scadenza_certificato
                                                         ? <>
-                                                            <span style={{ fontSize: '0.82rem' }}>{new Date(computeScadenzaCertificatoStr(socio.scadenza_certificato) || socio.scadenza_certificato).toLocaleDateString('it-IT')}</span>
+                                                            <span style={{ fontSize: '0.82rem' }}>{formatDateIT(computeScadenzaCertificatoStr(socio.scadenza_certificato) || socio.scadenza_certificato)}</span>
                                                             <StatusBadge status={certStatus} label={certStatus === 'expired' ? 'SCADUTO' : 'IN SCADENZA'} />
                                                           </>
                                                         : <span style={{ color: '#ccc' }}>—</span>
@@ -232,7 +233,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                                 <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                                                     {abbPay ? (() => {
                                                         const dateStr = abbPay.data_pagamento
-                                                            ? new Date(abbPay.data_pagamento).toLocaleDateString('it-IT')
+                                                            ? formatDateIT(abbPay.data_pagamento)
                                                             : '—';
                                                         let nota = null;
                                                         if (abbPay.data_scadenza_abbonamento) {
@@ -253,7 +254,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                                     })() : <span style={{ color: 'var(--warning)', fontSize: '0.8rem' }}>⚠ Non trovato</span>}
                                                 </td>
                                                 <td style={{ padding: '8px 10px', textAlign: 'center', color: '#888', fontSize: '0.82rem' }}>
-                                                    {i.dataIscrizione ? new Date(i.dataIscrizione).toLocaleDateString('it-IT') : '—'}
+                                                    {i.dataIscrizione ? formatDateIT(i.dataIscrizione) : '—'}
                                                 </td>
                                                 <td style={{ padding: '8px 4px', textAlign: 'center' }}>
                                                     <button

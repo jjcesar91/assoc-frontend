@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Shirt, Contact } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import StaffModal from './StaffModal';
+import { formatDateIT } from '../utils/dateUtils';
 import './Staff.css';
 
 const Staff = () => {
@@ -91,12 +92,6 @@ const Staff = () => {
         });
     };
 
-    const formatDate = (d) => {
-        if (!d) return '';
-        const [y, m, g] = d.split('-');
-        return `${g}/${m}/${y}`;
-    };
-
     return (
         <div className="staff-container">
             <div className="staff-main">
@@ -164,7 +159,7 @@ const Staff = () => {
                                             </div>
                                             <div>
                                                 <div className="staff-name">{s.cognome} {s.nome}</div>
-                                                <div className="staff-sub">{s.descrizioneQualifica}{s.dataNascita ? ` - ${formatDate(s.dataNascita)}` : ''}</div>
+                                                <div className="staff-sub">{s.descrizioneQualifica}{s.dataNascita ? ` - ${formatDateIT(s.dataNascita)}` : ''}</div>
                                             </div>
                                         </div>
                                     </td>

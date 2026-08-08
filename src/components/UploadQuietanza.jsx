@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { formatDateTimeIT } from '../utils/dateUtils';
 
 // Meccanismo di caricamento della quietanza di pagamento, indicizzato per token.
 // È usato sia dalla pagina pubblica /carica-quietanza (link inviato via email)
@@ -21,14 +22,7 @@ export const ACCEPT_LABEL = 'PDF, Word, LibreOffice/OpenDocument o immagine';
 
 function formatData(dt) {
     if (!dt) return '';
-    try {
-        return new Date(dt).toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        });
-    } catch {
-        return String(dt);
-    }
+    return formatDateTimeIT(dt) || String(dt);
 }
 
 /**

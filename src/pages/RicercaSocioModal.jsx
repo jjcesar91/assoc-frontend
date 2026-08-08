@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, User, Building2, MousePointerClick, Contact } from 'lucide-react';
 import { useAnno } from '../data/AnnoContext';
+import { formatDateIT } from '../utils/dateUtils';
 import './RicercaSocioModal.css';
 
 // Nome visualizzato: ragione sociale per le associazioni, cognome + nome altrimenti
@@ -226,7 +227,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                             </div>
                                         </td>
                                         <td style={{width: '18%'}}>
-                                            {socio.data_nascita ? new Date(socio.data_nascita).toLocaleDateString('it-IT') : ''}
+                                            {formatDateIT(socio.data_nascita)}
                                         </td>
                                         {abbonamentoId && (
                                             <td style={{width: '20%'}}>
@@ -243,11 +244,11 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                                                         let nota = null;
                                                         if (diff === 0) nota = <small style={{color:'var(--warning)', display:'block'}}>scade oggi</small>;
                                                         else nota = <small style={{color:'var(--success)', display:'block'}}>{diff} gg alla scad.</small>;
-                                                        const dateStr = ppEntry.pagamento ? new Date(ppEntry.pagamento).toLocaleDateString('it-IT') : '—';
+                                                        const dateStr = ppEntry.pagamento ? formatDateIT(ppEntry.pagamento) : '—';
                                                         return <>{dateStr}{nota}</>;
                                                     }
                                                     const dateStr = entry.dataPagamento
-                                                        ? new Date(entry.dataPagamento).toLocaleDateString('it-IT')
+                                                        ? formatDateIT(entry.dataPagamento)
                                                         : '—';
                                                     let nota = null;
                                                     if (entry.dataScadenza) {

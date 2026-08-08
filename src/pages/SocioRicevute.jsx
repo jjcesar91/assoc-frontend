@@ -3,6 +3,7 @@ import {
     Receipt, Upload, CheckCircle, Clock, XCircle, X, CalendarDays,
 } from 'lucide-react';
 import UploadQuietanza from '../components/UploadQuietanza';
+import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
 
 // "Le mie ricevute" dell'area soci.
 //
@@ -18,17 +19,12 @@ const euro = (v) => `€ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
 const formatDataOra = (dt) => {
     if (!dt) return '—';
-    try {
-        return new Date(dt).toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        });
-    } catch { return String(dt); }
+    return formatDateTimeIT(dt) || String(dt);
 };
 
 const formatData = (dt) => {
     if (!dt) return '—';
-    try { return new Date(dt).toLocaleDateString('it-IT'); } catch { return String(dt); }
+    return formatDateIT(dt) || String(dt);
 };
 
 // Descrizione delle righe: il backend non persiste il nome prodotto nelle righe,

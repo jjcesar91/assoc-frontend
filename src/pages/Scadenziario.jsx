@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, Euro, Printer, X, CalendarClock, User, Landmark, Banknote } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 import './DettaglioRicevutaModal.css';
 
@@ -62,7 +63,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
 
     const formatDate = (s) => {
         if (!s) return '—';
-        return new Date(s).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return formatDateIT(s);
     };
 
     const statoStyle = (st) => {
@@ -211,7 +212,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
         <tr>
             <td>RICEVUTA</td><td>${p.numero_ricevuta || ''}</td>
             <td>${p.progressivo_stagione || ''}</td>
-            <td>${(p.data_ricevuta || p.data_pagamento) ? new Date(p.data_ricevuta || p.data_pagamento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</td>
+            <td>${formatDateIT(p.data_ricevuta || p.data_pagamento)}</td>
             <td>${statoLabel}</td>
         </tr>
         <tr>
@@ -584,7 +585,7 @@ const Scadenziario = () => {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return formatDateIT(dateStr);
     };
 
     const statoStyle = (stato) => {

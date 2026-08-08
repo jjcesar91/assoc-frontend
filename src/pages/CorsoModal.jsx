@@ -6,6 +6,7 @@ import { useSocieta } from '../data/SocietaContext';
 import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari, computeOraFine } from '../utils/corsoUtils';
+import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
 import './CorsoModal.css';
 
 const GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
@@ -50,7 +51,7 @@ const formatDayLabel = (dateStr) => {
     const [y, m, d] = dateStr.split('-').map(Number);
     const date = new Date(y, m - 1, d);
     const dayName = GIORNI_IT[date.getDay()];
-    return `${dayName} ${date.toLocaleDateString('it-IT')}`;
+    return `${dayName} ${formatDateIT(date)}`;
 };
 
 const defaultForm = {
@@ -420,14 +421,14 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                 const socio = sociMap[i.socioId];
                 const payments = paymentsMap[i.socioId] || [];
                 const certScad = computeScadenzaCertificatoStr(socio?.scadenza_certificato);
-                const certStr = certScad ? new Date(certScad).toLocaleDateString('it-IT') : '—';
+                const certStr = certScad ? formatDateIT(certScad) : '—';
                 const abbPay = payments
                     .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
                     .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
                 const abbStr = abbPay?.data_scadenza_abbonamento
-                    ? new Date(abbPay.data_scadenza_abbonamento).toLocaleDateString('it-IT') : '—';
+                    ? formatDateIT(abbPay.data_scadenza_abbonamento) : '—';
                 const birthYear = socio?.data_nascita ? new Date(socio.data_nascita).getFullYear() : '';
-                const birthFull = socio?.data_nascita ? new Date(socio.data_nascita).toLocaleDateString('it-IT') : '';
+                const birthFull = socio?.data_nascita ? formatDateIT(socio.data_nascita) : '';
                 const socioLabel = socio
                     ? `${socio.cognome} ${socio.nome} (${birthYear}) - CERT (${certStr}) - ABB (${abbStr})`
                     : `#${i.socioId}`;
@@ -790,14 +791,14 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                 </td>
                                                 <td className="center">
                                                     {socio?.scadenza_certificato
-                                                        ? <>{new Date(computeScadenzaCertificatoStr(socio.scadenza_certificato) || socio.scadenza_certificato).toLocaleDateString('it-IT')}<StatusBadge status={certStatus} label={certStatus === 'expired' ? 'SCADUTO' : 'IN SCADENZA'} /></>
+                                                        ? <>{formatDateIT(computeScadenzaCertificatoStr(socio.scadenza_certificato) || socio.scadenza_certificato)}<StatusBadge status={certStatus} label={certStatus === 'expired' ? 'SCADUTO' : 'IN SCADENZA'} /></>
                                                         : <span className="cm-date-missing">—</span>
                                                     }
                                                 </td>
                                                 <td className="center">
                                                     {abbPay ? (() => {
                                                         const dateStr = abbPay.data_pagamento
-                                                            ? new Date(abbPay.data_pagamento).toLocaleDateString('it-IT')
+                                                            ? formatDateIT(abbPay.data_pagamento)
                                                             : '—';
                                                         let nota = null;
                                                         if (abbPay.data_scadenza_abbonamento) {
@@ -818,7 +819,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                     })() : <span className="cm-abb-missing"><AlertTriangle size={13} /> Non trovato</span>}
                                                 </td>
                                                 <td className="center" style={{ color: 'var(--text-secondary)', fontSize: '0.83rem' }}>
-                                                    {i.dataIscrizione ? new Date(i.dataIscrizione).toLocaleDateString('it-IT') : '—'}
+                                                    {i.dataIscrizione ? formatDateIT(i.dataIscrizione) : '—'}
                                                 </td>
                                                 <td className="center">
                                                     <button
@@ -882,7 +883,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                 <>
                                                     <CheckCircle size={15} />
                                                     Presenze salvate il{' '}
-                                                    <strong>{new Date(presenzaSalvata.savedAt).toLocaleString('it-IT')}</strong>
+                                                    <strong>{formatDateTimeIT(presenzaSalvata.savedAt)}</strong>
                                                     {presenzaSalvata.savedByName && <> da <strong>{presenzaSalvata.savedByName}</strong></>}
                                                     <span className="cm-presenza-counter">
                                                         {presentiIds.size} presenti su {iscrizioni.length}

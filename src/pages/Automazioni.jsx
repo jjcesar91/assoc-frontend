@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Mail, Save, PlayCircle, Info } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
+import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
 import './Automazioni.css';
 
 const CATEGORIA_LABEL = {
@@ -154,7 +155,7 @@ const Automazioni = () => {
 
     const formatDate = (s) => {
         if (!s) return '—';
-        return new Date(s).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return formatDateIT(s);
     };
 
     if (!selectedSocietaId) {
@@ -321,7 +322,7 @@ const Automazioni = () => {
                                         <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px' }}>Nessun invio registrato</td></tr>
                                     ) : logRows.map(row => (
                                         <tr key={row.id}>
-                                            <td>{new Date(row.data_invio).toLocaleString('it-IT')}</td>
+                                            <td>{formatDateTimeIT(row.data_invio)}</td>
                                             <td>{rules.find(r => r.tipo === row.tipo)?.label || row.tipo}</td>
                                             <td>{row.destinatario || (row.socio ? `${row.socio.cognome} ${row.socio.nome}` : '—')}</td>
                                             <td>

@@ -8,6 +8,7 @@ import { getComConfig, applyShortcodes, sendComunicazioneEmail, formatImporto } 
 import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
+import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
 import './DettaglioRicevutaModal.css';
 
 const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -366,11 +367,6 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
         }
     };
 
-    const formatDate = (s) => {
-        if (!s) return '';
-        return new Date(s).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
     const formatCurrency = (amount) => parseFloat(amount || 0).toFixed(2).replace('.', ',');
 
     const getScadenzaTesseramento = () => {
@@ -495,14 +491,14 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                             </div>
                             <div className="dpm-field">
                                 <div className="dpm-fl">Data ricevuta</div>
-                                <div className="dpm-fv">{formatDate(pagamento.data_ricevuta || pagamento.data_pagamento) || '—'}</div>
+                                <div className="dpm-fv">{formatDateIT(pagamento.data_ricevuta || pagamento.data_pagamento) || '—'}</div>
                             </div>
                             <div className="dpm-field">
                                 <div className="dpm-fl">Data pagamento</div>
                                 <div className="dpm-fv">
                                     {pagamento.tipo_documento === 'proforma'
                                         ? <span className="dpm-fv-empty">Non registrato</span>
-                                        : (formatDate(pagamento.data_pagamento) || '—')
+                                        : (formatDateIT(pagamento.data_pagamento) || '—')
                                     }
                                 </div>
                             </div>
@@ -521,9 +517,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                                         {pagamento.ricevuta_file_nome || 'Quietanza caricata'}
                                     </div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                        Caricata il {new Date(pagamento.ricevuta_uploaded_at).toLocaleString('it-IT', {
-                                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                                        })}
+                                        Caricata il {formatDateTimeIT(pagamento.ricevuta_uploaded_at)}
                                     </div>
                                 </div>
                                 <button
@@ -550,7 +544,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                                             {item.name}
                                             {idx === 0 && scadenzaTess && (
                                                 <span className="dpm-quote-scad">
-                                                    Scad. {scadenzaTess.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                    Scad. {formatDateIT(scadenzaTess)}
                                                 </span>
                                             )}
                                         </span>

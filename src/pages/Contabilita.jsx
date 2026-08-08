@@ -5,6 +5,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
 import ImportPrimaNotaModal from './ImportPrimaNotaModal';
+import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 
 // ---------------------------------------------------------------------------
@@ -168,8 +169,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
 
     const formatDate = (s) => {
         if (!s) return '—';
-        const [y, m, d] = s.split('-');
-        return `${d}/${m}/${y}`;
+        return formatDateIT(s);
     };
 
     const rows = [
@@ -344,8 +344,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 
     const formatDate = (s) => {
         if (!s) return '\u2014';
-        const [y, m, d] = s.split('-');
-        return `${d}/${m}/${y}`;
+        return formatDateIT(s);
     };
 
     return (
@@ -762,8 +761,8 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
             const nomeSocietaSafe = nomeSocieta.replace(/\s+/g, '_') || 'societa';
             const filename = `bilancio_${nomeSocietaSafe}_${stagione}.pdf`;
             const headerLine = nomeSocieta
-                ? `${nomeSocieta}  |  ${dateRange.dataDa} — ${dateRange.dataA}`
-                : `${dateRange.dataDa} — ${dateRange.dataA}`;
+                ? `${nomeSocieta}  |  ${formatDateIT(dateRange.dataDa)} — ${formatDateIT(dateRange.dataA)}`
+                : `${formatDateIT(dateRange.dataDa)} — ${formatDateIT(dateRange.dataA)}`;
 
             await html2pdf()
                 .set({
@@ -1002,7 +1001,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                 {/* Toolbar: periodo + bottone PDF */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingRight: '4px' }}>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                        Periodo: <strong>{dateRange.dataDa}</strong> — <strong>{dateRange.dataA}</strong>
+                        Periodo: <strong>{formatDateIT(dateRange.dataDa)}</strong> — <strong>{formatDateIT(dateRange.dataA)}</strong>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -1048,7 +1047,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
                     </div>
                 )}
                 <div style={{ textAlign: 'center', fontWeight: '600', fontSize: '0.9rem', marginBottom: '12px', color: '#444' }}>
-                    Rendiconto per Cassa &nbsp;|&nbsp; {dateRange.dataDa} — {dateRange.dataA}
+                    Rendiconto per Cassa &nbsp;|&nbsp; {formatDateIT(dateRange.dataDa)} — {formatDateIT(dateRange.dataA)}
                 </div>
 
                 {/* Tabella principale */}
