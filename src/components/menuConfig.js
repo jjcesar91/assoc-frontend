@@ -1,4 +1,4 @@
-import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck } from 'lucide-react';
+import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -99,4 +99,5 @@ export const MENU_STRUCTURE = [
             { id: 'societa-comunicazioni',   label: 'Parametri SMTP', path: '/societa/comunicazioni', superuserOnly: true },
         ],
     },
+    { id: 'faq',           label: 'FAQ / Guida',    Icon: HelpCircle,    path: '/faq' },
 ];

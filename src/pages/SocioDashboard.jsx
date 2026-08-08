@@ -4,12 +4,13 @@ import {
     LogOut, CreditCard, BookOpen, MessageSquare,
     Clock, CheckCircle, AlertTriangle, ChevronRight,
     CalendarDays, Bell, User, Activity, MapPin, UserCheck, Timer,
-    X, Mail, Smartphone, ArrowLeftCircle, Home, ShoppingCart, Receipt
+    X, Mail, Smartphone, ArrowLeftCircle, Home, ShoppingCart, Receipt, HelpCircle
 } from 'lucide-react';
 import { getOrari } from '../utils/corsoUtils';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
 import SocioNegozio from './SocioNegozio';
 import SocioRicevute from './SocioRicevute';
+import Faq from './Faq';
 import './SocioDashboard.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -507,6 +508,7 @@ export default function SocioDashboard({ onLogout }) {
                         { key: 'home', label: 'Home', icon: <Home size={16} /> },
                         { key: 'negozio', label: 'Negozio', icon: <ShoppingCart size={16} /> },
                         { key: 'ricevute', label: 'Le mie ricevute', icon: <Receipt size={16} /> },
+                        { key: 'faq', label: 'FAQ', icon: <HelpCircle size={16} /> },
                     ].map(t => (
                         <button
                             key={t.key}
@@ -535,6 +537,8 @@ export default function SocioDashboard({ onLogout }) {
                 {tab === 'ricevute' && (
                     <SocioRicevute socio={socio} refreshKey={ricevuteRefresh} />
                 )}
+
+                {tab === 'faq' && <Faq />}
 
                 {tab === 'home' && (<>
 
