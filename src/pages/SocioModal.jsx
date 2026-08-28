@@ -2253,7 +2253,9 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                             >
                                 <option value="" disabled>Azioni</option>
                                 
-                                <option value="comunicazione">Invia comunicazione</option>
+                                <option value="comunicazione" disabled={!formData.email || !!emailError}>
+                                    Invia comunicazione{(!formData.email || emailError) ? ' (email mancante o non valida)' : ''}
+                                </option>
                                 <option value="iscrizione_senza_ricevuta">Iscrizione senza ricevuta</option>
                                 <option value="revoca_iscrizione">Revoca iscrizione</option>
                                 <option value="nuovo_pagamento">Nuova ricevuta</option>
@@ -2742,9 +2744,11 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                             <div style={{padding: '24px'}}>
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
                                     <h3 style={{margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)'}}>Comunicazioni</h3>
-                                    <button 
-                                        className="btn-save-full" 
-                                        style={{width: 'auto', padding: '8px 16px', backgroundColor: 'var(--success)'}}
+                                    <button
+                                        className="btn-save-full"
+                                        style={{width: 'auto', padding: '8px 16px', backgroundColor: formData.email && !emailError ? 'var(--success)' : 'var(--text-secondary)', opacity: formData.email && !emailError ? 1 : 0.6, cursor: formData.email && !emailError ? 'pointer' : 'not-allowed'}}
+                                        title={!formData.email ? 'Il socio non ha un indirizzo email registrato' : (emailError || undefined)}
+                                        disabled={!formData.email || !!emailError}
                                         onClick={() => setShowComunicazioneModal(true)}
                                     >
                                         <Mail size={18} style={{marginRight: '8px'}}/>
@@ -2861,7 +2865,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                 <Mail size={32} />
                                             </div>
                                             <p style={{margin: 0, fontWeight: 500}}>Nessuna comunicazione inviata</p>
-                                            <p style={{margin: '8px 0 0 0', fontSize: '0.9rem', maxWidth: '300px'}}>Utilizza il pulsante "Nuova Comunicazione" per inviare email o SMS a questo socio.</p>
+                                            <p style={{margin: '8px 0 0 0', fontSize: '0.9rem', maxWidth: '300px'}}>Utilizza il pulsante "Nuova Comunicazione" per inviare una email a questo socio.</p>
                                         </div>
                                     )}
                                 </div>
@@ -3226,7 +3230,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                                                     <Folder size={16} />
                                                                 </button>
                                                                 <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Stampa" onClick={() => handlePrintPayment(p)}><Printer size={16} /></button>
-                                                                <button style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backgroundColor: 'var(--primary)', color:'white'}} title="Invia email" onClick={() => setShowComunicazioneModal(true)}><Mail size={16} /></button>
+                                                                <button
+                                                                    style={{padding: 0, border:'none', width:'32px', height:'32px', borderRadius:'4px', display:'inline-flex', alignItems:'center', justifyContent:'center', cursor: formData.email && !emailError ? 'pointer' : 'not-allowed', backgroundColor: 'var(--primary)', color:'white', opacity: formData.email && !emailError ? 1 : 0.4}}
+                                                                    title={formData.email && !emailError ? 'Invia email' : 'Il socio non ha un indirizzo email registrato'}
+                                                                    disabled={!formData.email || !!emailError}
+                                                                    onClick={() => setShowComunicazioneModal(true)}
+                                                                ><Mail size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
