@@ -195,7 +195,7 @@ function App() {
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/modulistica/template" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Template di Stampa">
+            <Layout onLogout={handleLogout} title="Footer">
               <TemplateStampa />
             </Layout>
           ) : <Navigate to="/login" />} />

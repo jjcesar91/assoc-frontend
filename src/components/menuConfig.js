@@ -1,4 +1,4 @@
-import { Briefcase, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -73,13 +73,13 @@ export const MENU_STRUCTURE = [
         Icon: FileText,
         children: [
             { id: 'modulistica-moduli',    label: 'Moduli',             path: '/modulistica' },
-            { id: 'modulistica-template',  label: 'Template di Stampa', path: '/modulistica/template' },
+            { id: 'modulistica-template',  label: 'Footer',             path: '/modulistica/template' },
         ],
     },
     {
         id: 'societa',
-        label: 'Impostazioni',
-        Icon: Briefcase,
+        label: 'Configurazione',
+        Icon: Settings,
         children: [
             { id: 'societa-anagrafica',     label: 'Anagrafica',      path: '/societa/anagrafica' },
             { id: 'societa-anno',           label: 'Anno contabile',  path: '/societa/anno-contabile' },
