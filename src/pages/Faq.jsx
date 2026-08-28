@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, MapPin, Info, ListChecks, AlertTriangle } from 'lucide-react';
 import { FAQ_CATEGORIES, FAQ_LAST_UPDATE } from '../data/faqData';
 import { formatDateIT } from '../utils/dateUtils';
 
@@ -15,8 +15,11 @@ const Faq = () => {
             .map(category => ({
                 ...category,
                 items: category.items.filter(item =>
-                    item.question.toLowerCase().includes(term) ||
-                    item.answer.toLowerCase().includes(term) ||
+                    item.domanda.toLowerCase().includes(term) ||
+                    item.percorso.toLowerCase().includes(term) ||
+                    item.aCosaServe.toLowerCase().includes(term) ||
+                    item.procedimento.some(p => p.toLowerCase().includes(term)) ||
+                    item.erroriComuni.some(e => e.toLowerCase().includes(term)) ||
                     category.label.toLowerCase().includes(term)
                 ),
             }))
@@ -115,15 +118,50 @@ const Faq = () => {
                                             color: '#333',
                                         }}
                                     >
-                                        <span>{item.question}</span>
+                                        <span>{item.domanda}</span>
                                         <ChevronDown
                                             size={16}
                                             style={{ flexShrink: 0, color: '#888', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
                                         />
                                     </button>
                                     {open && (
-                                        <div style={{ padding: '12px 14px', fontSize: '0.87rem', lineHeight: 1.5, color: '#555', borderTop: '1px solid #eee' }}>
-                                            {item.answer}
+                                        <div style={{ padding: '14px', fontSize: '0.87rem', lineHeight: 1.5, color: '#555', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.8rem', color: '#888' }}>
+                                                <MapPin size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                                <span><strong style={{ color: '#666' }}>Percorso:</strong> {item.percorso}</span>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                                <Info size={14} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--primary)' }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#444', marginBottom: '2px', fontSize: '0.8rem' }}>A cosa serve</div>
+                                                    <div>{item.aCosaServe}</div>
+                                                </div>
+                                            </div>
+
+                                            {item.procedimento.length > 0 && (
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                                    <ListChecks size={14} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--success)' }} />
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#444', marginBottom: '4px', fontSize: '0.8rem' }}>Procedimento operativo</div>
+                                                        <ol style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                            {item.procedimento.map((step, i) => <li key={i}>{step}</li>)}
+                                                        </ol>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {item.erroriComuni.length > 0 && (
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--warning)' }} />
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#444', marginBottom: '4px', fontSize: '0.8rem' }}>Errori comuni</div>
+                                                        <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                            {item.erroriComuni.map((err, i) => <li key={i}>{err}</li>)}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
