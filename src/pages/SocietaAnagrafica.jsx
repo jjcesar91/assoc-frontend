@@ -13,7 +13,8 @@ const ASSOCIAZIONE_OPTIONS = {
 };
 
 const SocietaAnagrafica = () => {
-    const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
+    const { selectedSocietaId, societaList, fetchSocieta, userInfo } = useSocieta();
+    const isSuperuser = userInfo?.role === 'superuser';
     const [formData, setFormData] = useState({
         denominazione: '',
         codice_fiscale: '',
@@ -30,7 +31,8 @@ const SocietaAnagrafica = () => {
         cognome_rappr_legale: '',
         nome_rappr_legale: '',
         alias_sms: '',
-        alias_email: ''
+        alias_email: '',
+        gestore_ets_point: false
     });
     const [tempAffiliazione, setTempAffiliazione] = useState({ tipo: '', nome: '' });
     const [loading, setLoading] = useState(false);
@@ -57,7 +59,8 @@ const SocietaAnagrafica = () => {
                     cognome_rappr_legale: societa.cognome_rappr_legale || '',
                     nome_rappr_legale: societa.nome_rappr_legale || '',
                     alias_sms: societa.alias_sms || '',
-                    alias_email: societa.alias_email || ''
+                    alias_email: societa.alias_email || '',
+                    gestore_ets_point: societa.gestore_ets_point || false
                 });
             }
         }
@@ -161,7 +164,8 @@ const SocietaAnagrafica = () => {
                     cognome_rappr_legale: societa.cognome_rappr_legale || '',
                     nome_rappr_legale: societa.nome_rappr_legale || '',
                     alias_sms: societa.alias_sms || '',
-                    alias_email: societa.alias_email || ''
+                    alias_email: societa.alias_email || '',
+                    gestore_ets_point: societa.gestore_ets_point || false
                 });
             }
         }
@@ -270,6 +274,61 @@ const SocietaAnagrafica = () => {
                         <option value="APS">Associazione di Promozione Sociale (APS)</option>
                     </select>
                 </div>
+
+                {/* Gestore ETS Point — riservato ai superuser: attiva la sezione "ETS Point" in Automazioni */}
+                {isSuperuser && (
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '12px', color: '#555', fontWeight: 600 }}>
+                            Riservato Superuser
+                        </label>
+                        <div
+                            onClick={() => setFormData(prev => ({ ...prev, gestore_ets_point: !prev.gestore_ets_point }))}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '14px',
+                                padding: '12px 18px',
+                                border: `2px solid ${formData.gestore_ets_point ? 'var(--primary)' : '#ddd'}`,
+                                borderRadius: '8px',
+                                backgroundColor: formData.gestore_ets_point ? 'var(--info-container)' : 'var(--surface-1)',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                transition: 'all 0.15s ease',
+                                minWidth: '320px'
+                            }}
+                        >
+                            <div style={{
+                                width: '42px',
+                                height: '24px',
+                                borderRadius: '12px',
+                                backgroundColor: formData.gestore_ets_point ? 'var(--primary)' : '#ccc',
+                                position: 'relative',
+                                flexShrink: 0,
+                                transition: 'background-color 0.15s ease'
+                            }}>
+                                <div style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    borderRadius: '50%',
+                                    backgroundColor: 'white',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: formData.gestore_ets_point ? '21px' : '3px',
+                                    transition: 'left 0.15s ease',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                }} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: formData.gestore_ets_point ? 'var(--primary-hover)' : '#333' }}>
+                                    Gestore ETS Point
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '2px' }}>
+                                    {formData.gestore_ets_point ? 'Attivo — sezione "ETS Point" visibile in Automazioni' : 'Non attivo'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Affiliazioni Section */}
                 <div style={{ border: '1px solid #eee', padding: '16px', borderRadius: '4px' }}>
