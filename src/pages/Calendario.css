@@ -201,6 +201,12 @@
     padding: 6px 8px 4px;
 }
 
+.corso-card-descrizione {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
 .corso-card-tech {
     font-weight: 700;
     font-size: 0.8rem;

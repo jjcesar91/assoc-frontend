@@ -51,6 +51,7 @@ const CorsoCard = ({ corso, onEdit, onDelete, onViewIscritti }) => {
             <div className="corso-card-area-label">{areaLabel}</div>
             <div className="corso-card" style={{ borderTop: `3px solid ${attivitaStyle.backgroundColor}` }}>
                 <div className="corso-card-body">
+                    {corso.descrizione && <div className="corso-card-descrizione">{corso.descrizione}</div>}
                     <div className="corso-card-tech">{techLabel}</div>
                     <div className="corso-card-struttura">{strutturaLabel}</div>
                     <div className="corso-card-attivita">{attivitaLabel}</div>
