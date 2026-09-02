@@ -25,8 +25,12 @@ jobs:
             export COMPOSE_DOCKER_CLI_BUILD=0
             # Progetto compose isolato (la cartella si chiama "docker" come nel backend).
             export COMPOSE_PROJECT_NAME=frontend
-            # Rileva la rete del gateway API (fallback al nome standard del backend).
-            export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | head -1 || true)
+            # Rete del gateway API di DEV: il compose backend dev gira con
+            # COMPOSE_PROJECT_NAME=docker, quindi la rete e' docker_app_network.
+            # Escludiamo esplicitamente le reti *prod* (backend_prod_app_network):
+            # senza il filtro, 'grep app_network$ | head -1' puo' pescare la rete di
+            # produzione e il frontend dev finisce a proxare il backend di prod.
+            export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | grep -v prod | head -1 || true)
             export APP_NETWORK=${APP_NETWORK:-docker_app_network}
             echo "Rete API condivisa: $APP_NETWORK"
 
