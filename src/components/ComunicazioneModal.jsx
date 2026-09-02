@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, MessageSquare, Check, Loader2 } from 'lucide-react';
 import SimpleEditor from './SimpleEditor';
 import { useAlert } from './AlertModal';
@@ -24,6 +24,8 @@ const nomeSocioFromRecord = (s) => {
         : [s.nome, s.cognome].filter(Boolean).join(' ');
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, products }) => {
     const showAlert = useAlert();
     const [tipo, setTipo] = useState('EMAIL'); // 'SMS' or 'EMAIL'
@@ -34,7 +36,40 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
     const [loadingTemplate, setLoadingTemplate] = useState(false);
     const [allegaRicevuta, setAllegaRicevuta] = useState(false);
     const [ccnSocieta, setCcnSocieta] = useState(false);
+    const [socioEmail, setSocioEmail] = useState(null);
+    const [loadingSocioEmail, setLoadingSocioEmail] = useState(true);
     const societaEmail = societa?.email || '';
+
+    // Recupera l'email del socio destinatario per poter avvisare (e bloccare
+    // l'invio) quando manca o non è in un formato valido, prima ancora che
+    // l'utente compili il messaggio.
+    useEffect(() => {
+        let cancelled = false;
+        if (!socioId) {
+            setSocioEmail('');
+            setLoadingSocioEmail(false);
+            return;
+        }
+        setLoadingSocioEmail(true);
+        (async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const r = await fetch(`/users/api/soci/${socioId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
+                const s = r.ok ? await r.json() : null;
+                if (!cancelled) setSocioEmail(s?.email || s?.user?.email || '');
+            } catch {
+                if (!cancelled) setSocioEmail('');
+            } finally {
+                if (!cancelled) setLoadingSocioEmail(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [socioId]);
+
+    const emailNonValida = tipo === 'EMAIL' && !loadingSocioEmail
+        && (!socioEmail || !EMAIL_REGEX.test(socioEmail));
 
     // Carica una comunicazione di default risolvendo i placeholder {{}} col
     // contesto della ricevuta (nome socio, importo, numero, istruzioni pagamento).
@@ -101,6 +136,14 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
         e.preventDefault();
 
         // Validation
+        if (emailNonValida) {
+            showAlert(
+                socioEmail ? "L'indirizzo email del socio non è in un formato valido" : 'Il socio non ha un indirizzo email registrato',
+                'Email mancante o non valida',
+                'warning'
+            );
+            return;
+        }
         if (tipo === 'EMAIL' && !oggetto) {
             showAlert("L'oggetto è obbligatorio per le email", 'Campo mancante', 'warning');
             return;
@@ -182,6 +225,14 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
                 </div>
 
                 <div className="comunicazione-body">
+                    {emailNonValida && (
+                        <div style={{ color: 'var(--danger)', background: 'var(--danger-container)', padding: 12, borderRadius: 6, marginBottom: 12, fontSize: '0.9rem' }}>
+                            {socioEmail
+                                ? "L'indirizzo email registrato per il socio non è in un formato valido: impossibile inviare la comunicazione via email."
+                                : 'Il socio non ha un indirizzo email registrato: impossibile inviare la comunicazione via email.'}
+                        </div>
+                    )}
+
                     {ricevuta && (
                         <div className="comunicazione-field">
                             <label>Comunicazione predefinita</label>
@@ -205,17 +256,20 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
                             <button
                                 type="button"
                                 className={`type-btn ${tipo === 'SMS' ? 'active' : ''}`}
-                                onClick={() => setTipo('SMS')}
+                                onClick={() => {}}
+                                disabled
+                                title="Funzionalità SMS non ancora attiva"
                                 style={{
-                                    backgroundColor: tipo === 'SMS' ? 'var(--success)' : 'white',
-                                    color: tipo === 'SMS' ? 'white' : 'var(--text-secondary)',
+                                    backgroundColor: '#f1f1f1',
+                                    color: 'var(--text-secondary)',
+                                    opacity: 0.6,
                                     border: 'none',
                                     padding: '8px 24px',
                                     fontWeight: '500',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    cursor: 'pointer'
+                                    cursor: 'not-allowed'
                                 }}
                             >
                                 <MessageSquare size={16} /> SMS
@@ -305,7 +359,13 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
                     <button className="btn-annulla" onClick={onClose} disabled={isSubmitting}>
                         <X size={18} /> Annulla
                     </button>
-                    <button className="btn-invia" onClick={handleSubmit} disabled={isSubmitting}>
+                    <button
+                        className="btn-invia"
+                        onClick={handleSubmit}
+                        disabled={isSubmitting || emailNonValida}
+                        title={emailNonValida ? (socioEmail ? "L'indirizzo email del socio non è valido" : 'Il socio non ha un indirizzo email registrato') : undefined}
+                        style={emailNonValida ? { backgroundColor: 'var(--text-secondary)', opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                    >
                         {isSubmitting ? (
                             <>
                                 <Loader2 size={18} className="comunicazione-spin" /> Invio in corso...

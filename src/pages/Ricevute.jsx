@@ -327,13 +327,15 @@ const Ricevute = () => {
                             >
                                 <FileInput size={14}/> Importa ricevute
                             </button>
-                            <button
-                                className="btn-contained"
-                                style={{backgroundColor: 'var(--warning)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
-                                onClick={() => setShowImportOdoo(true)}
-                            >
-                                <FileInput size={14}/> Importa da Odoo
-                            </button>
+                            {localStorage.getItem('user_role') === 'superuser' && (
+                                <button
+                                    className="btn-contained"
+                                    style={{backgroundColor: 'var(--warning)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                    onClick={() => setShowImportOdoo(true)}
+                                >
+                                    <FileInput size={14}/> Importa da Odoo
+                                </button>
+                            )}
                             <div style={{ position: 'relative' }} ref={menuRef}>
                                 <button
                                     className="btn-contained"

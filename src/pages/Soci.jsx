@@ -225,6 +225,24 @@ const Soci = ({ onLogout }) => {
     });
     const [showMoreFilters, setShowMoreFilters] = useState(false);
 
+    // Ordinamento colonne: { field, direction: 'asc' | 'desc' } oppure null (nessun ordinamento).
+    // Default: elenco soci ordinato alfabeticamente per cognome.
+    const [sortConfig, setSortConfig] = useState({ field: 'cognome', direction: 'asc' });
+
+    // Ciclo al click sull'intestazione: ASC -> DESC -> nessun ordinamento -> ASC...
+    const handleSort = (field) => {
+        setSortConfig(prev => {
+            if (!prev || prev.field !== field) return { field, direction: 'asc' };
+            if (prev.direction === 'asc') return { field, direction: 'desc' };
+            return null;
+        });
+    };
+
+    const SortIcon = ({ field }) => {
+        if (!sortConfig || sortConfig.field !== field) return null;
+        return sortConfig.direction === 'asc' ? <ChevronUp size={14} style={{ marginLeft: 4, verticalAlign: 'middle' }} /> : <ChevronDown size={14} style={{ marginLeft: 4, verticalAlign: 'middle' }} />;
+    };
+
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
@@ -372,7 +390,7 @@ const Soci = ({ onLogout }) => {
             return s;
         };
 
-        const rows = filteredSoci.map(s => [
+        const rows = sortedSoci.map(s => [
             s.cognome || '',
             s.nome || '',
             formatDate(s.data_nascita),
@@ -443,6 +461,43 @@ const Soci = ({ onLogout }) => {
 
         return true;
     });
+
+    // Valore comparabile di un socio per una data colonna ordinabile.
+    const CERT_STATUS_RANK = { 'MISSING': -1, '0': 0, '1': 1, '2': 2 };
+    const getSortValue = (socio, field) => {
+        switch (field) {
+            case 'cognome':
+                return socio.tipo_socio === 'associazione' ? (socio.ragione_sociale || '') : (socio.cognome || '');
+            case 'nascita':
+                return socio.data_nascita ? new Date(socio.data_nascita).getTime() : null;
+            case 'iscrizione':
+                return getIscrizioneStatus(socio);
+            case 'tesseramento':
+                return getTesseramentoStatus(socio);
+            case 'certificato':
+                return CERT_STATUS_RANK[getCertStatus(socio.scadenza_certificato)] ?? -1;
+            case 'contatti':
+                return socio.telefono || '';
+            default:
+                return '';
+        }
+    };
+
+    const compareSortValues = (a, b) => {
+        if (a == null && b == null) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+        if (typeof a === 'number' && typeof b === 'number') return a - b;
+        return String(a).localeCompare(String(b), 'it', { sensitivity: 'base' });
+    };
+
+    const sortedSoci = useMemo(() => {
+        if (!sortConfig) return filteredSoci;
+        const { field, direction } = sortConfig;
+        const dir = direction === 'asc' ? 1 : -1;
+        return [...filteredSoci].sort((a, b) => dir * compareSortValues(getSortValue(a, field), getSortValue(b, field)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filteredSoci, sortConfig, payments, currentSocieta, productsById]);
 
     useEffect(() => {
         // Reset UI state e ricarica dati al cambio società
@@ -1177,7 +1232,9 @@ const Soci = ({ onLogout }) => {
                                     {/* <div style={{padding: '8px 16px', fontSize:'0.75rem', fontWeight:'bold', color:'#333', backgroundColor:'var(--surface-1)'}}>Altre azioni</div> */}
                                     {/* <button className="dropdown-item-custom"><Tag size={16}/> Gestione liste</button> */}
                                     <button className="dropdown-item-custom" onClick={() => importFileRef.current?.click()}><FileUp size={16}/> Importa Excel</button>
-                                    <button className="dropdown-item-custom" onClick={() => importOdooFileRef.current?.click()}><FileUp size={16}/> Importa CSV Odoo</button>
+                                    {localStorage.getItem('user_role') === 'superuser' && (
+                                        <button className="dropdown-item-custom" onClick={() => importOdooFileRef.current?.click()}><FileUp size={16}/> Importa CSV Odoo</button>
+                                    )}
                                     <button className="dropdown-item-custom" onClick={handleExportTemplate}><FileDown size={16}/> Esporta template</button>
                                     {/* <button className="dropdown-item-custom"><RefreshCw size={16}/> Rielabora whitelist</button> */}
                                     {/* Accessi hidden */}
@@ -1310,18 +1367,18 @@ const Soci = ({ onLogout }) => {
                             <thead>
                                 <tr>
                                     <th style={{width: '60px'}}></th>
-                                    <th>Nominativo</th>
-                                    <th>Dati di nascita</th>
-                                    <th>Iscrizione</th>
-                                    <th>Tesseramento</th>
-                                    <th>Certificato Medico</th>
-                                    <th>Contatti</th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('cognome')}>Nominativo<SortIcon field="cognome"/></th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('nascita')}>Dati di nascita<SortIcon field="nascita"/></th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('iscrizione')}>Iscrizione<SortIcon field="iscrizione"/></th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('tesseramento')}>Tesseramento<SortIcon field="tesseramento"/></th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('certificato')}>Certificato Medico<SortIcon field="certificato"/></th>
+                                    <th style={{cursor: 'pointer', userSelect: 'none'}} onClick={() => handleSort('contatti')}>Contatti<SortIcon field="contatti"/></th>
                                     <th style={{width: '1%', whiteSpace: 'nowrap'}}>Etichette</th>
                                     <th style={{textAlign:'right'}}>Azioni</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredSoci.map(socio => (
+                                {sortedSoci.map(socio => (
                                     <tr key={socio.id}>
                                         <td>
                                             <div style={{
@@ -1405,9 +1462,11 @@ const Soci = ({ onLogout }) => {
                                         </td>
                                         <td style={{textAlign:'right'}}>
                                             <button className="btn-icon-small" title="Modifica" onClick={() => handleEditSocio(socio)}><Edit size={18}/></button>
-                                            <button 
-                                                className="btn-icon-small" 
-                                                title="Invia Email"
+                                            <button
+                                                className="btn-icon-small"
+                                                title={(socio.email || socio.user?.email) ? 'Invia Email' : 'Il socio non ha un indirizzo email registrato'}
+                                                disabled={!(socio.email || socio.user?.email)}
+                                                style={{ opacity: (socio.email || socio.user?.email) ? 1 : 0.4, cursor: (socio.email || socio.user?.email) ? 'pointer' : 'not-allowed' }}
                                                 onClick={() => handleOpenComunicazione(socio.id)}
                                             >
                                                 <Mail size={18}/>
@@ -1416,7 +1475,7 @@ const Soci = ({ onLogout }) => {
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredSoci.length === 0 && (
+                                {sortedSoci.length === 0 && (
                                     <tr>
                                         <td colSpan="9" style={{textAlign:'center', padding:'32px', color:'var(--text-secondary)'}}>
                                             Nessun socio trovato

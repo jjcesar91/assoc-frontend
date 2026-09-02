@@ -11,7 +11,8 @@ const CATEGORIA_LABEL = {
 };
 
 const Automazioni = () => {
-    const { selectedSocietaId } = useSocieta();
+    const { selectedSocietaId, societaList } = useSocieta();
+    const currentSocieta = societaList.find(s => s.id == selectedSocietaId);
     const confirm = useConfirm();
     const [activeTab, setActiveTab] = useState('config');
 
@@ -193,7 +194,9 @@ const Automazioni = () => {
                                 </span>
                             </div>
 
-                            {['ets_point', 'associazioni'].map(categoria => (
+                            {['ets_point', 'associazioni']
+                                .filter(categoria => categoria !== 'ets_point' || currentSocieta?.gestore_ets_point)
+                                .map(categoria => (
                                 grouped[categoria] && (
                                     <div key={categoria} className="auto-section card">
                                         <div className="auto-section-title">

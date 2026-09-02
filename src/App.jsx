@@ -9,6 +9,7 @@ import SocietaImpostazioni from './pages/SocietaImpostazioni'
 import AnnoContabile from './pages/AnnoContabile'
 import SocietaComunicazioni from './pages/SocietaComunicazioni'
 import Modulistica from './pages/Modulistica'
+import Faq from './pages/Faq'
 import TemplateStampa from './pages/TemplateStampa'
 import TemplateRicevuta from './pages/TemplateRicevuta'
 import Prodotti from './pages/Prodotti'
@@ -194,10 +195,15 @@ function App() {
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/modulistica/template" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Template di Stampa">
+            <Layout onLogout={handleLogout} title="Footer">
               <TemplateStampa />
             </Layout>
           ) : <Navigate to="/login" />} />
+          <Route path="/faq" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="FAQ / Guida">
+              <Faq />
+            </Layout>
+          ) : isAuthenticated ? <Navigate to="/area-soci" /> : <Navigate to="/login" />} />
           <Route path="/prodotti" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Prodotti">
               <Prodotti />
