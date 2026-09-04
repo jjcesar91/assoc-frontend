@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSocieta } from '../data/SocietaContext';
 import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign, Star } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import ContoBonificoModal from './ContoBonificoModal';
 import ContoModal from './ContoModal';
+import NuovoContoModal from './NuovoContoModal';
 import './Soci.css';
 
 const API_GATEWAY = '/payments/api';
@@ -13,24 +14,27 @@ const Conti = () => {
     const confirm = useConfirm();
     const [conti, setConti] = useState([]);
     const [loading, setLoading] = useState(false);
-    
-    // Form state (solo creazione: le modifiche avvengono tramite modal)
-    const [descrizione, setDescrizione] = useState('');
-    const [modalita, setModalita] = useState('');
+
+    // Filtri di ricerca (in tempo reale, come nelle altre schermate di elenco)
+    const [filterDescrizione, setFilterDescrizione] = useState('');
+    const [filterModalita, setFilterModalita] = useState('TUTTE');
+
+    // Modal di creazione
+    const [nuovoContoModalOpen, setNuovoContoModalOpen] = useState(false);
 
     // Modal dedicato per i conti di tipo Bonifico
     const [bonificoModalOpen, setBonificoModalOpen] = useState(false);
     const [bonificoConto, setBonificoConto] = useState(null);
 
-    // Modal di modifica per i conti non bonifico
+    // Modal di modifica (descrizione + modalità)
     const [contoModalOpen, setContoModalOpen] = useState(false);
     const [contoInModifica, setContoInModifica] = useState(null);
 
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Reset form al cambio società
-        resetForm();
+        setFilterDescrizione('');
+        setFilterModalita('TUTTE');
         setError(null);
         if (selectedSocietaId) {
             fetchConti();
@@ -57,56 +61,45 @@ const Conti = () => {
         }
     };
 
-    const resetForm = () => {
-        setDescrizione('');
-        setModalita('');
-    };
+    // Tutte le modalità effettivamente in uso, per popolare il filtro.
+    const modalitaDisponibili = useMemo(() => {
+        const s = new Set(conti.flatMap(c => c.modalita_pagamento || []));
+        return [...s].sort();
+    }, [conti]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
+    const filteredConti = useMemo(() => conti.filter(c => {
+        if (filterDescrizione && !c.descrizione.toLowerCase().includes(filterDescrizione.toLowerCase())) return false;
+        if (filterModalita !== 'TUTTE' && !(c.modalita_pagamento || []).includes(filterModalita)) return false;
+        return true;
+    }), [conti, filterDescrizione, filterModalita]);
+
+    const handleCreateConto = async (data) => {
         if (!selectedSocietaId) {
             setError('Selezionare una società');
-            return;
+            throw new Error('Selezionare una società');
         }
-
-        const payload = {
-            societa_id: selectedSocietaId,
-            descrizione,
-            modalita_pagamento: modalita
-        };
-
         const token = localStorage.getItem('token');
-
-        try {
-            const res = await fetch(`${API_GATEWAY}/conti`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!res.ok) throw new Error('Errore nel salvataggio del conto');
-            
-            resetForm();
-            fetchConti(); // Refresh list
-        } catch (err) {
-            setError(err.message);
-        }
+        const res = await fetch(`${API_GATEWAY}/conti`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ societa_id: selectedSocietaId, ...data })
+        });
+        if (!res.ok) throw new Error('Errore nel salvataggio del conto');
+        setNuovoContoModalOpen(false);
+        fetchConti();
     };
 
     const handleEdit = (conto) => {
-        // I conti di tipo Bonifico si modificano tramite modal dedicato
-        // (descrizione, IBAN e istruzioni di pagamento); gli altri con il modal generico.
-        if (conto.modalita_pagamento?.toLowerCase() === 'bonifico') {
-            setBonificoConto(conto);
-            setBonificoModalOpen(true);
-            return;
-        }
         setContoInModifica(conto);
         setContoModalOpen(true);
+    };
+
+    const handleConfigBonifico = (conto) => {
+        setBonificoConto(conto);
+        setBonificoModalOpen(true);
     };
 
     const updateConto = async (conto, data) => {
@@ -166,7 +159,7 @@ const Conti = () => {
 
     const handleDelete = async (id) => {
         if (!await confirm('Sei sicuro di voler eliminare questo conto?')) return;
-        
+
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${API_GATEWAY}/conti/${id}`, {
@@ -181,63 +174,57 @@ const Conti = () => {
     };
 
     const renderPaymentIcon = (modalita) => {
-        switch(modalita?.toLowerCase()) {
-            case 'contanti': return <Banknote size={18} />;
-            case 'pos': return <CreditCard size={18} />;
-            case 'bonifico': return <Landmark size={18} />;
-            case 'assegno': return <DollarSign size={18} />;
-            default: return <DollarSign size={18} />;
+        switch (modalita?.toLowerCase()) {
+            case 'contanti': return <Banknote size={14} />;
+            case 'pos': return <CreditCard size={14} />;
+            case 'bonifico': return <Landmark size={14} />;
+            case 'assegno': return <DollarSign size={14} />;
+            default: return <DollarSign size={14} />;
         }
     };
 
     return (
         <div className="soci-full-container">
             <div className="main-content">
-                
-                {error && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '20px' }}>{error}</div>}
-                
-                {/* Form Nuovo/Modifica Conto */}
-                <div className="toolbar-card" style={{display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'stretch', marginBottom: '24px'}}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                        Aggiungi Conto
-                    </h3>
-                    
-                    <form onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px'}}>
-                        <div style={{display:'flex', flexDirection:'column', flex: 2, minWidth: '200px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Descrizione *</label>
-                            <input 
-                                className="md-input" 
-                                placeholder="Es. Cassa Principale" 
-                                style={{width: '100%'}} 
-                                value={descrizione}
-                                onChange={(e) => setDescrizione(e.target.value)}
-                                required
-                            />
-                        </div>
-                        
-                        <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '150px'}}>
-                            <label style={{fontSize:'0.85rem', marginBottom:'4px'}}>Modalità di Pagamento</label>
-                            <select 
-                                className="md-select" 
-                                style={{width: '100%', padding: '10px 12px'}} 
-                                value={modalita}
-                                onChange={(e) => setModalita(e.target.value)}
-                            >
-                                <option value="">— nessuna —</option>
-                                <option value="Contanti">Contanti</option>
-                                <option value="POS">POS</option>
-                                <option value="Assegno">Assegno</option>
-                                <option value="Bonifico">Bonifico</option>
-                            </select>
-                        </div>
 
-                        <div style={{display:'flex', gap:'8px'}}>
-                            <button type="submit" className="btn-contained" style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Plus size={16} />
-                                Crea
-                            </button>
-                        </div>
-                    </form>
+                {error && <div style={{ backgroundColor: 'var(--danger-container)', color: 'var(--danger)', padding: '12px', borderRadius: '4px', marginBottom: '20px' }}>{error}</div>}
+
+                {/* Filtri + Crea */}
+                <div className="toolbar-card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '220px' }}>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Descrizione</label>
+                        <input
+                            className="md-input"
+                            placeholder="Cerca per descrizione..."
+                            style={{ width: '100%' }}
+                            value={filterDescrizione}
+                            onChange={(e) => setFilterDescrizione(e.target.value)}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '160px' }}>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Modalità</label>
+                        <select
+                            className="md-select"
+                            style={{ width: '100%', padding: '10px 12px' }}
+                            value={filterModalita}
+                            onChange={(e) => setFilterModalita(e.target.value)}
+                        >
+                            <option value="TUTTE">Tutte</option>
+                            {modalitaDisponibili.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                        <button
+                            className="btn-contained"
+                            style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            onClick={() => setNuovoContoModalOpen(true)}
+                        >
+                            <Plus size={16} />
+                            Crea
+                        </button>
+                    </div>
                 </div>
 
                 {/* Elenco Conti */}
@@ -253,49 +240,72 @@ const Conti = () => {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="3" style={{textAlign:'center', padding:'24px', color:'var(--text-secondary)'}}>Caricamento in corso...</td></tr>
-                            ) : conti.length === 0 ? (
+                            ) : filteredConti.length === 0 ? (
                                 <tr><td colSpan="3" style={{textAlign:'center', padding:'24px', color:'var(--text-secondary)'}}>Nessun conto trovato.</td></tr>
                             ) : (
-                                conti.map(c => (
-                                    <tr key={c.id} style={{ borderBottom: '1px solid #eee' }} className="hover-row">
-                                        <td style={{ padding: '12px 16px' }}>
-                                            <div style={{ fontWeight: '500', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {c.descrizione}
-                                                {c.predefinito && (
-                                                    <span title="Conto predefinito" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', backgroundColor: 'var(--success-container)', color: 'var(--success)', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500' }}>
-                                                        <Star size={12} fill="currentColor" />
-                                                        Predefinito
-                                                    </span>
+                                filteredConti.map(c => {
+                                    const modalitaList = c.modalita_pagamento || [];
+                                    const hasBonifico = modalitaList.some(m => m?.toLowerCase() === 'bonifico');
+                                    return (
+                                        <tr key={c.id} style={{ borderBottom: '1px solid #eee' }} className="hover-row">
+                                            <td style={{ padding: '12px 16px' }}>
+                                                <div style={{ fontWeight: '500', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {c.descrizione}
+                                                    {c.predefinito && (
+                                                        <span title="Conto predefinito" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', backgroundColor: 'var(--success-container)', color: 'var(--success)', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500' }}>
+                                                            <Star size={12} fill="currentColor" />
+                                                            Predefinito
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '12px 16px' }}>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                    {modalitaList.length > 0 ? modalitaList.map(m => (
+                                                        <div key={m} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: 'var(--info-container)', color: 'var(--primary)', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
+                                                            {renderPaymentIcon(m)}
+                                                            {m}
+                                                        </div>
+                                                    )) : (
+                                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: 'var(--surface-1)', color: 'var(--text-tertiary)', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
+                                                            —
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                                {!c.predefinito && (
+                                                    <button className="btn-icon-small" title="Imposta come predefinito" onClick={() => handleSetPredefinito(c.id)}>
+                                                        <Star size={18} />
+                                                    </button>
                                                 )}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '12px 16px' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: c.modalita_pagamento ? 'var(--info-container)' : 'var(--surface-1)', color: c.modalita_pagamento ? 'var(--primary)' : 'var(--text-tertiary)', borderRadius: '16px', fontSize: '0.85rem', fontWeight: '500' }}>
-                                                {renderPaymentIcon(c.modalita_pagamento)}
-                                                {c.modalita_pagamento || '—'}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                            {!c.predefinito && (
-                                                <button className="btn-icon-small" title="Imposta come predefinito" onClick={() => handleSetPredefinito(c.id)}>
-                                                    <Star size={18} />
+                                                {hasBonifico && (
+                                                    <button className="btn-icon-small" title="Configura Bonifico (IBAN e istruzioni)" onClick={() => handleConfigBonifico(c)}>
+                                                        <Landmark size={18} />
+                                                    </button>
+                                                )}
+                                                <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(c)}>
+                                                    <Edit2 size={18} />
                                                 </button>
-                                            )}
-                                            <button className="btn-icon-small" title="Modifica" onClick={() => handleEdit(c)}>
-                                                <Edit2 size={18} />
-                                            </button>
-                                            <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(c.id)} style={{ color: 'var(--danger)' }}>
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                                <button className="btn-icon-small" title="Elimina" onClick={() => handleDelete(c.id)} style={{ color: 'var(--danger)' }}>
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
 
             </div>
+
+            <NuovoContoModal
+                isOpen={nuovoContoModalOpen}
+                onClose={() => setNuovoContoModalOpen(false)}
+                onSave={handleCreateConto}
+            />
 
             <ContoBonificoModal
                 isOpen={bonificoModalOpen}

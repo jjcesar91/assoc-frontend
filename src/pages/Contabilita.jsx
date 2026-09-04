@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, FolderOpen, Trash2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
+import GirocontoModal from './GirocontoModal';
 import ImportPrimaNotaModal from './ImportPrimaNotaModal';
 import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
@@ -256,7 +257,7 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
 // ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
-const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onDettaglio, onElimina, onImportCsv }) => {
+const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onGiroconto, onDettaglio, onModifica, onElimina, onImportCsv }) => {
     const dateRange = useMemo(() => {
         if (!selectedAnno || !societa) {
             const y = new Date().getFullYear();
@@ -268,6 +269,69 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             dataA: end.toISOString().split('T')[0],
         };
     }, [selectedAnno, societa]);
+
+    // Conti della società, per le righe di saldo iniziale (vedi saldoRows).
+    const [conti, setConti] = useState([]);
+    useEffect(() => {
+        if (!societa?.id) { setConti([]); return; }
+        const token = localStorage.getItem('token');
+        fetch(`/payments/api/conti?societa_id=${societa.id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(setConti)
+            .catch(() => setConti([]));
+    }, [societa?.id]);
+
+    // Righe sintetiche di saldo iniziale, una per ogni conto con un saldo
+    // registrato in anagrafica (Configurazione → Conti), rispetto all'anno
+    // contabile selezionato (non al filtro data, che l'utente può restringere
+    // separatamente — vedi dateRange sopra):
+    // - saldo_iniziale_data dentro l'anno  -> riga normale in quella data
+    // - saldo_iniziale_data dopo l'anno    -> nessuna riga (conta zero)
+    // - saldo_iniziale_data prima dell'anno -> riga "riportata" al primo
+    //   giorno dell'anno, saldo + movimenti del conto tra la data di saldo
+    //   (esclusa, si presume già riflessa nel saldo) e l'inizio anno (escluso,
+    //   per non contare due volte i movimenti del primo giorno che compaiono
+    //   comunque come righe proprie), sempre mostrata per prima nella lista.
+    const saldoRows = useMemo(() => {
+        const { dataDa: startStr, dataA: endStr } = dateRange;
+        const rows = [];
+        conti.forEach(conto => {
+            if (conto.saldo_iniziale == null || !conto.saldo_iniziale_data) return;
+            const saldoData = conto.saldo_iniziale_data;
+            if (saldoData > endStr) return; // saldo successivo all'anno: non applicabile, conta zero
+
+            const base = {
+                id: `saldo-${conto.id}`,
+                conto_destinazione: conto.descrizione,
+                modalita_pagamento: 'Saldo',
+                quote: `Saldo ${conto.descrizione}`,
+                quote_types: null,
+                stato_pagamento: '1. VALIDO CON RICEVUTA',
+            };
+
+            if (saldoData >= startStr) {
+                // Dentro l'anno selezionato: riga alla sua data reale.
+                rows.push({ ...base, data_pagamento: saldoData, importo: parseFloat(conto.saldo_iniziale) });
+            } else {
+                // Prima dell'anno: riporta il saldo sommando i movimenti del
+                // conto tra la data di saldo e l'inizio anno.
+                const movimenti = payments.filter(p =>
+                    p.conto_destinazione === conto.descrizione &&
+                    !p.stato_pagamento?.startsWith('3.') &&
+                    p.data_pagamento > saldoData &&
+                    p.data_pagamento < startStr
+                );
+                const totMovimenti = movimenti.reduce((acc, p) => acc + parseFloat(p.importo || 0), 0);
+                rows.push({
+                    ...base,
+                    data_pagamento: startStr,
+                    importo: parseFloat(conto.saldo_iniziale) + totMovimenti,
+                    pinnedFirst: true,
+                });
+            }
+        });
+        return rows;
+    }, [conti, payments, dateRange]);
 
     const [filters, setFilters] = useState({
         descrizione: '',
@@ -299,13 +363,15 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         setCurrentPage(1);
     };
 
+    const paymentsConSaldo = useMemo(() => [...payments, ...saldoRows], [payments, saldoRows]);
+
     const contiUnici = useMemo(() => {
-        const s = new Set(payments.map(p => p.conto_destinazione).filter(Boolean));
+        const s = new Set(paymentsConSaldo.map(p => p.conto_destinazione).filter(Boolean));
         return [...s].sort();
-    }, [payments]);
+    }, [paymentsConSaldo]);
 
     const filtered = useMemo(() => {
-        return payments.filter(p => {
+        const risultato = paymentsConSaldo.filter(p => {
             if (filters.dataDa && p.data_pagamento < filters.dataDa) return false;
             if (filters.dataA && p.data_pagamento > filters.dataA) return false;
             if (filters.descrizione) {
@@ -327,11 +393,21 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             }
             return true;
         }).sort((a, b) => (b.data_pagamento || '').localeCompare(a.data_pagamento || ''));
-    }, [payments, filters]);
 
-    const totaleAvere = useMemo(() =>
+        // I saldi riportati (conto con saldo antecedente all'anno) vanno
+        // sempre mostrati per primi, davanti alle operazioni vere e proprie
+        // dell'anno, anche se la loro data (inizio anno) li metterebbe in
+        // fondo nell'ordinamento per data decrescente.
+        const pinned = risultato.filter(p => p.pinnedFirst);
+        const resto = risultato.filter(p => !p.pinnedFirst);
+        return pinned.length > 0 ? [...pinned, ...resto] : risultato;
+    }, [paymentsConSaldo, filters]);
+
+    // Totale netto del periodo filtrato: entrate + uscite (gli importi delle
+    // uscite sono già memorizzati negativi, quindi la somma li sottrae).
+    const totaleNetto = useMemo(() =>
         filtered
-            .filter(p => parseFloat(p.importo || 0) >= 0 && !p.stato_pagamento?.startsWith('3.'))
+            .filter(p => !p.stato_pagamento?.startsWith('3.'))
             .reduce((acc, p) => acc + parseFloat(p.importo || 0), 0),
         [filtered]
     );
@@ -347,12 +423,55 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         return formatDateIT(s);
     };
 
+    // Stile condiviso dei pulsanti azione (dimensioni/tipografia coerenti,
+    // solo il colore di sfondo cambia in base al ruolo del pulsante).
+    const actionBtnStyle = (bg) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '7px',
+        padding: '8px 16px',
+        backgroundColor: bg,
+        color: '#fff',
+        border: 'none',
+        borderRadius: '8px',
+        fontWeight: '600',
+        fontSize: '0.9rem',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+    });
+
+    const filterDivider = <div style={{ width: '1px', background: 'var(--border-color)', alignSelf: 'stretch', margin: '0 2px' }} />;
+
     return (
         <>
-            {/* Filters Toolbar */}
-            <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px', flex: 1 }}>
+            {/* Toolbar: azioni — a sinistra scorciatoie (preferite/import), a destra le due creazioni */}
+            <div className="toolbar-card" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <OperazioniPreferiteDropdown
+                        societaId={societa?.id}
+                        onSelect={onNuovaOperazioneDaPreferita}
+                    />
+                    <button onClick={onImportCsv} style={actionBtnStyle('var(--primary-hover)')}>
+                        <Upload size={16} />
+                        Importa Prima Nota
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <button onClick={onGiroconto} style={actionBtnStyle('var(--primary)')}>
+                        <ArrowLeftRight size={16} />
+                        Giroconto
+                    </button>
+                    <button onClick={onNuovaOperazione} style={actionBtnStyle('var(--success)')}>
+                        <Plus size={16} />
+                        Nuova
+                    </button>
+                </div>
+            </div>
+
+            {/* Toolbar: filtri — raggruppati per periodo / ricerca testuale / categoria */}
+            <div className="toolbar-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
 
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: '130px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Data da</label>
@@ -381,21 +500,26 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             onClick={handleResetFilters}
                             title="Reimposta filtri"
                             style={{
-                                padding: '7px 10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '7px 12px',
                                 border: '1px solid var(--border-color)',
                                 borderRadius: '8px',
                                 background: 'var(--surface-1)',
                                 cursor: 'pointer',
                                 color: 'var(--text-secondary)',
-                                fontSize: '1rem',
+                                fontSize: '0.85rem',
+                                fontWeight: '500',
                                 lineHeight: 1,
+                                whiteSpace: 'nowrap',
                             }}
                         >
-                            &#8635;
+                            <span style={{ fontSize: '1rem' }}>&#8635;</span> Reset
                         </button>
                     </div>
 
-                    <div style={{ width: '1px', background: 'var(--border-color)', alignSelf: 'stretch', margin: '0 2px' }} />
+                    {filterDivider}
 
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '160px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Descrizione</label>
@@ -418,6 +542,8 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             onChange={(e) => handleFilterChange('intestatario', e.target.value)}
                         />
                     </div>
+
+                    {filterDivider}
 
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '120px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Conto</label>
@@ -444,55 +570,6 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             <option value="AVERE">Entrata</option>
                             <option value="DARE">Uscita</option>
                         </select>
-                    </div>
-                    </div>{/* fine inner flex */}
-
-                    {/* Bottone Nuova Operazione + Preferiti + Importa CSV */}
-                    <div style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0, gap: '8px' }}>
-                        <OperazioniPreferiteDropdown
-                            societaId={societa?.id}
-                            onSelect={onNuovaOperazioneDaPreferita}
-                        />
-                        <button
-                            onClick={onImportCsv}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '7px',
-                                padding: '8px 16px',
-                                backgroundColor: 'var(--primary-hover)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: '600',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <Upload size={16} />
-                            Importa Prima Nota
-                        </button>
-                        <button
-                            onClick={onNuovaOperazione}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '7px',
-                                padding: '8px 16px',
-                                backgroundColor: 'var(--success)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: '600',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <Plus size={16} />
-                            Nuova
-                        </button>
                     </div>
                 </div>
             </div>
@@ -646,13 +723,22 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                                     <FolderOpen size={14} />
                                                 </button>
                                                 {p.quote_types === 'operazione_manuale' && (
-                                                    <button
-                                                        style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--danger)', color: 'white' }}
-                                                        title="Elimina"
-                                                        onClick={() => onElimina(p)}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--warning)', color: 'white' }}
+                                                            title="Modifica"
+                                                            onClick={() => onModifica(p)}
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button
+                                                            style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--danger)', color: 'white' }}
+                                                            title="Elimina"
+                                                            onClick={() => onElimina(p)}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
@@ -674,8 +760,8 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             <button disabled={safePage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ border: '1px solid #ddd', background: 'white', color: '#333', padding: '5px 10px', borderRadius: '4px', cursor: safePage === totalPages ? 'not-allowed' : 'pointer', opacity: safePage === totalPages ? 0.4 : 1 }}>&gt;&gt;</button>
                             <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Tot righe: <strong>{filtered.length}</strong></span>
                         </div>
-                        <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1rem' }}>
-                            € {totaleAvere.toFixed(2).replace('.', ',')}
+                        <span style={{ color: totaleNetto < 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 'bold', fontSize: '1rem' }}>
+                            {totaleNetto < 0 ? '− ' : ''}€ {Math.abs(totaleNetto).toFixed(2).replace('.', ',')}
                         </span>
                     </div>
                 )}
@@ -700,6 +786,7 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     const { selectedSocietaId, societaList } = useSocieta();
     const [gruppi, setGruppi] = useState([]);
     const [vociConfig, setVociConfig] = useState([]);
+    const [products, setProducts] = useState([]);
     const [loadingGruppi, setLoadingGruppi] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [escludiZero, setEscludiZero] = useState(false);
@@ -806,15 +893,16 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     };
 
     useEffect(() => {
-        if (!selectedSocietaId) { setGruppi([]); setVociConfig([]); return; }
+        if (!selectedSocietaId) { setGruppi([]); setVociConfig([]); setProducts([]); return; }
         setLoadingGruppi(true);
         const token = localStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
         Promise.all([
             fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
             fetch(`/payments/api/voci-config?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
+            fetch(`/products/api?societaId=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
         ])
-            .then(([gruppiData, configData]) => { setGruppi(gruppiData); setVociConfig(configData); })
+            .then(([gruppiData, configData, productsData]) => { setGruppi(gruppiData); setVociConfig(configData); setProducts(productsData); })
             .catch(() => {})
             .finally(() => setLoadingGruppi(false));
     }, [selectedSocietaId]);
@@ -849,33 +937,56 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
         return map;
     }, [gruppi, vociConfig]);
 
-    // Pagamenti validi del periodo: con gruppo assegnato OPPURE con tipo auto-mappabile
+    // Mappa product_id → id sottogruppo, per i prodotti (tipicamente generici) a cui
+    // è stato assegnato un sottogruppo specifico in anagrafica prodotto.
+    const productIdToGruppoId = useMemo(() => {
+        const validIds = new Set(gruppi.map(g => g.id));
+        const map = {};
+        products.forEach(p => {
+            if (p.gruppoId && validIds.has(p.gruppoId)) map[p.id] = p.gruppoId;
+        });
+        return map;
+    }, [products, gruppi]);
+
+    // Risolve il sottogruppo di un pagamento con priorità:
+    // 1) gruppo assegnato esplicitamente sul pagamento (operazioni manuali/import)
+    // 2) sottogruppo assegnato al prodotto (product_id) in anagrafica prodotto
+    // 3) default per tipo prodotto (Configurazione → Contabilità)
+    // I giroconti (trasferimenti tra conti propri) non sono mai un'entrata/uscita
+    // reale: vanno esclusi dal bilancio a prescindere da un eventuale gruppo_id.
+    const resolveGruppoId = useCallback((p) => {
+        if (p.modalita_pagamento === 'Giroconto') return null;
+        if (p.gruppo_id) return p.gruppo_id;
+        if (p.product_id && productIdToGruppoId[p.product_id]) return productIdToGruppoId[p.product_id];
+        if (p.quote_types) {
+            const types = p.quote_types.split(',').map(t => t.trim());
+            for (const t of types) {
+                if (quoteTypeToGruppoId[t]) return quoteTypeToGruppoId[t];
+            }
+        }
+        return null;
+    }, [quoteTypeToGruppoId, productIdToGruppoId]);
+
+    // Pagamenti validi del periodo: con gruppo risolvibile (esplicito, da prodotto o da tipo)
     const paymentsValidi = useMemo(() => payments.filter(p => {
         if (p.stato_pagamento?.startsWith('3.')) return false;
-        const hasAutoGroup = p.quote_types && p.quote_types.split(',').some(t => quoteTypeToGruppoId[t.trim()]);
-        if (!p.gruppo_id && !hasAutoGroup) return false;
+        if (!resolveGruppoId(p)) return false;
         if (dateRange.dataDa && p.data_pagamento < dateRange.dataDa) return false;
         if (dateRange.dataA && p.data_pagamento > dateRange.dataA) return false;
         return true;
-    }), [payments, dateRange, quoteTypeToGruppoId]);
+    }), [payments, dateRange, resolveGruppoId]);
 
     // Totale per gruppo/sottogruppo (sempre positivo — il segno è dato dal tipo)
     const totaliPerGruppo = useMemo(() => {
         const map = {};
         paymentsValidi.forEach(p => {
-            let targetId = p.gruppo_id;
-            if (!targetId && p.quote_types) {
-                const types = p.quote_types.split(',').map(t => t.trim());
-                for (const t of types) {
-                    if (quoteTypeToGruppoId[t]) { targetId = quoteTypeToGruppoId[t]; break; }
-                }
-            }
+            const targetId = resolveGruppoId(p);
             if (targetId) {
                 map[targetId] = (map[targetId] || 0) + Math.abs(parseFloat(p.importo || 0));
             }
         });
         return map;
-    }, [paymentsValidi, quoteTypeToGruppoId]);
+    }, [paymentsValidi, resolveGruppoId]);
 
     const gruppiRadice = useMemo(() => gruppi.filter(g => !g.gruppo_id), [gruppi]);
     const allSotto = useMemo(() => gruppi.filter(g => g.gruppo_id), [gruppi]);
@@ -1355,6 +1466,8 @@ const Contabilita = () => {
     const [loading, setLoading] = useState(false);
     const [nuovaOpModalOpen, setNuovaOpModalOpen] = useState(false);
     const [nuovaOpInitialData, setNuovaOpInitialData] = useState(null);
+    const [editingOperazione, setEditingOperazione] = useState(null);
+    const [girocontoModalOpen, setGirocontoModalOpen] = useState(false);
     const [dettaglioPayment, setDettaglioPayment] = useState(null);
     const [importCsvOpen, setImportCsvOpen] = useState(false);
     const confirm = useConfirm();
@@ -1498,9 +1611,11 @@ const Contabilita = () => {
                         loading={loading}
                         selectedAnno={selectedAnno}
                         societa={societa}
-                        onNuovaOperazione={() => { setNuovaOpInitialData(null); setNuovaOpModalOpen(true); }}
-                        onNuovaOperazioneDaPreferita={(snapshot) => { setNuovaOpInitialData(snapshot); setNuovaOpModalOpen(true); }}
+                        onNuovaOperazione={() => { setNuovaOpInitialData(null); setEditingOperazione(null); setNuovaOpModalOpen(true); }}
+                        onNuovaOperazioneDaPreferita={(snapshot) => { setNuovaOpInitialData(snapshot); setEditingOperazione(null); setNuovaOpModalOpen(true); }}
+                        onGiroconto={() => setGirocontoModalOpen(true)}
                         onDettaglio={(p) => setDettaglioPayment(p)}
+                        onModifica={(p) => { setEditingOperazione(p); setNuovaOpInitialData(null); setNuovaOpModalOpen(true); }}
                         onElimina={handleElimina}
                         onImportCsv={() => setImportCsvOpen(true)}
                     />
@@ -1521,10 +1636,18 @@ const Contabilita = () => {
 
                 <NuovaOperazioneModal
                     isOpen={nuovaOpModalOpen}
-                    onClose={() => { setNuovaOpModalOpen(false); setNuovaOpInitialData(null); }}
+                    onClose={() => { setNuovaOpModalOpen(false); setNuovaOpInitialData(null); setEditingOperazione(null); }}
                     onSaved={refreshPayments}
                     societaId={selectedSocietaId}
                     initialData={nuovaOpInitialData}
+                    editingPayment={editingOperazione}
+                />
+
+                <GirocontoModal
+                    isOpen={girocontoModalOpen}
+                    onClose={() => setGirocontoModalOpen(false)}
+                    onSaved={refreshPayments}
+                    societaId={selectedSocietaId}
                 />
 
                 <DettaglioOperazioneModal

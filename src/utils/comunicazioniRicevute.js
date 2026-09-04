@@ -133,7 +133,7 @@ export function buildIstruzioniPagamento(conti, contoDestinazione, modalita) {
     if ((modalita || '').toLowerCase() !== 'bonifico') return '';
     if (!Array.isArray(conti)) return '';
     const conto = conti.find(c => c.descrizione === contoDestinazione)
-        || conti.find(c => c.modalita_pagamento?.toLowerCase() === 'bonifico');
+        || conti.find(c => (c.modalita_pagamento || []).some(m => m?.toLowerCase() === 'bonifico'));
     if (!conto?.istruzioni_pagamento) return '';
     return conto.istruzioni_pagamento.replaceAll('{{IBAN}}', conto.iban || '');
 }
