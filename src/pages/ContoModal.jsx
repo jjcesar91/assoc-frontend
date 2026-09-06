@@ -11,11 +11,15 @@ const MODALITA_OPTIONS = ['Contanti', 'POS', 'Assegno', 'Bonifico'];
 const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
     const [descrizione, setDescrizione] = useState('');
     const [modalita, setModalita] = useState([]);
+    const [saldoIniziale, setSaldoIniziale] = useState('0');
+    const [saldoInizialeData, setSaldoInizialeData] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setDescrizione(conto?.descrizione || '');
             setModalita(conto?.modalita_pagamento || []);
+            setSaldoIniziale(conto?.saldo_iniziale != null ? String(conto.saldo_iniziale) : '0');
+            setSaldoInizialeData(conto?.saldo_iniziale_data || '');
         }
     }, [isOpen, conto]);
 
@@ -30,6 +34,8 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
         onSave({
             descrizione: descrizione.trim(),
             modalita_pagamento: modalita,
+            saldo_iniziale: saldoIniziale === '' ? 0 : parseFloat(String(saldoIniziale).replace(',', '.')) || 0,
+            saldo_iniziale_data: saldoInizialeData || null,
         });
     };
 
@@ -77,6 +83,28 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
                                     pagamento si configurano dall'azione dedicata nell'elenco conti.
                                 </div>
                             )}
+                        </div>
+
+                        <div className="conto-modal-field" style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label>Saldo iniziale</label>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    className="md-input"
+                                    value={saldoIniziale}
+                                    onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setSaldoIniziale(e.target.value); }}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label>Data saldo iniziale</label>
+                                <input
+                                    type="date"
+                                    className="md-input"
+                                    value={saldoInizialeData}
+                                    onChange={(e) => setSaldoInizialeData(e.target.value)}
+                                />
+                            </div>
                         </div>
 
                     </div>
