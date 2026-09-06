@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Search, User, Truck, Type, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { X, Plus, Edit2, Search, User, Truck, Type, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import RicercaSocioModal from './RicercaSocioModal';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { useSocieta } from '../data/SocietaContext';
@@ -143,7 +143,7 @@ const FornitoreSelector = ({ fornitori, selected, onSelect, societaId, onFornito
 // ---------------------------------------------------------------------------
 // Modal principale
 // ---------------------------------------------------------------------------
-const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData }) => {
+const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData, editingPayment }) => {
     const { selectedAnno } = useAnno();
     const { societaList } = useSocieta();
     const selectedSocieta = useMemo(
@@ -207,7 +207,11 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
     // Reset al cambio società o apertura/chiusura
     useEffect(() => {
         if (isOpen && societaId) {
-            loadData(initialData || null);
+            if (editingPayment) {
+                loadDataForEdit(editingPayment);
+            } else {
+                loadData(initialData || null);
+            }
         }
         if (!isOpen) {
             resetAll();
@@ -249,11 +253,84 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                     });
                 }
             } else {
-                const defaultConto = cData.find(c => c.modalita_pagamento === 'Contanti') || cData[0];
-                setForm(prev => ({ ...prev, conto_destinazione: defaultConto?.descrizione || '' }));
+                const defaultConto = cData.find(c => (c.modalita_pagamento || []).includes('Contanti')) || cData[0];
+                const defaultModalita = defaultConto?.modalita_pagamento?.[0] || 'Contanti';
+                setForm(prev => ({ ...prev, conto_destinazione: defaultConto?.descrizione || '', modalita_pagamento: defaultModalita }));
             }
         } catch (e) {
             console.error('Errore caricamento dati:', e);
+        } finally {
+            setLoadingGruppi(false);
+        }
+    };
+
+    // Ricostruisce la selezione del form a partire da un pagamento esistente
+    // (operazione manuale di prima nota). Diversamente dalla preferita, qui i
+    // dati arrivano nel formato "grezzo" della tabella payments.
+    const loadDataForEdit = async (payment) => {
+        setLoadingGruppi(true);
+        const token = localStorage.getItem('token');
+        try {
+            const [gRes, fRes, cRes] = await Promise.all([
+                fetch(`/payments/api/gruppi?societa_id=${societaId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`/payments/api/fornitori?societa_id=${societaId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`/payments/api/conti?societa_id=${societaId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            ]);
+            const [gData, fData, cData] = await Promise.all([
+                gRes.ok ? gRes.json() : [],
+                fRes.ok ? fRes.json() : [],
+                cRes.ok ? cRes.json() : [],
+            ]);
+            setGruppi(gData);
+            setFornitori(fData);
+            setConti(cData);
+
+            const gruppoRecord = payment.gruppo_id ? gData.find(g => g.id === payment.gruppo_id) : null;
+            if (gruppoRecord && gruppoRecord.gruppo_id) {
+                setSelectedGruppo(gData.find(g => g.id === gruppoRecord.gruppo_id) || null);
+                setSelectedSottogruppo(gruppoRecord);
+            } else {
+                setSelectedGruppo(gruppoRecord || null);
+                setSelectedSottogruppo(null);
+            }
+
+            const importoNum = parseFloat(payment.importo || 0);
+            setSegno(importoNum < 0 ? 'Uscita' : 'Entrata');
+
+            if (payment.socio_id) {
+                setIntestatarioTipo('socio');
+                setIntestatarioLibero('');
+                setSelectedFornitore(null);
+                let socio = { id: payment.socio_id, nome: '', cognome: payment.intestatario || '', codice_fiscale: payment.codice_fiscale || null };
+                try {
+                    const sRes = await fetch(`/users/api/soci/${payment.socio_id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (sRes.ok) socio = await sRes.json();
+                } catch (e) {
+                    console.error('Errore caricamento socio:', e);
+                }
+                setSelectedSocio(socio);
+            } else if (payment.fornitore_id) {
+                setIntestatarioTipo('fornitore');
+                setSelectedSocio(null);
+                setIntestatarioLibero('');
+                setSelectedFornitore(fData.find(f => f.id === payment.fornitore_id) || null);
+            } else {
+                setIntestatarioTipo('libero');
+                setSelectedSocio(null);
+                setSelectedFornitore(null);
+                setIntestatarioLibero(payment.intestatario || '');
+            }
+
+            setForm({
+                data_pagamento: payment.data_pagamento || new Date().toISOString().split('T')[0],
+                importo: isNaN(importoNum) ? '' : Math.abs(importoNum).toFixed(2),
+                descrizione: payment.quote || '',
+                modalita_pagamento: payment.modalita_pagamento || 'Contanti',
+                conto_destinazione: payment.conto_destinazione || '',
+                note: payment.note || '',
+            });
+        } catch (e) {
+            console.error('Errore caricamento dati per modifica:', e);
         } finally {
             setLoadingGruppi(false);
         }
@@ -320,12 +397,19 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
         setForm(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleModalitaChange = (newModalita) => {
-        const associati = conti.filter(c => c.modalita_pagamento === newModalita);
+    // Il conto guida la scelta della modalità: cambiando conto, la tendina
+    // modalità si ricarica con le modalità associate al conto selezionato
+    // (se il conto non ne ha nessuna configurata, restano le modalità
+    // "storiche" per non bloccare l'operatore).
+    const handleContoChange = (descrizione) => {
+        const conto = conti.find(c => c.descrizione === descrizione);
+        const modalitaDelConto = conto?.modalita_pagamento;
         setForm(prev => ({
             ...prev,
-            modalita_pagamento: newModalita,
-            conto_destinazione: associati.length > 0 ? associati[0].descrizione : '',
+            conto_destinazione: descrizione,
+            modalita_pagamento: (modalitaDelConto && modalitaDelConto.length > 0)
+                ? (modalitaDelConto.includes(prev.modalita_pagamento) ? prev.modalita_pagamento : modalitaDelConto[0])
+                : prev.modalita_pagamento,
         }));
     };
 
@@ -397,18 +481,23 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
             modalita_pagamento: form.modalita_pagamento,
             conto_destinazione: form.conto_destinazione || null,
             note: form.note || null,
-            stato_pagamento: '1. VALIDO CON RICEVUTA',
-            emetti_ricevuta: 'NO',
             gruppo_id: selectedSottogruppo?.id || selectedGruppo?.id || null,
-            ...(socio_id ? { socio_id, codice_fiscale } : {}),
-            ...(fornitore_id ? { fornitore_id } : {}),
+            // Valorizzati esplicitamente a null quando non applicabili, per
+            // ripulire un intestatario di tipo diverso scelto in precedenza
+            // (rilevante in modifica: es. da socio a fornitore).
+            socio_id: socio_id || null,
+            codice_fiscale: codice_fiscale || null,
+            fornitore_id: fornitore_id || null,
+            ...(editingPayment ? {} : { stato_pagamento: '1. VALIDO CON RICEVUTA', emetti_ricevuta: 'NO' }),
         };
 
         setSaving(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('/payments/api', {
-                method: 'POST',
+            const url = editingPayment ? `/payments/api/${editingPayment.id}` : '/payments/api';
+            const method = editingPayment ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
@@ -433,6 +522,13 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
     const selectedItem = selectedSottogruppo || selectedGruppo;
     const isMisto = selectedItem?.tipo === 'Entrata/Uscita';
 
+    // Modalità disponibili per il conto attualmente selezionato; se il conto
+    // non ha modalità configurate si ripiega sull'elenco storico fisso.
+    const contoSelezionato = conti.find(c => c.descrizione === form.conto_destinazione);
+    const modalitaOptions = (contoSelezionato?.modalita_pagamento?.length > 0)
+        ? contoSelezionato.modalita_pagamento
+        : MODALITA;
+
     return (
         <>
             <div className="nom-overlay">
@@ -441,8 +537,8 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                     {/* Header */}
                     <div className="nom-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Plus size={20} />
-                            <span>Nuova Operazione</span>
+                            {editingPayment ? <Edit2 size={18} /> : <Plus size={20} />}
+                            <span>{editingPayment ? 'Modifica Operazione' : 'Nuova Operazione'}</span>
                         </div>
                         <button className="nom-close-btn" onClick={onClose} title="Chiudi">
                             <X size={20} />
@@ -651,27 +747,27 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                                 </div>
 
                                 <div className="nom-field nom-field--half">
-                                    <label>Modalità pagamento</label>
-                                    <select
-                                        className="md-select"
-                                        value={form.modalita_pagamento}
-                                        onChange={e => handleModalitaChange(e.target.value)}
-                                    >
-                                        {MODALITA.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="nom-field nom-field--half">
                                     <label>Conto destinazione</label>
                                     <select
                                         className="md-select"
                                         value={form.conto_destinazione}
-                                        onChange={e => handleFieldChange('conto_destinazione', e.target.value)}
+                                        onChange={e => handleContoChange(e.target.value)}
                                     >
                                         <option value="">— Nessuno —</option>
                                         {conti.map(c => (
                                             <option key={c.id} value={c.descrizione}>{c.descrizione}</option>
                                         ))}
+                                    </select>
+                                </div>
+
+                                <div className="nom-field nom-field--half">
+                                    <label>Modalità pagamento</label>
+                                    <select
+                                        className="md-select"
+                                        value={form.modalita_pagamento}
+                                        onChange={e => handleFieldChange('modalita_pagamento', e.target.value)}
+                                    >
+                                        {modalitaOptions.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
                                 </div>
 
@@ -696,18 +792,20 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                             <button type="button" className="nom-btn nom-btn--cancel" onClick={onClose} disabled={saving}>
                                 Annulla
                             </button>
-                            <button
-                                type="button"
-                                className="nom-btn nom-btn--star"
-                                onClick={() => setSalvaPreferiteOpen(true)}
-                                disabled={saving}
-                                title="Salva come operazione preferita"
-                            >
-                                <Star size={15} />
-                                Salva preferiti
-                            </button>
+                            {!editingPayment && (
+                                <button
+                                    type="button"
+                                    className="nom-btn nom-btn--star"
+                                    onClick={() => setSalvaPreferiteOpen(true)}
+                                    disabled={saving}
+                                    title="Salva come operazione preferita"
+                                >
+                                    <Star size={15} />
+                                    Salva preferiti
+                                </button>
+                            )}
                             <button type="submit" className="nom-btn nom-btn--save" disabled={saving || !selectedItem}>
-                                {saving ? 'Salvataggio…' : 'Salva operazione'}
+                                {saving ? 'Salvataggio…' : (editingPayment ? 'Salva modifiche' : 'Salva operazione')}
                             </button>
                         </div>
                     </form>

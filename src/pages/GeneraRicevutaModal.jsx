@@ -6,6 +6,11 @@ import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 import { formatDateIT } from '../utils/dateUtils';
 
+// Elenco storico, usato come ripiego quando il conto selezionato non ha
+// modalità configurate in anagrafica (Configurazione → Conti).
+const MODALITA_STORICHE = ['Contanti', 'POS', 'Assegno', 'Bonifico'];
+const MODALITA_ICONS = { Contanti: Coins, POS: CreditCard, Assegno: Banknote, Bonifico: Landmark };
+
 const GeneraRicevutaModal = ({
     isOpen,
     onClose,
@@ -123,12 +128,14 @@ const GeneraRicevutaModal = ({
                         const data = await res.json();
                         setConti(data);
 
-                        // Default
-                        const associati = data.filter(c => c.modalita_pagamento === 'Contanti');
-                        if (associati.length > 0) {
-                            setContoDestinazione(associati[0].descrizione);
+                        // Default: conto con "Contanti" tra le modalità, altrimenti CASSA/il primo.
+                        const defaultConto = data.find(c => (c.modalita_pagamento || []).includes('Contanti')) || data.find(c => c.descrizione === 'CASSA');
+                        if (defaultConto) {
+                            setContoDestinazione(defaultConto.descrizione);
+                            setModalita(defaultConto.modalita_pagamento?.[0] || 'Contanti');
                         } else {
                             setContoDestinazione('CASSA');
+                            setModalita('Contanti');
                         }
                     }
                 } catch (e) {
@@ -138,7 +145,6 @@ const GeneraRicevutaModal = ({
             fetchConti();
 
             // Reset other fields as well to defaults if needed
-            setModalita('Contanti');
             setEmettiRicevuta('SI');
             // Alla riapertura la modal mostra sempre l'anno associativo corrente
             setAnnoRicevuta(currentRefYear);
@@ -175,15 +181,25 @@ const GeneraRicevutaModal = ({
         return () => { cancelled = true; };
     }, [isOpen, annoRicevuta, selectedSocietaId]);
 
-    const handleModalitaChange = (newModalita) => {
-        setModalita(newModalita);
-        const associati = conti.filter(c => c.modalita_pagamento === newModalita);
-        if (associati.length > 0) {
-            setContoDestinazione(associati[0].descrizione);
+    // Il conto guida la scelta della modalità: cambiando conto, i pulsanti
+    // modalità si ricaricano con le modalità associate al conto selezionato
+    // (se il conto non ne ha nessuna configurata, restano le modalità
+    // "storiche" per non bloccare l'operatore).
+    const handleContoChange = (descrizione) => {
+        setContoDestinazione(descrizione);
+        const conto = conti.find(c => c.descrizione === descrizione);
+        const modalitaDelConto = conto?.modalita_pagamento;
+        if (modalitaDelConto && modalitaDelConto.length > 0 && !modalitaDelConto.includes(modalita)) {
+            setModalita(modalitaDelConto[0]);
         }
     };
 
     if (!isOpen) return null;
+
+    const contoSelezionato = conti.find(c => c.descrizione === contoDestinazione);
+    const modalitaOptions = (contoSelezionato?.modalita_pagamento?.length > 0)
+        ? contoSelezionato.modalita_pagamento
+        : MODALITA_STORICHE;
 
     const annoDiverso = annoRicevuta != null && annoRicevuta !== currentRefYear;
 
@@ -331,30 +347,12 @@ const GeneraRicevutaModal = ({
                             </div>
                         </div>
 
-                        <div className="gpm-field-group" style={{ flex: 2 }}>
-                            <label>Modalità di pagamento</label>
-                            <div className="gpm-payment-methods">
-                                <button className={`gpm-method-btn ${modalita === 'Contanti' ? 'active' : ''}`} onClick={() => handleModalitaChange('Contanti')}>
-                                    <Coins size={16}/> Contanti
-                                </button>
-                                <button className={`gpm-method-btn ${modalita === 'POS' ? 'active' : ''}`} onClick={() => handleModalitaChange('POS')}>
-                                    <CreditCard size={16}/> POS
-                                </button>
-                                <button className={`gpm-method-btn ${modalita === 'Assegno' ? 'active' : ''}`} onClick={() => handleModalitaChange('Assegno')}>
-                                    <Banknote size={16}/> Assegno
-                                </button>
-                                <button className={`gpm-method-btn ${modalita === 'Bonifico' ? 'active' : ''}`} onClick={() => handleModalitaChange('Bonifico')}>
-                                    <Landmark size={16}/> Bonifico
-                                </button>
-                            </div>
-                        </div>
-
                         <div className="gpm-field-group">
                             <label>Conto di destinazione</label>
                             <select
                                 className="gpm-select"
                                 value={contoDestinazione}
-                                onChange={(e) => setContoDestinazione(e.target.value)}
+                                onChange={(e) => handleContoChange(e.target.value)}
                             >
                                 {conti.length > 0 ? (
                                     conti.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)
@@ -365,6 +363,20 @@ const GeneraRicevutaModal = ({
                                     </>
                                 )}
                             </select>
+                        </div>
+
+                        <div className="gpm-field-group" style={{ flex: 2 }}>
+                            <label>Modalità di pagamento</label>
+                            <div className="gpm-payment-methods">
+                                {modalitaOptions.map(m => {
+                                    const Icon = MODALITA_ICONS[m] || Coins;
+                                    return (
+                                        <button key={m} type="button" className={`gpm-method-btn ${modalita === m ? 'active' : ''}`} onClick={() => setModalita(m)}>
+                                            <Icon size={16}/> {m}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 

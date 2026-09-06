@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { useSocieta } from '../data/SocietaContext';
 import './ProdottoModal.css';
 import RateScadenzarioModal from './RateScadenzarioModal';
 
@@ -16,8 +17,10 @@ const getDurationDays = (duration) => {
 };
 
 const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
+    const { selectedSocietaId } = useSocieta();
     const [showRateModal, setShowRateModal] = useState(false);
     const [formErrors, setFormErrors] = useState({});
+    const [sottogruppi, setSottogruppi] = useState([]);
     // Initial state based on `product` if editing
     const [formData, setFormData] = useState({
         type: 'generic', // Default
@@ -36,7 +39,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         passepartout: false,
         season: '',
         numInstallments: '',
-        installments: []
+        installments: [],
+        gruppoId: '' // sottogruppo di bilancio (solo per tipo generic)
     });
 
     useEffect(() => {
@@ -62,10 +66,21 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                 passepartout: false,
                 season: '',
                 numInstallments: '',
-                installments: []
+                installments: [],
+                gruppoId: ''
             });
         }
     }, [product, isOpen]);
+
+    // Sottogruppi di bilancio disponibili (servizio payments), per l'associazione
+    // opzionale dei prodotti generici a un sottogruppo specifico.
+    useEffect(() => {
+        if (!isOpen || !selectedSocietaId) { setSottogruppi([]); return; }
+        fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setSottogruppi((data || []).filter(g => g.gruppo_id)))
+            .catch(() => setSottogruppi([]));
+    }, [isOpen, selectedSocietaId]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -81,7 +96,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
             const updated = {
                 ...prev,
                 [name]: type === 'checkbox' ? checked : finalValue,
-                ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {})
+                ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {}),
+                ...(name === 'type' && finalValue !== 'generic' ? { gruppoId: '' } : {})
             };
             if (name === 'duration') {
                 const maxDays = getDurationDays(finalValue);
@@ -290,6 +306,30 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     placeholder="es. 7"
                                 />
                                 {formErrors.giorniAvvisoScadenza && <span className="prodotto-form-error">{formErrors.giorniAvvisoScadenza}</span>}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'generic':
+                return (
+                    <div className="prodotto-form-row">
+                        <div className="prodotto-form-col">
+                            <div className="prodotto-form-group">
+                                <label>Sottogruppo di bilancio (opzionale)</label>
+                                <select
+                                    name="gruppoId"
+                                    value={formData.gruppoId || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, gruppoId: e.target.value === '' ? '' : parseInt(e.target.value, 10) }))}
+                                    className="prodotto-form-control"
+                                >
+                                    <option value="">— Nessuno (usa la configurazione di default) —</option>
+                                    {sottogruppi.map(g => (
+                                        <option key={g.id} value={g.id}>{g.codice ? `${g.codice} - ${g.descrizione}` : g.descrizione}</option>
+                                    ))}
+                                </select>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    Le ricevute emesse per questo prodotto confluiranno in prima nota e bilancio sotto questo sottogruppo.
+                                </span>
                             </div>
                         </div>
                     </div>

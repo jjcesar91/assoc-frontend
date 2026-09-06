@@ -164,10 +164,10 @@ const Modulistica = () => {
 
                 <!-- MEMBER TABLE -->
                 <style>
-                    .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 10pt; }
-                    .pdf-table td { border: 1px solid #000; padding: 8px; vertical-align: top; }
-                    .pdf-label { font-size: 8pt; text-transform: uppercase; color: #000; margin-bottom: 4px; font-weight: bold; }
-                    .pdf-value { min-height: 18px; }
+                    .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 8pt; }
+                    .pdf-table td { border: 1px solid #000; padding: 6.4px; vertical-align: top; }
+                    .pdf-label { font-size: 6.4pt; text-transform: uppercase; color: #000; margin-bottom: 3.2px; font-weight: bold; }
+                    .pdf-value { min-height: 14.4px; }
                 </style>
                 <table class="pdf-table">
                     <tr>
@@ -211,7 +211,7 @@ const Modulistica = () => {
                 </table>
 
                 <!-- BODY CONTENT -->
-                <div style="font-size: 11pt; line-height: 1.6; text-align: justify; margin-bottom: 60px;">
+                <div style="font-size: 11pt; line-height: 1.12; text-align: justify; margin-bottom: 60px;">
                     ${modulo.htmlContent || modulo.testo || ''}
                 </div>
 
