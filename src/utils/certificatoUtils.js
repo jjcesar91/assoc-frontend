@@ -27,3 +27,39 @@ export function computeScadenzaCertificatoStr(dataPresentazione) {
     if (!d) return '';
     return d.toISOString().split('T')[0];
 }
+
+/**
+ * Inverso esatto di computeScadenzaCertificato: da una data di SCADENZA risale
+ * alla data di presentazione da registrare sul campo scadenza_certificato.
+ * Formula (operazioni invertite e con segno opposto): scadenza + 1 giorno - 1 anno
+ * Esempio: scade il 2 febbraio 2027 → presentato il 3 febbraio 2026
+ *
+ * Serve in importazione: i file elenco soci (template incluso) riportano SEMPRE
+ * la data di scadenza, mentre a DB si conserva la data di presentazione.
+ * La coppia compute/inverse è un punto fisso: reimportare due volte lo stesso
+ * file non produce spostamenti di anno.
+ *
+ * @param {string|Date|null} dataScadenza
+ * @returns {Date|null}
+ */
+export function computeDataCertificatoDaScadenza(dataScadenza) {
+    if (!dataScadenza) return null;
+    const d = new Date(dataScadenza);
+    if (isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() + 1);
+    d.setFullYear(d.getFullYear() - 1);
+    return d;
+}
+
+/**
+ * Come computeDataCertificatoDaScadenza ma restituisce la stringa YYYY-MM-DD
+ * (o stringa vuota se la data di scadenza non è valida).
+ *
+ * @param {string|null} dataScadenza
+ * @returns {string}
+ */
+export function computeDataCertificatoDaScadenzaStr(dataScadenza) {
+    const d = computeDataCertificatoDaScadenza(dataScadenza);
+    if (!d) return '';
+    return d.toISOString().split('T')[0];
+}

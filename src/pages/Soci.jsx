@@ -7,7 +7,7 @@ import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
-import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { computeScadenzaCertificatoStr, computeDataCertificatoDaScadenzaStr } from '../utils/certificatoUtils';
 import { formatDateIT } from '../utils/dateUtils';
 import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
@@ -382,7 +382,7 @@ const Soci = ({ onLogout }) => {
             'COMUNE_NASCITA', 'INDIRIZZO_RESIDENZA', 'COMUNE_RESIDENZA', 'CAP',
             'TELEFONO', 'EMAIL', 'ANNO_NASCITA', 'ISCRITTO', 'DATA_ISCRIZIONE',
             'DATA_ACCETTAZIONE', 'PAGAMENTI NON REGOLARI', 'CERTIFICATO VALIDO',
-            'DATA CERTIFICATO', 'NOTE',
+            'DATA SCADENZA CERTIFICATO', 'NOTE',
         ];
 
         const escapeCell = (v) => {
@@ -409,9 +409,10 @@ const Soci = ({ onLogout }) => {
             formatDate(s.data_ammissione),
             getTesseramentoStatus(s) !== 'REGOLARE' ? 'SI' : 'NO',
             certLabel(getCertStatus(s.scadenza_certificato)),
-            // Valore grezzo del campo (data del certificato), non la scadenza
-            // calcolata: così l'export è reimportabile senza spostamenti di data.
-            formatDate(s.scadenza_certificato),
+            // Si esporta la data di SCADENZA (coerente con l'intestazione e con
+            // l'import, che la riconverte in data di presentazione): reimportare
+            // l'export non produce spostamenti di anno.
+            formatDate(computeScadenzaCertificatoStr(s.scadenza_certificato)),
             s.note || '',
         ]);
 
@@ -642,7 +643,7 @@ const Soci = ({ onLogout }) => {
         const headers = [
             'COGNOME', 'NOME', 'SESSO', 'DATA_NASCITA', 'COMUNE_NASCITA',
             'CODICE_FISCALE', 'EMAIL', 'TELEFONO', 'INDIRIZZO_RESIDENZA',
-            'COMUNE_RESIDENZA', 'CAP', 'DATA CERTIFICATO',
+            'COMUNE_RESIDENZA', 'CAP', 'DATA SCADENZA CERTIFICATO',
             'DATA_ISCRIZIONE', 'NOTE',
         ];
         const csv = headers.join(';') + '\n';
@@ -766,10 +767,10 @@ const Soci = ({ onLogout }) => {
         for (let i = 0; i < dataRecords.length; i++) {
             const cells = dataRecords[i];
             const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
-            // Data del certificato medico: intestazione attuale 'DATA CERTIFICATO',
-            // con fallback allo storico 'DATA SCADENZA CERTIFICATO' (nome fuorviante:
-            // il campo contiene la data del certificato, non la sua scadenza).
-            const getDataCertificato = () => get('DATA CERTIFICATO') || get('DATA SCADENZA CERTIFICATO');
+            // Colonna certificato: nei file elenco soci contiene SEMPRE la data di
+            // SCADENZA. A DB si registra invece la data di presentazione, quindi
+            // in fase di import si converte con l'inverso di computeScadenzaCertificato.
+            const getDataScadenzaCertificato = () => get('DATA SCADENZA CERTIFICATO') || get('DATA CERTIFICATO');
 
             const cf = get('CODICE_FISCALE').toUpperCase();
 
@@ -786,9 +787,10 @@ const Soci = ({ onLogout }) => {
                 indirizzo: get('INDIRIZZO_RESIDENZA') || null,
                 comune: get('COMUNE_RESIDENZA') || null,
                 cap: get('CAP') || null,
-                // Importata così com'è: nessuno spostamento di 1 anno, il valore
-                // del file è la data del certificato salvata su scadenza_certificato.
-                scadenza_certificato: parseDate(getDataCertificato()) || null,
+                // Il file riporta la data di scadenza: si registra la data di
+                // presentazione (scadenza - 1 anno + 1 giorno). Reimportare lo
+                // stesso file non sposta l'anno (compute/inverse sono simmetrici).
+                scadenza_certificato: computeDataCertificatoDaScadenzaStr(parseDate(getDataScadenzaCertificato())) || null,
                 data_ammissione: parseDate(get('DATA_ISCRIZIONE')) || null,
                 note: get('NOTE') || null,
             });
@@ -806,9 +808,9 @@ const Soci = ({ onLogout }) => {
                 const cognome = payload.cognome;
                 const nome = payload.nome;
 
-                // Colonna data certificato vuota nel file ma valore presente a DB:
-                // non azzerare, si mantiene la scadenza già registrata.
-                if (!getDataCertificato() && existing.scadenza_certificato) {
+                // Colonna certificato vuota nel file ma valore presente a DB:
+                // non azzerare, si mantiene la data già registrata.
+                if (!getDataScadenzaCertificato() && existing.scadenza_certificato) {
                     payload.scadenza_certificato = existing.scadenza_certificato;
                 }
 
@@ -925,8 +927,8 @@ const Soci = ({ onLogout }) => {
         const headers = allRecords[headerIdx].map(h => h.toUpperCase().trim());
         const col = (name) => headers.indexOf(name);
         if (col('CODICE_FISCALE') === -1) { showAlert('Colonna CODICE_FISCALE non trovata nel file.', 'File non valido', 'warning'); return; }
-        if (col('DATA CERTIFICATO') === -1 && col('DATA SCADENZA CERTIFICATO') === -1) {
-            showAlert('Colonna « DATA CERTIFICATO » non trovata nel file.', 'File non valido', 'warning'); return;
+        if (col('DATA SCADENZA CERTIFICATO') === -1 && col('DATA CERTIFICATO') === -1) {
+            showAlert('Colonna « DATA SCADENZA CERTIFICATO » non trovata nel file.', 'File non valido', 'warning'); return;
         }
         const dataRecords = allRecords.slice(headerIdx + 1);
         const total = dataRecords.length;
@@ -954,7 +956,8 @@ const Soci = ({ onLogout }) => {
         for (let i = 0; i < dataRecords.length; i++) {
             const cells = dataRecords[i];
             const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
-            const rawCert = get('DATA CERTIFICATO') || get('DATA SCADENZA CERTIFICATO');
+            // Colonna = data di SCADENZA; a DB si registra la data di presentazione.
+            const rawScad = get('DATA SCADENZA CERTIFICATO') || get('DATA CERTIFICATO');
             const cf = get('CODICE_FISCALE').toUpperCase();
 
             if (!cf) {
@@ -963,16 +966,17 @@ const Soci = ({ onLogout }) => {
             } else if (!existingCFsMap.has(cf)) {
                 saltati++;
                 logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): socio non presente nella società` });
-            } else if (!rawCert) {
+            } else if (!rawScad) {
                 // Colonna vuota: non si azzera il valore già a DB.
                 saltati++;
-                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato assente nel file` });
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): data scadenza certificato assente nel file` });
             } else {
-                const nuova = parseDate(rawCert);
+                const scadIso = parseDate(rawScad);
+                const nuova = computeDataCertificatoDaScadenzaStr(scadIso) || null;
                 const existing = existingCFsMap.get(cf);
-                if (!nuova) {
-                    errori.push(`Riga ${i+2} (${cf}): data certificato non valida ("${rawCert}")`);
-                    logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato non valida ("${rawCert}")` });
+                if (!scadIso || !nuova) {
+                    errori.push(`Riga ${i+2} (${cf}): data scadenza certificato non valida ("${rawScad}")`);
+                    logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): data scadenza certificato non valida ("${rawScad}")` });
                 } else if (normDate(nuova) === normDate(existing.scadenza_certificato)) {
                     saltati++;
                     logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato già allineata` });
@@ -988,7 +992,7 @@ const Soci = ({ onLogout }) => {
                             const updated = await res.json();
                             existingCFsMap.set(cf, updated);
                             const da = normDate(existing.scadenza_certificato) || '—';
-                            logs.push({ type: 'UPDATE', rowIdx: i, message: `Riga ${i+2} (${cf}): certificato ${da} → ${normDate(nuova)}` });
+                            logs.push({ type: 'UPDATE', rowIdx: i, message: `Riga ${i+2} (${cf}): certificato ${da} → ${normDate(nuova)} (scadenza ${normDate(scadIso)})` });
                         } else {
                             const err = await res.json();
                             const msg = err.error || err.message || 'errore sconosciuto';
