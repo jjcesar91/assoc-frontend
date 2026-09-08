@@ -14,6 +14,14 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
     const [saldoIniziale, setSaldoIniziale] = useState('0');
     const [saldoInizialeData, setSaldoInizialeData] = useState('');
 
+    const isSuperuser = (localStorage.getItem('user_role') || '') === 'superuser';
+    // Il saldo si considera "già impostato" se è stata registrata una data di
+    // riferimento oppure un importo diverso da zero. In quel caso solo il
+    // superuser può modificarlo; se non è mai stato impostato, chiunque può farlo.
+    const saldoGiaImpostato = !!(conto?.saldo_iniziale_data)
+        || (conto?.saldo_iniziale != null && Number(conto.saldo_iniziale) !== 0);
+    const saldoBloccato = saldoGiaImpostato && !isSuperuser;
+
     useEffect(() => {
         if (isOpen) {
             setDescrizione(conto?.descrizione || '');
@@ -34,8 +42,14 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
         onSave({
             descrizione: descrizione.trim(),
             modalita_pagamento: modalita,
-            saldo_iniziale: saldoIniziale === '' ? 0 : parseFloat(String(saldoIniziale).replace(',', '.')) || 0,
-            saldo_iniziale_data: saldoInizialeData || null,
+            // Se il saldo è bloccato (già impostato e utente non superuser) si
+            // rispediscono i valori originali, senza applicare modifiche.
+            saldo_iniziale: saldoBloccato
+                ? (conto?.saldo_iniziale != null ? Number(conto.saldo_iniziale) : 0)
+                : (saldoIniziale === '' ? 0 : parseFloat(String(saldoIniziale).replace(',', '.')) || 0),
+            saldo_iniziale_data: saldoBloccato
+                ? (conto?.saldo_iniziale_data || null)
+                : (saldoInizialeData || null),
         });
     };
 
@@ -94,6 +108,7 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
                                     className="md-input"
                                     value={saldoIniziale}
                                     onChange={(e) => { if (/^\d*[.,]?\d*$/.test(e.target.value)) setSaldoIniziale(e.target.value); }}
+                                    disabled={saldoBloccato}
                                 />
                             </div>
                             <div style={{ flex: 1 }}>
@@ -103,9 +118,16 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
                                     className="md-input"
                                     value={saldoInizialeData}
                                     onChange={(e) => setSaldoInizialeData(e.target.value)}
+                                    disabled={saldoBloccato}
                                 />
                             </div>
                         </div>
+                        {saldoBloccato && (
+                            <div className="field-hint">
+                                Il saldo iniziale e la relativa data sono già stati impostati:
+                                solo un <strong>superuser</strong> può modificarli.
+                            </div>
+                        )}
 
                     </div>
 

@@ -130,6 +130,7 @@ const Soci = ({ onLogout }) => {
     const [importLogFilters, setImportLogFilters] = useState({ creati: true, aggiornati: true, saltati: true, errori: true });
     const importFileRef = useRef(null);
     const importOdooFileRef = useRef(null);
+    const fixCertFileRef = useRef(null);
     const importLogRef = useRef(null);
 
     const location = useLocation();
@@ -381,7 +382,7 @@ const Soci = ({ onLogout }) => {
             'COMUNE_NASCITA', 'INDIRIZZO_RESIDENZA', 'COMUNE_RESIDENZA', 'CAP',
             'TELEFONO', 'EMAIL', 'ANNO_NASCITA', 'ISCRITTO', 'DATA_ISCRIZIONE',
             'DATA_ACCETTAZIONE', 'PAGAMENTI NON REGOLARI', 'CERTIFICATO VALIDO',
-            'DATA SCADENZA CERTIFICATO', 'NOTE',
+            'DATA CERTIFICATO', 'NOTE',
         ];
 
         const escapeCell = (v) => {
@@ -408,6 +409,8 @@ const Soci = ({ onLogout }) => {
             formatDate(s.data_ammissione),
             getTesseramentoStatus(s) !== 'REGOLARE' ? 'SI' : 'NO',
             certLabel(getCertStatus(s.scadenza_certificato)),
+            // Valore grezzo del campo (data del certificato), non la scadenza
+            // calcolata: così l'export è reimportabile senza spostamenti di data.
             formatDate(s.scadenza_certificato),
             s.note || '',
         ]);
@@ -639,7 +642,7 @@ const Soci = ({ onLogout }) => {
         const headers = [
             'COGNOME', 'NOME', 'SESSO', 'DATA_NASCITA', 'COMUNE_NASCITA',
             'CODICE_FISCALE', 'EMAIL', 'TELEFONO', 'INDIRIZZO_RESIDENZA',
-            'COMUNE_RESIDENZA', 'CAP', 'DATA SCADENZA CERTIFICATO',
+            'COMUNE_RESIDENZA', 'CAP', 'DATA CERTIFICATO',
             'DATA_ISCRIZIONE', 'NOTE',
         ];
         const csv = headers.join(';') + '\n';
@@ -763,6 +766,10 @@ const Soci = ({ onLogout }) => {
         for (let i = 0; i < dataRecords.length; i++) {
             const cells = dataRecords[i];
             const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
+            // Data del certificato medico: intestazione attuale 'DATA CERTIFICATO',
+            // con fallback allo storico 'DATA SCADENZA CERTIFICATO' (nome fuorviante:
+            // il campo contiene la data del certificato, non la sua scadenza).
+            const getDataCertificato = () => get('DATA CERTIFICATO') || get('DATA SCADENZA CERTIFICATO');
 
             const cf = get('CODICE_FISCALE').toUpperCase();
 
@@ -779,7 +786,9 @@ const Soci = ({ onLogout }) => {
                 indirizzo: get('INDIRIZZO_RESIDENZA') || null,
                 comune: get('COMUNE_RESIDENZA') || null,
                 cap: get('CAP') || null,
-                scadenza_certificato: parseDate(get('DATA SCADENZA CERTIFICATO')) || null,
+                // Importata così com'è: nessuno spostamento di 1 anno, il valore
+                // del file è la data del certificato salvata su scadenza_certificato.
+                scadenza_certificato: parseDate(getDataCertificato()) || null,
                 data_ammissione: parseDate(get('DATA_ISCRIZIONE')) || null,
                 note: get('NOTE') || null,
             });
@@ -796,6 +805,12 @@ const Soci = ({ onLogout }) => {
                 const payload = buildPayload();
                 const cognome = payload.cognome;
                 const nome = payload.nome;
+
+                // Colonna data certificato vuota nel file ma valore presente a DB:
+                // non azzerare, si mantiene la scadenza già registrata.
+                if (!getDataCertificato() && existing.scadenza_certificato) {
+                    payload.scadenza_certificato = existing.scadenza_certificato;
+                }
 
                 const isDifferent =
                     normStr(payload.cognome) !== normStr(existing.cognome) ||
@@ -882,6 +897,119 @@ const Soci = ({ onLogout }) => {
         if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
         if (creati > 0 || aggiornati > 0) fetchSoci();
         if (importFileRef.current) importFileRef.current.value = '';
+    };
+
+    // Come importFromFile, ma aggiorna SOLO la data del certificato medico
+    // (campo scadenza_certificato) leggendola dallo stesso file di importazione
+    // soci. Non crea soci, non tocca nessun altro campo, non azzera se la
+    // colonna è vuota. Azione riservata al super-user.
+    const fixCertificatoMedicoFromFile = async (file) => {
+        if (!selectedSocietaId) { showAlert('Seleziona prima una società.', 'Società mancante', 'warning'); return; }
+
+        let allRecords;
+        try {
+            allRecords = await readFileToRecords(file);
+        } catch (e) {
+            showAlert('Impossibile leggere il file. Se è un XLSX verifica la connessione internet, altrimenti usa un CSV.', 'Errore caricamento');
+            return;
+        }
+        if (allRecords.length < 2) { showAlert('File vuoto o non valido.', 'File non valido', 'warning'); return; }
+
+        // Stessa individuazione dell'intestazione dell'importazione soci.
+        const headerIdx = allRecords.findIndex(r => {
+            const joined = r.join(';').toUpperCase();
+            return joined.includes('CODICE_FISCALE') || joined.includes('COGNOME');
+        });
+        if (headerIdx === -1) { showAlert('Intestazioni colonne non trovate nel file.', 'File non valido', 'warning'); return; }
+
+        const headers = allRecords[headerIdx].map(h => h.toUpperCase().trim());
+        const col = (name) => headers.indexOf(name);
+        if (col('CODICE_FISCALE') === -1) { showAlert('Colonna CODICE_FISCALE non trovata nel file.', 'File non valido', 'warning'); return; }
+        if (col('DATA CERTIFICATO') === -1 && col('DATA SCADENZA CERTIFICATO') === -1) {
+            showAlert('Colonna « DATA CERTIFICATO » non trovata nel file.', 'File non valido', 'warning'); return;
+        }
+        const dataRecords = allRecords.slice(headerIdx + 1);
+        const total = dataRecords.length;
+
+        // CF già presenti per questa società (dati freschi dal server)
+        const token = localStorage.getItem('token');
+        let existingCFsMap = new Map();
+        try {
+            const res = await fetch(`/users/api/soci?societa_id=${selectedSocietaId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    data.forEach(s => { if (s.codice_fiscale) existingCFsMap.set(s.codice_fiscale.toUpperCase(), s); });
+                }
+            }
+        } catch (e) { /* usa map vuota se fallisce */ }
+
+        setShowActionsMenu(false);
+        setImportLogFilters({ creati: true, aggiornati: true, saltati: true, errori: true });
+        setImportReport({ total, current: 0, creati: 0, aggiornati: 0, saltati: 0, errori: [], logs: [], done: false, headers, dataRecords, source: 'cert' });
+
+        const normDate = (v) => { if (!v) return ''; return String(v).trim().substring(0, 10); };
+        let aggiornati = 0; let saltati = 0; const errori = []; const logs = [];
+
+        for (let i = 0; i < dataRecords.length; i++) {
+            const cells = dataRecords[i];
+            const get = (name) => { const idx = col(name); return idx >= 0 ? (cells[idx] || '').trim() : ''; };
+            const rawCert = get('DATA CERTIFICATO') || get('DATA SCADENZA CERTIFICATO');
+            const cf = get('CODICE_FISCALE').toUpperCase();
+
+            if (!cf) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2}: codice fiscale assente` });
+            } else if (!existingCFsMap.has(cf)) {
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): socio non presente nella società` });
+            } else if (!rawCert) {
+                // Colonna vuota: non si azzera il valore già a DB.
+                saltati++;
+                logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato assente nel file` });
+            } else {
+                const nuova = parseDate(rawCert);
+                const existing = existingCFsMap.get(cf);
+                if (!nuova) {
+                    errori.push(`Riga ${i+2} (${cf}): data certificato non valida ("${rawCert}")`);
+                    logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato non valida ("${rawCert}")` });
+                } else if (normDate(nuova) === normDate(existing.scadenza_certificato)) {
+                    saltati++;
+                    logs.push({ type: 'SKIP', rowIdx: i, message: `Riga ${i+2} (${cf}): data certificato già allineata` });
+                } else {
+                    try {
+                        const res = await fetch(`/users/api/soci/${existing.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ scadenza_certificato: nuova }),
+                        });
+                        if (res.ok) {
+                            aggiornati++;
+                            const updated = await res.json();
+                            existingCFsMap.set(cf, updated);
+                            const da = normDate(existing.scadenza_certificato) || '—';
+                            logs.push({ type: 'UPDATE', rowIdx: i, message: `Riga ${i+2} (${cf}): certificato ${da} → ${normDate(nuova)}` });
+                        } else {
+                            const err = await res.json();
+                            const msg = err.error || err.message || 'errore sconosciuto';
+                            errori.push(`Riga ${i+2} (${cf}): ${msg}`);
+                            logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): ${msg}` });
+                        }
+                    } catch (e) {
+                        errori.push(`Riga ${i+2} (${cf}): errore di rete`);
+                        logs.push({ type: 'ERR', rowIdx: i, message: `Riga ${i+2} (${cf}): errore di rete` });
+                    }
+                }
+            }
+
+            setImportReport({ total, current: i + 1, creati: 0, aggiornati, saltati, errori: [...errori], logs: [...logs], done: false, headers, dataRecords, source: 'cert' });
+            if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        }
+
+        setImportReport({ total, current: total, creati: 0, aggiornati, saltati, errori, logs, done: true, headers, dataRecords, source: 'cert' });
+        if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+        if (aggiornati > 0) fetchSoci();
+        if (fixCertFileRef.current) fixCertFileRef.current.value = '';
     };
 
     const importOdooFromFile = async (file) => {
@@ -1235,6 +1363,9 @@ const Soci = ({ onLogout }) => {
                                     {localStorage.getItem('user_role') === 'superuser' && (
                                         <button className="dropdown-item-custom" onClick={() => importOdooFileRef.current?.click()}><FileUp size={16}/> Importa CSV Odoo</button>
                                     )}
+                                    {localStorage.getItem('user_role') === 'superuser' && (
+                                        <button className="dropdown-item-custom" onClick={() => fixCertFileRef.current?.click()}><FileUp size={16}/> Fix certificato medico</button>
+                                    )}
                                     <button className="dropdown-item-custom" onClick={handleExportTemplate}><FileDown size={16}/> Esporta template</button>
                                     {/* <button className="dropdown-item-custom"><RefreshCw size={16}/> Rielabora whitelist</button> */}
                                     {/* Accessi hidden */}
@@ -1528,6 +1659,13 @@ const Soci = ({ onLogout }) => {
                 style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) importOdooFromFile(e.target.files[0]); }}
             />
+            <input
+                ref={fixCertFileRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) fixCertificatoMedicoFromFile(e.target.files[0]); }}
+            />
 
             {/* Modal avanzamento/riepilogo importazione */}
             {importReport && (
@@ -1535,7 +1673,7 @@ const Soci = ({ onLogout }) => {
                     <div className="modal-card" style={{ maxWidth: '560px', width: '95%', padding: '28px' }} onClick={e => e.stopPropagation()}>
                         {!importReport.done ? (
                             <>
-                                <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione in corso…</h3>
+                                <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 600 }}>{importReport.source === 'cert' ? 'Fix certificato medico in corso…' : 'Importazione in corso…'}</h3>
                                 <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                     Riga {importReport.current} di {importReport.total}
                                 </p>
@@ -1549,7 +1687,9 @@ const Soci = ({ onLogout }) => {
                                     }} />
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', fontSize: '0.88rem', marginBottom: '16px' }}>
-                                    <span style={{ color: 'var(--success)' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
+                                    {importReport.source !== 'cert' && (
+                                        <span style={{ color: 'var(--success)' }}>✓ Creati: <strong>{importReport.creati}</strong></span>
+                                    )}
                                     <span style={{ color: 'var(--warning)' }}>↻ Aggiornati: <strong>{importReport.aggiornati ?? 0}</strong></span>
                                     <span style={{ color: '#888' }}>↷ Saltati: <strong>{importReport.saltati}</strong></span>
                                     <span style={{ color: 'var(--danger)' }}>✗ Errori: <strong>{importReport.errori.length}</strong></span>
@@ -1570,7 +1710,7 @@ const Soci = ({ onLogout }) => {
                             </>
                         ) : (
                             <>
-                                <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', fontWeight: 600 }}>Importazione completata</h3>
+                                <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', fontWeight: 600 }}>{importReport.source === 'cert' ? 'Fix certificato medico completato' : 'Importazione completata'}</h3>
                                 {/* Progress bar al 100% */}
                                 <div style={{ height: '8px', borderRadius: '4px', backgroundColor: 'var(--border-color)', overflow: 'hidden', marginBottom: '14px' }}>
                                     <div style={{ height: '100%', borderRadius: '4px', backgroundColor: 'var(--success)', width: '100%' }} />
@@ -1578,6 +1718,7 @@ const Soci = ({ onLogout }) => {
                                 {/* Badge cliccabili per filtrare i log */}
                                 <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Clicca per filtrare i log e l'esportazione:</p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                                    {importReport.source !== 'cert' && (
                                     <div
                                         onClick={() => setImportLogFilters(f => ({ ...f, creati: !f.creati }))}
                                         style={{
@@ -1592,6 +1733,7 @@ const Soci = ({ onLogout }) => {
                                         <span style={{ color: 'var(--success)' }}>✓ Soci creati</span>
                                         <strong style={{ color: 'var(--success)' }}>{importReport.creati}</strong>
                                     </div>
+                                    )}
                                     <div
                                         onClick={() => setImportLogFilters(f => ({ ...f, aggiornati: !f.aggiornati }))}
                                         style={{

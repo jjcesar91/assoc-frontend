@@ -81,7 +81,7 @@ const OperazioniPreferiteDropdown = ({ societaId, onSelect }) => {
             {open && (
                 <div style={{
                     position: 'absolute',
-                    right: 0,
+                    left: 0,
                     top: 'calc(100% + 6px)',
                     background: '#fff',
                     border: '1px solid var(--border-color)',
