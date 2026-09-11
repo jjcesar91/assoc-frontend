@@ -1,0 +1,45 @@
+name: Deploy Frontend (dev)
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Builder classico: le immagini includono "ContainerConfig", evitando il
+            # bug di docker-compose v1 "KeyError: 'ContainerConfig'" alla ricreazione.
+            export DOCKER_BUILDKIT=0
+            export COMPOSE_DOCKER_CLI_BUILD=0
+            # Progetto compose isolato (la cartella si chiama "docker" come nel backend).
+            export COMPOSE_PROJECT_NAME=frontend
+            # Rete del gateway API di DEV: il compose backend dev gira con
+            # COMPOSE_PROJECT_NAME=docker, quindi la rete e' docker_app_network.
+            # Escludiamo esplicitamente le reti *prod* (backend_prod_app_network):
+            # senza il filtro, 'grep app_network$ | head -1' puo' pescare la rete di
+            # produzione e il frontend dev finisce a proxare il backend di prod.
+            export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | grep -v prod | head -1 || true)
+            export APP_NETWORK=${APP_NETWORK:-docker_app_network}
+            echo "Rete API condivisa: $APP_NETWORK"
+
+            git pull origin dev
+
+            cd docker
+            # Build + ricreazione robusta (rm prima di up: evita l'ereditarieta' dei
+            # volumi dal vecchio container, causa del bug ContainerConfig).
+            docker-compose build
+            docker-compose rm -sf || true
+            docker-compose up -d
+            echo "Frontend deploy completed."
