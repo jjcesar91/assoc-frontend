@@ -32,6 +32,10 @@ jobs:
             # produzione e il frontend dev finisce a proxare il backend di prod.
             export APP_NETWORK=$(docker network ls --format '{{.Name}}' | grep -E 'app_network$' | grep -v prod | head -1 || true)
             export APP_NETWORK=${APP_NETWORK:-docker_app_network}
+            # Nome container e porta host distinti dal deploy prod (stesso docker-compose.yml
+            # usato da entrambi gli ambienti sullo stesso host).
+            export FRONTEND_CONTAINER_NAME=assoc_frontend
+            export FRONTEND_PORT=5173
             echo "Rete API condivisa: $APP_NETWORK"
 
             git pull origin dev

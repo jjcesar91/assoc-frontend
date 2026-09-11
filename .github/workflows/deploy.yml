@@ -28,6 +28,10 @@ jobs:
             # Rete del gateway API creata dal compose backend_prod (COMPOSE_PROJECT_NAME
             # li' e' backend_prod, quindi la rete si chiama backend_prod_app_network).
             export APP_NETWORK=backend_prod_app_network
+            # Nome container e porta host distinti dal deploy dev (stesso docker-compose.yml
+            # usato da entrambi gli ambienti sullo stesso host).
+            export FRONTEND_CONTAINER_NAME=assoc_frontend_prod
+            export FRONTEND_PORT=6173
             echo "Rete API condivisa: $APP_NETWORK"
 
             git pull origin master

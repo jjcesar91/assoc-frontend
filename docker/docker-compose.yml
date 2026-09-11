@@ -14,10 +14,14 @@ version: '3.8'
 services:
   frontend:
     build: ..
-    container_name: assoc_frontend_prod
+    # Nome container e porta host distinti tra dev e prod (stesso file di compose
+    # usato da entrambi gli ambienti): senza questa parametrizzazione i due deploy
+    # sullo stesso host collidono sullo stesso container_name/porta. Iniettati
+    # dallo script di deploy; default = ambiente dev.
+    container_name: ${FRONTEND_CONTAINER_NAME:-assoc_frontend}
     restart: unless-stopped
     ports:
-      - "6173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     environment:
       - VITE_API_TARGET=http://nginx
       - CHOKIDAR_USEPOLLING=true
