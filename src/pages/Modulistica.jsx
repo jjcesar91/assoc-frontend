@@ -216,7 +216,7 @@ const Modulistica = () => {
                 </div>
 
                 <!-- SIGNATURES -->
-                <table style="width: 100%; margin-top: 50px; border: none;">
+                <table class="pdf-no-break" style="width: 100%; margin-top: 50px; border: none;">
                     <tr>
                         <td style="width: 40%; vertical-align: bottom; font-size: 12pt;">
                             ${today}
@@ -246,7 +246,11 @@ const Modulistica = () => {
                     useCORS: true
                 },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                // Non usare 'avoid-all': forzerebbe l'intero blocco di testo del modulo
+                // (che può essere lungo) a saltare per intero su pagina 2 se non entra
+                // nello spazio residuo di pagina 1, lasciando la prima pagina quasi vuota.
+                // Si evita lo spezzamento solo sugli elementi che devono restare integri.
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.pdf-table', '.pdf-no-break'] }
             };
 
             if (window.html2pdf) {
