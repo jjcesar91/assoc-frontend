@@ -1,7 +1,7 @@
-// Calcolo dello stato di iscrizione (quota associativa) di un socio.
-// Logica condivisa tra la colonna "Iscrizione" della tabella soci (Soci.jsx)
-// e la label ISCRITTO/NON ISCRITTO della modal socio (SocioModal.jsx), in modo
-// che le due viste siano sempre coerenti tra loro.
+// Calcolo dello stato di iscrizione (quota associativa) e tesseramento di un socio.
+// Logica condivisa tra le colonne "Iscrizione"/"Tesseramento" della tabella soci
+// (Soci.jsx) e le label ISCRITTO/NON ISCRITTO e TESSERATO/NON TESSERATO della modal
+// socio (SocioModal.jsx), in modo che le due viste siano sempre coerenti tra loro.
 import { getAnnoDateRange } from '../data/AnnoContext';
 
 // Anno contabile (anno associativo) a cui appartiene una certa data.
@@ -81,4 +81,82 @@ export const bestScadTsIscrizioneDaPagamenti = (payments, societa) => {
         if (best == null || ts > best) best = ts;
     }
     return best;
+};
+
+// Scadenza di un pagamento Tesseramento: 365 giorni (anno_solare) oppure fine anno contabile
+// (anno_associativo o periodicità non specificata).
+export const scadenzaPagamentoTesseramento = (p, societa) => {
+    if (!p.data_pagamento) return null;
+    if (p.periodicity_tesseramento === 'anno_solare') {
+        const scad = new Date(p.data_pagamento);
+        scad.setFullYear(scad.getFullYear() + 1);
+        scad.setDate(scad.getDate() - 1);
+        return scad;
+    }
+    const anno = annoContabileDiData(p.data_pagamento, societa);
+    if (anno == null) return null;
+    return getAnnoDateRange(anno, societa).end;
+};
+
+// Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola).
+export const getTesseramentoProductId = (p) => {
+    if (Array.isArray(p.payment_items)) {
+        const item = p.payment_items.find(i => i.quote_types === 'tesseramento');
+        return item?.product_id ?? p.product_id ?? null;
+    }
+    return p.product_id ?? null;
+};
+
+// Scadenza (timestamp) + giorni di avviso più favorevoli tra i pagamenti tesseramento di un
+// socio (lista di pagamenti "grezzi" già filtrati per il socio). getGiorniAvviso(productId),
+// se fornita, risolve i giorni di avviso specifici del prodotto tesseramento che ha generato
+// il pagamento (soglia di preavviso personalizzata, come nella tabella soci).
+export const bestScadTessDaPagamenti = (payments, societa, getGiorniAvviso) => {
+    let best = null; // { ts, giorniAvviso }
+    for (const p of (payments || [])) {
+        if (typeof p.stato_pagamento === 'string' && p.stato_pagamento.startsWith('3.')) continue; // annullati/storni
+        const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+        if (!types.includes('tesseramento')) continue;
+        const scad = scadenzaPagamentoTesseramento(p, societa);
+        if (!scad) continue;
+        const ts = scad.getTime();
+        if (isNaN(ts)) continue;
+        if (best == null || ts > best.ts) {
+            const productId = getTesseramentoProductId(p);
+            best = { ts, giorniAvviso: getGiorniAvviso ? getGiorniAvviso(productId) : undefined };
+        }
+    }
+    return best;
+};
+
+// Scadenza (timestamp) derivata da una Data Tesseramento inserita manualmente (senza pagamento/
+// prodotto associato): 365 giorni fissi dalla data inserita, come i prodotti tesseramento con
+// periodicità "anno_solare" (nessun prodotto quindi nessun giorniAvviso personalizzato).
+export const scadTessDaDataManuale = (dataManuale) => {
+    if (!dataManuale) return null;
+    const scad = new Date(dataManuale);
+    if (isNaN(scad)) return null;
+    scad.setFullYear(scad.getFullYear() + 1);
+    scad.setDate(scad.getDate() - 1);
+    const ts = scad.getTime();
+    if (isNaN(ts)) return null;
+    return { ts, giorniAvviso: undefined };
+};
+
+// Stato Tesseramento di un socio, con priorità in quest'ordine:
+// 1. Data Tesseramento inserita manualmente sul socio (dataManuale) — sovrascrive sia il calcolo
+//    dai pagamenti sia l'eredità dall'iscrizione.
+// 2. Opzione società "Quota associativa e Tesseramento Unico": eredita lo stato dell'iscrizione
+//    (statoIscrizione, già calcolato altrove).
+// 3. statoDaScadenza sulla scadenza tesseramento più favorevole tra i pagamenti del socio
+//    (bestScadTess, da bestScadTessDaPagamenti/bestScadTessTs).
+// Stessa combinazione usata sia nella tabella soci (getTesseramentoStatus in Soci.jsx) sia nella
+// modal socio, così le due viste restano coerenti.
+export const getTesseramentoStato = ({ dataManuale, bestScadTess, statoIscrizione, quotaTesseramentoUnico }) => {
+    if (dataManuale) {
+        const scad = scadTessDaDataManuale(dataManuale);
+        return statoDaScadenza(scad?.ts ?? null);
+    }
+    if (quotaTesseramentoUnico) return statoIscrizione;
+    return statoDaScadenza(bestScadTess?.ts ?? null, bestScadTess?.giorniAvviso);
 };

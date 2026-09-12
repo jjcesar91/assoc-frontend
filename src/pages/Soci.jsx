@@ -6,9 +6,9 @@ import EditProfileModal from './EditProfileModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
-import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
+import { useAnno } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr, computeDataCertificatoDaScadenzaStr } from '../utils/certificatoUtils';
-import { annoContabileDiData, scadenzaPagamentoIscrizione, statoDaScadenza, combineIscrizioneStato } from '../utils/iscrizioneStatoUtils';
+import { scadenzaPagamentoIscrizione, combineIscrizioneStato, scadenzaPagamentoTesseramento, getTesseramentoProductId, getTesseramentoStato } from '../utils/iscrizioneStatoUtils';
 import { formatDateIT } from '../utils/dateUtils';
 import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
@@ -33,35 +33,12 @@ const parseEtichette = (val) => {
 };
 
 // ---------------------------------------------------------------------------
-// Calcolo scadenze Iscrizione / Tesseramento (rispecchia SocioModal/Scadenziario)
+// Calcolo scadenze Iscrizione / Tesseramento
 // ---------------------------------------------------------------------------
-// Anno contabile, scadenza pagamento iscrizione e statoDaScadenza sono condivisi
-// con la modal socio in ../utils/iscrizioneStatoUtils (vedi import sopra), così
-// la colonna "Iscrizione" e la label ISCRITTO/NON ISCRITTO restano coerenti.
-
-// Scadenza di un pagamento Tesseramento: 365 giorni (anno_solare) oppure fine anno contabile.
-const scadenzaPagamentoTesseramento = (p, societa) => {
-    if (!p.data_pagamento) return null;
-    if (p.periodicity_tesseramento === 'anno_solare') {
-        const scad = new Date(p.data_pagamento);
-        scad.setFullYear(scad.getFullYear() + 1);
-        scad.setDate(scad.getDate() - 1);
-        return scad;
-    }
-    // anno_associativo o periodicità non specificata: fine anno contabile del pagamento
-    const anno = annoContabileDiData(p.data_pagamento, societa);
-    if (anno == null) return null;
-    return getAnnoDateRange(anno, societa).end;
-};
-
-// Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola).
-const getTesseramentoProductId = (p) => {
-    if (Array.isArray(p.payment_items)) {
-        const item = p.payment_items.find(i => i.quote_types === 'tesseramento');
-        return item?.product_id ?? p.product_id ?? null;
-    }
-    return p.product_id ?? null;
-};
+// Anno contabile, scadenze pagamento e statoDaScadenza sono condivisi con la
+// modal socio in ../utils/iscrizioneStatoUtils (vedi import sopra), così le
+// colonne "Iscrizione"/"Tesseramento" e le label ISCRITTO/NON ISCRITTO e
+// TESSERATO/NON TESSERATO nella modal restano coerenti.
 
 // Chip di stato (Iscrizione/Tesseramento)
 const STATO_CHIP_CLASS = {
@@ -313,10 +290,13 @@ const Soci = ({ onLogout }) => {
     };
 
     const getTesseramentoStatus = (socio) => {
-        // Opzione "Quota associativa e Tesseramento Unico": il tesseramento eredita lo stato dell'iscrizione
-        if (currentSocieta?.quota_tesseramento_unico) return getIscrizioneStatus(socio);
-        const best = bestScadTessTs(socio);
-        return statoDaScadenza(best?.ts ?? null, best?.giorniAvviso);
+        return getTesseramentoStato({
+            dataManuale: socio.data_tesseramento_manuale,
+            bestScadTess: bestScadTessTs(socio),
+            statoIscrizione: getIscrizioneStatus(socio),
+            quotaTesseramentoUnico: !!currentSocieta?.quota_tesseramento_unico,
+            societa: currentSocieta,
+        });
     };
 
     const formatDate = (d) => {

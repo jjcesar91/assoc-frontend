@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip } from 'lucide-react';
+import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip, Edit } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import DettaglioRicevutaModal from './DettaglioRicevutaModal';
@@ -12,7 +12,7 @@ import ComunicazioneModal from '../components/ComunicazioneModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
-import { combineIscrizioneStato, isIscrittoDaStato, bestScadTsIscrizioneDaPagamenti } from '../utils/iscrizioneStatoUtils';
+import { combineIscrizioneStato, isIscrittoDaStato, bestScadTsIscrizioneDaPagamenti, bestScadTessDaPagamenti, getTesseramentoStato, getTesseramentoProductId } from '../utils/iscrizioneStatoUtils';
 import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
@@ -72,16 +72,6 @@ function computeStatoPagamentoScadenza(scadenzaDate, giorniAvvisoScadenza) {
     return 'VALIDO';
 }
 
-// Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola),
-// stesso pattern usato per gli abbonamenti (subscription) più sotto.
-function getTesseramentoProductId(p) {
-    if (Array.isArray(p.payment_items)) {
-        const item = p.payment_items.find(i => i.quote_types === 'tesseramento');
-        return item?.product_id ?? p.product_id ?? null;
-    }
-    return p.product_id ?? null;
-}
-
 function computeStatoAbbonamento(scadenzaDate, giorniAvvisoScadenza) {
     if (!scadenzaDate) return null;
     const today = new Date();
@@ -99,6 +89,21 @@ const GIORNI_SETTIMANA = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Vene
 const formatDateIT = (dateStr) => {
     if (!dateStr) return '-';
     return formatDateITShared(dateStr);
+};
+
+// Bottone icona "piatto" (senza bordo/sfondo) per azioni inline dentro un campo,
+// es. matita per sovrascrivere a mano la Data Tesseramento.
+const tesseramentoIconBtnStyle = {
+    background: 'none',
+    border: 'none',
+    padding: '2px',
+    margin: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: 'var(--text-secondary)',
+    lineHeight: 0,
 };
 
 const ScadenzaBadge = ({ stato }) => {
@@ -300,6 +305,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         
         // Bottom Fields
         data_scadenza_tesseramento: '',
+        data_tesseramento_manuale: '',
         id_badge: '',
         
         // Backend Default
@@ -385,12 +391,16 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const [showIscrizioneModal, setShowIscrizioneModal] = useState(false);
     const [iscrizioneDate, setIscrizioneDate] = useState(new Date().toISOString().split('T')[0]);
     const [iscrizioneStatus, setIscrizioneStatus] = useState(null); // 'ISCRITTO' | 'NON ISCRITTO'
+    const [tesseramentoStatus, setTesseramentoStatus] = useState(null); // 'TESSERATO' | 'NON TESSERATO'
     const [currentIscrizioneDate, setCurrentIscrizioneDate] = useState(''); // Date string for display
     const [socioIscrizioniDates, setSocioIscrizioniDates] = useState([]); // all data_iscrizione from iscrizione table
     const [currentRefYear, setCurrentRefYear] = useState(null);
 
-    // Data Tesseramento calcolata dai pagamenti dell'anno selezionato
-    const [dataTesseramento, setDataTesseramento] = useState('');
+    // Data Tesseramento: calcolata dal pagamento tesseramento più recente, sovrascrivibile a mano
+    // (data_tesseramento_manuale, in formData) tramite il bottone matita nel campo.
+    const [editingTesseramento, setEditingTesseramento] = useState(false);
+    const [tesseramentoDraft, setTesseramentoDraft] = useState('');
+    const [savingTesseramento, setSavingTesseramento] = useState(false);
 
     // Accetta come Socio State
     const [showAccettaSocioModal, setShowAccettaSocioModal] = useState(false);
@@ -748,6 +758,14 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         // usata per calcolare la colonna "Iscrizione" nella tabella soci.
         const bestScadTs = bestScadTsIscrizioneDaPagamenti(socioPagamenti, selectedSocieta);
 
+        // Scadenza "tesseramento" più favorevole (con giorni di avviso del prodotto): stessa
+        // funzione usata per calcolare la colonna "Tesseramento" nella tabella soci.
+        const bestScadTess = bestScadTessDaPagamenti(
+            socioPagamenti,
+            selectedSocieta,
+            (productId) => productId != null ? prodottiSocieta.find(pr => pr.id === productId)?.giorniAvvisoScadenza : undefined
+        );
+
         // Recupera iscrizioni senza ricevuta per stato anno e data_iscrizione
         fetch(`/users/api/soci/${formData.id}/iscrizione`)
             .then(res => res.json())
@@ -755,8 +773,21 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 if (Array.isArray(data)) {
                     // Label ISCRITTO/NON ISCRITTO coerente con la colonna "Iscrizione" della tabella
                     // soci: ISCRITTO se lo stato calcolato è REGOLARE o IN SCADENZA.
-                    const stato = combineIscrizioneStato(bestScadTs, data, currentRefYear, selectedSocieta);
-                    setIscrizioneStatus(isIscrittoDaStato(stato) ? 'ISCRITTO' : 'NON ISCRITTO');
+                    const statoIscrizione = combineIscrizioneStato(bestScadTs, data, currentRefYear, selectedSocieta);
+                    setIscrizioneStatus(isIscrittoDaStato(statoIscrizione) ? 'ISCRITTO' : 'NON ISCRITTO');
+
+                    // Label TESSERATO/NON TESSERATO coerente con la colonna "Tesseramento" della
+                    // tabella soci: priorità alla Data Tesseramento manuale se presente, poi
+                    // eredità dall'iscrizione (Quota associativa e Tesseramento Unico), poi
+                    // scadenza calcolata dai pagamenti.
+                    const statoTesseramento = getTesseramentoStato({
+                        dataManuale: formData.data_tesseramento_manuale,
+                        bestScadTess,
+                        statoIscrizione,
+                        quotaTesseramentoUnico: !!selectedSocieta?.quota_tesseramento_unico,
+                        societa: selectedSocieta,
+                    });
+                    setTesseramentoStatus(isIscrittoDaStato(statoTesseramento) ? 'TESSERATO' : 'NON TESSERATO');
 
                     // Salva tutte le date iscrizione per uso nel calcolo data_ammissione
                     const datesIscrizioni = data.map(i => i.data_iscrizione).filter(Boolean).sort();
@@ -771,7 +802,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             })
             .catch(e => console.error(e));
 
-    }, [formData.id, socioPagamenti, currentRefYear, societaList, selectedSocietaId]);
+    }, [formData.id, socioPagamenti, currentRefYear, societaList, selectedSocietaId, prodottiSocieta, formData.data_tesseramento_manuale]);
 
     const handleIscrizioneSubmit = async () => {
         try {
@@ -894,6 +925,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 tessera_eps: socioData.tessera_eps || '',
                 note: socioData.note || '',
                 data_scadenza_tesseramento: socioData.data_scadenza_tesseramento || '',
+                data_tesseramento_manuale: socioData.data_tesseramento_manuale || '',
                 id_badge: socioData.id_badge || '',
                 // Campi associazione
                 ragione_sociale: socioData.ragione_sociale || '',
@@ -1587,43 +1619,51 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         }
     }, [socioPagamenti, socioIscrizioniDates]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Calcola Data Tesseramento per l'anno selezionato
-    useEffect(() => {
-        if (!selectedAnno) {
-            setDataTesseramento('');
-            return;
-        }
-        const selectedSocieta = societaList?.find(s => s.id == selectedSocietaId);
-        const { start, end } = getAnnoDateRange(selectedAnno, selectedSocieta);
-        const quotaTessUnico = !!selectedSocieta?.quota_tesseramento_unico;
+    // Data Tesseramento calcolata: data dell'ultimo pagamento di un prodotto tesseramento
+    // (se presente), esclusi i pagamenti annullati. Sovrascritta dal valore manuale se presente.
+    const dataTesseramentoCalcolata = useMemo(() => {
+        const dates = socioPagamenti
+            .filter(p => !p.stato_pagamento?.startsWith('3.'))
+            .filter(p => (p.quote_types || '').split(',').map(t => t.trim().toLowerCase()).includes('tesseramento'))
+            .map(p => p.data_pagamento)
+            .filter(Boolean)
+            .sort();
+        return dates.length ? dates[dates.length - 1].split('T')[0] : '';
+    }, [socioPagamenti]);
 
-        const pagamentoTess = socioPagamenti.find(p => {
-            const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
-            if (!types.includes('tesseramento')) return false;
-            const d = p.data_pagamento ? new Date(p.data_pagamento) : null;
-            return d && d >= start && d <= end;
-        });
+    const isTesseramentoManuale = !!formData.data_tesseramento_manuale;
+    const dataTesseramentoDisplay = isTesseramentoManuale ? formData.data_tesseramento_manuale : dataTesseramentoCalcolata;
 
-        if (pagamentoTess) {
-            setDataTesseramento(pagamentoTess.data_pagamento ? pagamentoTess.data_pagamento.split('T')[0] : '');
-            return;
-        }
-
-        if (quotaTessUnico) {
-            const pagamentoIscr = socioPagamenti.find(p => {
-                const types = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
-                if (!types.includes('quota_associativa')) return false;
-                const d = p.data_pagamento ? new Date(p.data_pagamento) : null;
-                return d && d >= start && d <= end;
+    const handleSalvaTesseramentoManuale = async () => {
+        const nuovoValore = tesseramentoDraft || null; // vuoto => rimuove la sovrascrittura manuale
+        const valorePrecedente = formData.data_tesseramento_manuale || null;
+        if (nuovoValore === valorePrecedente) { setEditingTesseramento(false); return; }
+        setSavingTesseramento(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/users/api/soci/${formData.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data_tesseramento_manuale: nuovoValore }),
             });
-            if (pagamentoIscr) {
-                setDataTesseramento(pagamentoIscr.data_pagamento ? pagamentoIscr.data_pagamento.split('T')[0] : '');
-                return;
+            if (res.ok) {
+                setFormData(prev => ({ ...prev, data_tesseramento_manuale: nuovoValore || '' }));
+                const fmt = (d) => d ? formatDateIT(d) : '(nessuna)';
+                const azione = nuovoValore
+                    ? `Data Tesseramento inserita manualmente: ${fmt(valorePrecedente)} → ${fmt(nuovoValore)}`
+                    : `Sovrascrittura manuale della Data Tesseramento rimossa (${fmt(valorePrecedente)} → valore calcolato)`;
+                logToStorico('tesseramento', azione, { valore_precedente: valorePrecedente, valore_nuovo: nuovoValore });
+                setEditingTesseramento(false);
+            } else {
+                showSnackbar('Errore durante il salvataggio della Data Tesseramento', 'error');
             }
+        } catch (e) {
+            console.error('Errore salvataggio data tesseramento manuale', e);
+            showSnackbar('Errore durante il salvataggio della Data Tesseramento', 'error');
+        } finally {
+            setSavingTesseramento(false);
         }
-
-        setDataTesseramento('');
-    }, [socioPagamenti, selectedAnno, societaList, selectedSocietaId]); // eslint-disable-line react-hooks/exhaustive-deps
+    };
 
     const renderPaymentIcon = (modalita) => {
         if (!modalita) return <Banknote size={20} />;
@@ -2100,6 +2140,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         accesso_frontend: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Accesso', icon: <Globe size={14}/> },
         nota: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Nota', icon: <MessageSquare size={14}/> },
         ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Quietanza', icon: <Paperclip size={14}/> },
+        tesseramento: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Tesseramento', icon: <ShieldCheck size={14}/> },
     };
 
     // Apertura della quietanza caricata dal socio direttamente dalla riga di storico.
@@ -2198,17 +2239,33 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                             </h2>
                             {isEditMode && iscrizioneStatus && (
                                 <span style={{
-                                    fontSize: '0.75rem', 
-                                    fontWeight: 'bold', 
-                                    padding: '2px 8px', 
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    padding: '2px 8px',
                                     borderRadius: '4px',
                                     backgroundColor: iscrizioneStatus === 'ISCRITTO' ? 'var(--success-container)' : 'var(--danger-container)',
                                     color: iscrizioneStatus === 'ISCRITTO' ? 'var(--on-success-container)' : 'var(--on-danger-container)',
                                     border: `1px solid ${iscrizioneStatus === 'ISCRITTO' ? 'var(--success)' : 'var(--danger)'}`,
                                     marginTop: '4px',
+                                    marginRight: '6px',
                                     display: 'inline-block'
                                 }}>
                                     {iscrizioneStatus} {currentRefYear ? `(${currentRefYear})` : ''}
+                                </span>
+                            )}
+                            {isEditMode && tesseramentoStatus && (
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    backgroundColor: tesseramentoStatus === 'TESSERATO' ? 'var(--success-container)' : 'var(--danger-container)',
+                                    color: tesseramentoStatus === 'TESSERATO' ? 'var(--on-success-container)' : 'var(--on-danger-container)',
+                                    border: `1px solid ${tesseramentoStatus === 'TESSERATO' ? 'var(--success)' : 'var(--danger)'}`,
+                                    marginTop: '4px',
+                                    display: 'inline-block'
+                                }}>
+                                    {tesseramentoStatus}
                                 </span>
                             )}
                         </div>
@@ -2645,14 +2702,71 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     />
                                 </div>
                                 <div className="form-group grid-span-2" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px'}}>
-                                    <label className="field-label">Data Tesseramento</label>
-                                    <input
-                                        className="md-input"
-                                        type="date"
-                                        value={dataTesseramento}
-                                        readOnly
-                                        style={{ backgroundColor: 'var(--surface-1)', color: dataTesseramento ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}
-                                    />
+                                    <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                                        Data Tesseramento
+                                        {isTesseramentoManuale && !editingTesseramento && (
+                                            <span title="Inserita manualmente" style={{fontSize: '0.65rem', fontWeight: 700, color: 'var(--warning)'}}>●</span>
+                                        )}
+                                    </label>
+                                    {editingTesseramento ? (
+                                        <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                            <input
+                                                className="md-input"
+                                                type="date"
+                                                value={tesseramentoDraft}
+                                                onChange={(e) => setTesseramentoDraft(e.target.value)}
+                                                autoFocus
+                                                style={{width: '100%', paddingRight: '54px'}}
+                                            />
+                                            <div style={{position: 'absolute', right: '6px', display: 'flex', gap: '2px'}}>
+                                                <button
+                                                    type="button"
+                                                    title="Salva"
+                                                    disabled={savingTesseramento}
+                                                    onClick={handleSalvaTesseramentoManuale}
+                                                    style={{...tesseramentoIconBtnStyle, color: 'var(--success)', opacity: savingTesseramento ? 0.5 : 1}}
+                                                >
+                                                    <Check size={15} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Annulla"
+                                                    disabled={savingTesseramento}
+                                                    onClick={() => setEditingTesseramento(false)}
+                                                    style={{...tesseramentoIconBtnStyle, color: 'var(--danger)', opacity: savingTesseramento ? 0.5 : 1}}
+                                                >
+                                                    <X size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="date-custom-icon" style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                                            <input
+                                                className="md-input"
+                                                type="date"
+                                                value={dataTesseramentoDisplay}
+                                                readOnly
+                                                title={isTesseramentoManuale ? 'Data inserita manualmente' : 'Data calcolata dal pagamento tesseramento più recente'}
+                                                style={{
+                                                    width: '100%',
+                                                    paddingRight: '30px',
+                                                    backgroundColor: isTesseramentoManuale ? 'var(--warning-container)' : 'var(--surface-1)',
+                                                    color: dataTesseramentoDisplay ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                                                    border: isTesseramentoManuale ? '1.5px solid var(--warning)' : undefined,
+                                                }}
+                                            />
+                                            {isEditMode && formData.id && (
+                                                <button
+                                                    type="button"
+                                                    title="Inserisci/modifica manualmente"
+                                                    onClick={() => { setTesseramentoDraft(dataTesseramentoDisplay); setEditingTesseramento(true); }}
+                                                    style={{...tesseramentoIconBtnStyle, position: 'absolute', right: '6px'}}
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="form-group grid-span-4" style={{display: 'flex', flexDirection: 'column', justifyContent: 'flex-end'}}>
                                     <label className="field-label" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
