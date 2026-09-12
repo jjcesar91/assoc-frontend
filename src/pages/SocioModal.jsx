@@ -12,6 +12,7 @@ import ComunicazioneModal from '../components/ComunicazioneModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
+import { combineIscrizioneStato, isIscrittoDaStato, bestScadTsIscrizioneDaPagamenti } from '../utils/iscrizioneStatoUtils';
 import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
@@ -730,18 +731,9 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
 
     // Fetch Subscription Status & Data Iscrizione
     useEffect(() => {
-        if (!formData.id || !selectedAnno) return;
+        if (!formData.id) return;
 
         const selectedSocieta = societaList?.find(s => s.id == selectedSocietaId);
-        const { start, end } = getAnnoDateRange(selectedAnno, selectedSocieta);
-
-        // Stato iscrizione per l'anno selezionato (non cambia)
-        const pagamentoIscrizioneAnno = socioPagamenti.find(p => {
-            const quotes = (p.quote || '').toLowerCase();
-            if (!quotes.includes('iscrizione')) return false;
-            const dataPag = p.data_pagamento ? new Date(p.data_pagamento) : null;
-            return dataPag && dataPag >= start && dataPag <= end;
-        });
 
         // Ultima data pagamento quota associativa/iscrizione su tutti gli anni
         const pagamentiIscrizione = socioPagamenti.filter(p => {
@@ -752,19 +744,19 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         const datesPagamenti = pagamentiIscrizione.map(p => p.data_pagamento).filter(Boolean).sort();
         const latestPaymentDate = datesPagamenti.length ? datesPagamenti[datesPagamenti.length - 1] : null;
 
-        if (pagamentoIscrizioneAnno) {
-            setIscrizioneStatus('ISCRITTO');
-        }
+        // Scadenza "quota associativa" più favorevole tra i pagamenti del socio: stessa funzione
+        // usata per calcolare la colonna "Iscrizione" nella tabella soci.
+        const bestScadTs = bestScadTsIscrizioneDaPagamenti(socioPagamenti, selectedSocieta);
 
         // Recupera iscrizioni senza ricevuta per stato anno e data_iscrizione
         fetch(`/users/api/soci/${formData.id}/iscrizione`)
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    const active = data.find(i => i.anno === selectedAnno);
-                    if (!pagamentoIscrizioneAnno) {
-                        setIscrizioneStatus(active ? 'ISCRITTO' : 'NON ISCRITTO');
-                    }
+                    // Label ISCRITTO/NON ISCRITTO coerente con la colonna "Iscrizione" della tabella
+                    // soci: ISCRITTO se lo stato calcolato è REGOLARE o IN SCADENZA.
+                    const stato = combineIscrizioneStato(bestScadTs, data, currentRefYear, selectedSocieta);
+                    setIscrizioneStatus(isIscrittoDaStato(stato) ? 'ISCRITTO' : 'NON ISCRITTO');
 
                     // Salva tutte le date iscrizione per uso nel calcolo data_ammissione
                     const datesIscrizioni = data.map(i => i.data_iscrizione).filter(Boolean).sort();
@@ -779,7 +771,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             })
             .catch(e => console.error(e));
 
-    }, [formData.id, selectedAnno, socioPagamenti]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [formData.id, socioPagamenti, currentRefYear, societaList, selectedSocietaId]);
 
     const handleIscrizioneSubmit = async () => {
         try {

@@ -8,6 +8,7 @@ import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr, computeDataCertificatoDaScadenzaStr } from '../utils/certificatoUtils';
+import { annoContabileDiData, scadenzaPagamentoIscrizione, statoDaScadenza, combineIscrizioneStato } from '../utils/iscrizioneStatoUtils';
 import { formatDateIT } from '../utils/dateUtils';
 import { useAlert } from '../components/AlertModal';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
@@ -34,34 +35,9 @@ const parseEtichette = (val) => {
 // ---------------------------------------------------------------------------
 // Calcolo scadenze Iscrizione / Tesseramento (rispecchia SocioModal/Scadenziario)
 // ---------------------------------------------------------------------------
-// Anno contabile (anno associativo) a cui appartiene una certa data.
-const annoContabileDiData = (dateInput, societa) => {
-    const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
-    if (isNaN(d)) return null;
-    const year = d.getFullYear();
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    const tipo = societa?.tipo_anno_associativo || 'solare';
-    if (tipo === 'associativo') return month < 9 ? year - 1 : year;
-    if (tipo === 'personalizzato' && societa?.data_inizio_anno_associativo) {
-        const parts = String(societa.data_inizio_anno_associativo).split('-');
-        if (parts.length === 2) {
-            const cDay = parseInt(parts[0], 10);
-            const cMonth = parseInt(parts[1], 10);
-            if (month < cMonth || (month === cMonth && day < cDay)) return year - 1;
-        }
-        return year;
-    }
-    return year;
-};
-
-// Scadenza di un pagamento Iscrizione (quota associativa): fine anno contabile del pagamento.
-const scadenzaPagamentoIscrizione = (p, societa) => {
-    if (!p.data_pagamento) return null;
-    const anno = annoContabileDiData(p.data_pagamento, societa);
-    if (anno == null) return null;
-    return getAnnoDateRange(anno, societa).end;
-};
+// Anno contabile, scadenza pagamento iscrizione e statoDaScadenza sono condivisi
+// con la modal socio in ../utils/iscrizioneStatoUtils (vedi import sopra), così
+// la colonna "Iscrizione" e la label ISCRITTO/NON ISCRITTO restano coerenti.
 
 // Scadenza di un pagamento Tesseramento: 365 giorni (anno_solare) oppure fine anno contabile.
 const scadenzaPagamentoTesseramento = (p, societa) => {
@@ -76,18 +52,6 @@ const scadenzaPagamentoTesseramento = (p, societa) => {
     const anno = annoContabileDiData(p.data_pagamento, societa);
     if (anno == null) return null;
     return getAnnoDateRange(anno, societa).end;
-};
-
-// Da una scadenza (timestamp) allo stato: REGOLARE / IN SCADENZA (entro N gg, default 30) / SCADUTO / NO.
-// giorniAvviso: soglia specifica del prodotto (es. tesseramento), se disponibile.
-const statoDaScadenza = (scadTs, giorniAvviso) => {
-    if (scadTs == null) return 'NO';
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const s = new Date(scadTs); s.setHours(0, 0, 0, 0);
-    if (s < today) return 'SCADUTO';
-    const limit = new Date(today); limit.setDate(limit.getDate() + (giorniAvviso ?? 30));
-    if (s <= limit) return 'IN SCADENZA';
-    return 'REGOLARE';
 };
 
 // Risolve il product_id di un pagamento tesseramento (item multi-riga o riga singola).
@@ -344,17 +308,8 @@ const Soci = ({ onLogout }) => {
     };
 
     const getIscrizioneStatus = (socio) => {
-        const iscrizioni = socio.iscrizioni || [];
-        // Flag "Iscrizione senza ricevuta" per l'anno contabile corrente => sempre REGOLARE
-        if (iscrizioni.some(i => i.anno === currentRefYear)) return 'REGOLARE';
-        let best = bestScadTs(scadenzaMaps.iscrBySocioId, scadenzaMaps.iscrByCf, socio);
-        // Iscrizioni senza ricevuta di altri anni: valgono come quota (scadenza = fine anno contabile)
-        for (const i of iscrizioni) {
-            if (i.anno == null) continue;
-            const ts = getAnnoDateRange(i.anno, currentSocieta).end.getTime();
-            if (best == null || ts > best) best = ts;
-        }
-        return statoDaScadenza(best);
+        const best = bestScadTs(scadenzaMaps.iscrBySocioId, scadenzaMaps.iscrByCf, socio);
+        return combineIscrizioneStato(best, socio.iscrizioni, currentRefYear, currentSocieta);
     };
 
     const getTesseramentoStatus = (socio) => {
