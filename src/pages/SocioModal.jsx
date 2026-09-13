@@ -16,6 +16,7 @@ import { combineIscrizioneStato, isIscrittoDaStato, bestScadTsIscrizioneDaPagame
 import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
+import { ensureHtml2PdfScript, generateModuloPdf } from '../utils/moduloPdf';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -451,15 +452,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
 
     // Load html2pdf
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-             if (document.body.contains(script)) {
-                document.body.removeChild(script);
-            }
-        }
+        ensureHtml2PdfScript();
     }, []);
 
     // Carica i primi due moduli della società corrente per il menu Azioni
@@ -545,169 +538,13 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             if (selectedSocietaId && societaList) {
                 societa = societaList.find(s => s.id == selectedSocietaId);
             }
-            
-            let logoUrl = '';
-            if (societa && societa.logo_path) {
-                if (societa.logo_path.startsWith('http') || societa.logo_path.startsWith('blob:') || societa.logo_path.startsWith('data:')) {
-                    logoUrl = societa.logo_path;
-                } else {
-                    logoUrl = `/users/${societa.logo_path.startsWith('/') ? societa.logo_path.slice(1) : societa.logo_path}`;
-                }
-            }
-            
-            const denomination = societa ? societa.denominazione : 'Nome Società';
-            const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
-            const cfInfo = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
-            const today = formatDateITShared(printDate);
 
-            // Helper to convert image to base64
-            const getBase64Image = (url) => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.crossOrigin = 'Anonymous';
-                    img.src = url;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        resolve(canvas.toDataURL('image/png'));
-                    };
-                    img.onerror = reject;
-                });
-            };
-
-            const generatePDF = (logoBase64 = null) => {
-                const element = document.createElement('div');
-                element.style.width = '100%'; 
-                element.style.maxWidth = '800px';
-                
-                // Format birth date for display
-                let birthDateDisplay = formData.data_nascita
-                    ? (formatDateITShared(formData.data_nascita) || formData.data_nascita)
-                    : '';
-
-                element.innerHTML = `
-                <div style="padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
-                    
-                    <!-- HEADER -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 15px;">
-                        <div style="flex: 0 0 150px; height: 100px; display: flex; align-items: center; justify-content: flex-start;">
-                            ${logoBase64 ? `<img src="${logoBase64}" style="max-height: 100px; max-width: 150px; object-fit: contain;" />` : ''}
-                        </div>
-                        <div style="flex: 1; text-align: right; padding-left: 20px;">
-                            <h3 style="margin: 0; font-size: 16pt; font-weight: bold; line-height: 1.2;">${denomination}</h3>
-                            <div style="font-size: 10pt; margin-top: 5px; line-height: 1.3;">${address}</div>
-                            <div style="font-size: 10pt; margin-top: 2px;">${cfInfo}</div>
-                        </div>
-                    </div>
-
-                    <!-- TITLE -->
-                    <h1 style="text-align: center; font-size: 20pt; font-weight: bold; margin: 0 0 30px 0; text-transform: uppercase;">${modulo.descrizione}</h1>
-
-                    <!-- MEMBER TABLE -->
-                    <style>
-                        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 8pt; }
-                        .pdf-table td { border: 1px solid #000; padding: 6.4px; vertical-align: top; }
-                        .pdf-label { font-size: 6.4pt; text-transform: uppercase; color: #000; margin-bottom: 3.2px; font-weight: bold; }
-                        .pdf-value { min-height: 14.4px; font-weight: 500; }
-                    </style>
-                    <table class="pdf-table">
-                        <tr>
-                            <td style="width: 25%;">
-                                <div class="pdf-label">COGNOME</div>
-                                <div class="pdf-value">${formData.cognome || ''}</div>
-                            </td>
-                            <td style="width: 25%;">
-                                <div class="pdf-label">NOME</div>
-                                <div class="pdf-value">${formData.nome || ''}</div>
-                            </td>
-                            <td style="width: 25%;">
-                                <div class="pdf-label">DATA DI NASCITA</div>
-                                <div class="pdf-value">${birthDateDisplay}</div>
-                            </td>
-                            <td style="width: 25%;">
-                                <div class="pdf-label">LUOGO DI NASCITA</div>
-                                <div class="pdf-value">${formData.luogo_nascita || ''}</div>
-                            </td>
-                        </tr>
-                        <tr>
-                             <td colspan="2">
-                                <div class="pdf-label">CODICE FISCALE</div>
-                                <div class="pdf-value">${formData.codice_fiscale || ''}</div>
-                            </td>
-                             <td>
-                                <div class="pdf-label">TELEFONO</div>
-                                <div class="pdf-value">${formData.telefono || ''}</div>
-                            </td>
-                            <td>
-                                <div class="pdf-label">EMAIL</div>
-                                <div class="pdf-value">${formData.email || ''}</div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="4">
-                                <div class="pdf-label">INDIRIZZO RESIDENZA</div>
-                                <div class="pdf-value">${formData.indirizzo || ''} ${formData.cap || ''} ${formData.comune || ''}</div>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- BODY CONTENT -->
-                    <div style="font-size: 11pt; line-height: 1.12; text-align: justify; margin-bottom: 60px;">
-                        ${modulo.htmlContent || modulo.testo || ''}
-                    </div>
-
-                    <!-- SIGNATURES -->
-                    <table style="width: 100%; margin-top: 50px; border: none;">
-                        <tr>
-                            <td style="width: 40%; vertical-align: bottom; font-size: 12pt;">
-                                ${today}
-                            </td>
-                            <td style="width: 20%;"></td>
-                            <td style="width: 40%; text-align: center; vertical-align: bottom;">
-                                <div style="font-size: 12pt; margin-bottom: 40px; text-align: left;">Firma</div>
-                                <div style="border-bottom: 1px solid #000; height: 1px;"></div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                `;
-
-                const opt = {
-                    margin: 0.5,
-                    filename: `${modulo.descrizione.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${formData.cognome}_${formData.nome}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                };
-
-                if (window.html2pdf) {
-                    setTimeout(() => {
-                        window.html2pdf().set(opt).from(element).save();
-                        setShowPrintModal(false);
-                    }, 500);
-                } else {
-                    showAlert("La libreria PDF sta caricando, riprova tra un secondo.", 'Attenzione', 'warning');
-                }
-            };
-
-            if (logoUrl) {
-                getBase64Image(logoUrl)
-                    .then(base64 => generatePDF(base64))
-                    .catch(e => {
-                        console.error("Logo error", e);
-                        generatePDF();
-                    });
-            } else {
-                generatePDF();
-            }
+            await generateModuloPdf({ modulo, societa, dateToPrint: printDate, socio: formData });
+            setShowPrintModal(false);
 
         } catch (e) {
             console.error("Print Error:", e);
-            showAlert("Errore durante la generazione del modulo", 'Errore');
+            showAlert(e.message || "Errore durante la generazione del modulo", 'Errore');
         }
     };
 

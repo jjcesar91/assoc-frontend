@@ -3,7 +3,7 @@ import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, 
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
-import { formatDateIT } from '../utils/dateUtils';
+import { ensureHtml2PdfScript, generateModuloPdf } from '../utils/moduloPdf';
 
 const Modulistica = () => {
     const { selectedSocietaId, societaList } = useSocieta();
@@ -34,13 +34,7 @@ const Modulistica = () => {
     }, [isModalOpen, modalContent]); // Depend on modalContent too, so initial load works correctly
 
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        }
+        ensureHtml2PdfScript();
     }, []);
 
     useEffect(() => {
@@ -95,183 +89,17 @@ const Modulistica = () => {
         }
     };
 
-    const executePrint = (modulo, dateToPrint) => {
+    const executePrint = async (modulo, dateToPrint) => {
         let societa = null;
         if (selectedSocietaId && societaList.length > 0) {
             societa = societaList.find(s => s.id == selectedSocietaId);
         }
-        
-        // Ensure path handling is correct regardless of stored format
-        let logoUrl = '';
-        if (societa && societa.logo_path) {
-            // Check if logo_path is already a full URL or blob, if not prepend /users/
-            if (societa.logo_path.startsWith('http') || societa.logo_path.startsWith('blob:') || societa.logo_path.startsWith('data:')) {
-                logoUrl = societa.logo_path;
-            } else {
-                logoUrl = `/users/${societa.logo_path.startsWith('/') ? societa.logo_path.slice(1) : societa.logo_path}`;
-            }
-        }
-        
-        const denomination = societa ? societa.denominazione : 'Nome Società';
-        const address = societa ? `${societa.indirizzo || ''} ${societa.cap || ''} ${societa.comune || ''} ${societa.provincia ? '('+societa.provincia+')' : ''}` : '';
-        const cf = societa ? `CF: ${societa.codice_fiscale || ''} ${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
-        const footerText = societa ? (societa.footer_text || '') : '';
-        const today = formatDateIT(dateToPrint);
 
-        // Helper to convert image to base64 to avoid CORS/Loading issues in PDF
-        const getBase64Image = (url) => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.src = url;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/png'));
-                };
-                img.onerror = reject;
-            });
-        };
-
-        const generatePDF = (logoBase64 = null) => {
-            const element = document.createElement('div');
-            // Use 100% width but limit max-width for A4
-            element.style.width = '100%'; 
-            element.style.maxWidth = '800px';
-            element.innerHTML = `
-            <div style="padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
-                
-                <!-- HEADER - Flexbox with strict widths -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 15px;">
-                    <!-- Logo container -->
-                    <div style="flex: 0 0 150px; height: 100px; display: flex; align-items: center; justify-content: flex-start;">
-                        ${logoBase64 ? `<img src="${logoBase64}" style="max-height: 100px; max-width: 150px; object-fit: contain;" />` : ''}
-                    </div>
-                    
-                    <!-- Company Info -->
-                    <div style="flex: 1; text-align: right; padding-left: 20px;">
-                        <h3 style="margin: 0; font-size: 16pt; font-weight: bold; line-height: 1.2;">${denomination}</h3>
-                        <div style="font-size: 10pt; margin-top: 5px; line-height: 1.3;">${address}</div>
-                        <div style="font-size: 10pt; margin-top: 2px;">${cf}</div>
-                    </div>
-                </div>
-
-                <!-- TITLE -->
-                <h1 style="text-align: center; font-size: 20pt; font-weight: bold; margin: 0 0 30px 0; text-transform: uppercase;">${modulo.descrizione}</h1>
-
-                <!-- MEMBER TABLE -->
-                <style>
-                    .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 8pt; }
-                    .pdf-table td { border: 1px solid #000; padding: 6.4px; vertical-align: top; }
-                    .pdf-label { font-size: 6.4pt; text-transform: uppercase; color: #000; margin-bottom: 3.2px; font-weight: bold; }
-                    .pdf-value { min-height: 14.4px; }
-                </style>
-                <table class="pdf-table">
-                    <tr>
-                        <td style="width: 25%;">
-                            <div class="pdf-label">COGNOME</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                        <td style="width: 25%;">
-                            <div class="pdf-label">NOME</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                        <td style="width: 25%;">
-                            <div class="pdf-label">DATA DI NASCITA</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                        <td style="width: 25%;">
-                            <div class="pdf-label">LUOGO DI NASCITA</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                         <td colspan="2">
-                            <div class="pdf-label">CODICE FISCALE</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                         <td>
-                            <div class="pdf-label">TELEFONO</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                        <td>
-                            <div class="pdf-label">EMAIL</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="4">
-                            <div class="pdf-label">INDIRIZZO RESIDENZA</div>
-                            <div class="pdf-value"></div>
-                        </td>
-                    </tr>
-                </table>
-
-                <!-- BODY CONTENT -->
-                <div style="font-size: 11pt; line-height: 1.12; text-align: justify; margin-bottom: 60px;">
-                    ${modulo.htmlContent || modulo.testo || ''}
-                </div>
-
-                <!-- SIGNATURES -->
-                <table class="pdf-no-break" style="width: 100%; margin-top: 50px; border: none;">
-                    <tr>
-                        <td style="width: 40%; vertical-align: bottom; font-size: 12pt;">
-                            ${today}
-                        </td>
-                        <td style="width: 20%;"></td>
-                        <td style="width: 40%; text-align: center; vertical-align: bottom;">
-                            <div style="font-size: 12pt; margin-bottom: 40px; text-align: left;">Firma</div>
-                            <div style="border-bottom: 1px solid #000; height: 1px;"></div>
-                        </td>
-                    </tr>
-                </table>
-
-                ${footerText ? `
-                <!-- FOOTER -->
-                <div style="margin-top: 40px; padding-top: 10px; border-top: 1px solid #000; font-size: 8pt; color: #555; text-align: center; line-height: 1.4;">
-                    ${footerText}
-                </div>` : ''}
-            </div>
-            `;
-
-            const opt = {
-                margin: 0.5,
-                filename: `${modulo.descrizione.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true
-                },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                // Non usare 'avoid-all': forzerebbe l'intero blocco di testo del modulo
-                // (che può essere lungo) a saltare per intero su pagina 2 se non entra
-                // nello spazio residuo di pagina 1, lasciando la prima pagina quasi vuota.
-                // Si evita lo spezzamento solo sugli elementi che devono restare integri.
-                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.pdf-table', '.pdf-no-break'] }
-            };
-
-            if (window.html2pdf) {
-                // Short timeout to ensure DOM rendering completes
-                setTimeout(() => {
-                    window.html2pdf().set(opt).from(element).save();
-                }, 500);
-            } else {
-                showAlert("La libreria PDF sta caricando, riprova tra un secondo.", 'Attenzione', 'warning');
-            }
-        };
-
-        if (logoUrl) {
-            getBase64Image(logoUrl)
-                .then(base64 => generatePDF(base64))
-                .catch(err => {
-                    console.error("Error loading logo:", err);
-                    generatePDF(); // Fallback without logo
-                });
-        } else {
-            generatePDF();
+        try {
+            await generateModuloPdf({ modulo, societa, dateToPrint });
+        } catch (e) {
+            console.error("Print Error:", e);
+            showAlert(e.message || "Errore durante la generazione del modulo", 'Errore', 'warning');
         }
     };
 
