@@ -61,6 +61,8 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
     const cfInfo = societa ? `CF: ${societa.codice_fiscale || ''}${societa.partita_iva ? ' - P.IVA: ' + societa.partita_iva : ''}` : '';
     const footerText = societa ? (societa.footer_text || '') : '';
 
+    const luogoData = societa?.comune ? `${societa.comune}, ${today}` : today;
+
     const birthDateDisplay = socio?.data_nascita
         ? (formatDateIT(socio.data_nascita) || socio.data_nascita)
         : '';
@@ -133,7 +135,7 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
         </table>
 
         <!-- BODY CONTENT -->
-        <div style="font-size: 11pt; line-height: 1.12; text-align: justify; margin-bottom: 60px;">
+        <div class="pdf-body-content" style="font-size: 11pt; line-height: 1.12; text-align: justify; margin-bottom: 60px;">
             ${modulo.htmlContent || modulo.testo || ''}
         </div>
 
@@ -141,7 +143,7 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
         <table class="pdf-no-break" style="width: 100%; margin-top: 50px; border: none;">
             <tr>
                 <td style="width: 40%; vertical-align: bottom; font-size: 12pt;">
-                    ${today}
+                    ${luogoData}
                 </td>
                 <td style="width: 20%;"></td>
                 <td style="width: 40%; text-align: center; vertical-align: bottom;">
@@ -202,8 +204,11 @@ export async function generateModuloPdf({ modulo, societa, dateToPrint, socio = 
         // Non usare 'avoid-all': forzerebbe l'intero blocco di testo del modulo
         // (che può essere lungo) a saltare per intero su pagina 2 se non entra
         // nello spazio residuo di pagina 1, lasciando la prima pagina quasi vuota.
-        // Si evita lo spezzamento solo sugli elementi che devono restare integri.
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.pdf-table', '.pdf-no-break'] }
+        // Si evita lo spezzamento solo sugli elementi che devono restare integri:
+        // ogni singolo paragrafo/riga del testo del modulo (figli diretti di
+        // .pdf-body-content) viene spostato per intero a pagina successiva se non
+        // ci sta, invece di tagliare a metà una riga di testo.
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.pdf-table', '.pdf-no-break', '.pdf-body-content > *'] }
     };
 
     // html2pdf.js impagina in modo affidabile solo dopo che il layout si è assestato.
