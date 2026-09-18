@@ -20,7 +20,7 @@ export function ensureHtml2PdfScript() {
 }
 
 /** Converte un'immagine (es. il logo della società) in data URL base64, per evitare problemi CORS nel PDF. */
-function loadImageAsBase64(url) {
+export function loadImageAsBase64(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -37,7 +37,7 @@ function loadImageAsBase64(url) {
     });
 }
 
-function resolveLogoUrl(societa) {
+export function resolveLogoUrl(societa) {
     if (!societa || !societa.logo_path) return '';
     const { logo_path } = societa;
     if (logo_path.startsWith('http') || logo_path.startsWith('blob:') || logo_path.startsWith('data:')) {
@@ -160,6 +160,41 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
         </div>` : ''}
     </div>
     `;
+}
+
+/**
+ * Costruisce il documento HTML completo (non solo il frammento di buildModuloHtml)
+ * pronto per essere scritto in una finestra e stampato da browser — stesso schema
+ * di buildRicevutaHtml() in utils/ricevuta.js. Usato dalla pagina pubblica
+ * /ricevuta-telematica/:societaId, che riusa buildModuloHtml così da non far
+ * divergere ancora una volta il template del modulo tra le varie pagine che lo stampano.
+ * @param {Object} p
+ * @param {Object} p.modulo
+ * @param {Object|null} p.societa
+ * @param {string|null} [p.logoBase64]
+ * @param {string} p.today - data ISO da mostrare come data di compilazione
+ * @param {Object|null} [p.socio]
+ * @param {boolean} [p.autoPrint=true]
+ */
+export function buildModuloPrintHtml({ modulo, societa, logoBase64 = null, today, socio = null, autoPrint = true }) {
+    const todayFormatted = formatDateIT(today);
+    const body = buildModuloHtml({ modulo, societa, logoBase64, today: todayFormatted, socio });
+
+    return `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<title>${modulo.descrizione || 'Modulo'}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  body { margin: 0; }
+</style>
+</head>
+<body>
+${body}
+${autoPrint ? '<script>window.onload = () => window.print();</script>' : ''}
+</body>
+</html>`;
 }
 
 /**

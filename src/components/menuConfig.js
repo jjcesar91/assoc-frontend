@@ -1,4 +1,4 @@
-import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle, Send } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -76,6 +76,7 @@ export const MENU_STRUCTURE = [
             { id: 'modulistica-template',  label: 'Footer',             path: '/modulistica/template' },
         ],
     },
+    { id: 'ricevute-telematiche', label: 'Ricevute Telematiche', Icon: Send, path: '/ricevute-telematiche' },
     {
         id: 'societa',
         label: 'Configurazione',

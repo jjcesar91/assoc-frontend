@@ -29,7 +29,9 @@ import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
 import SocioDashboard from './pages/SocioDashboard';
-import CaricaQuietanza from './pages/CaricaQuietanza';
+import CaricaQuietanza from './pages/CaricaQuietanza'
+import RicevutaTelematica from './pages/RicevutaTelematica'
+import RicevuteTelematicheConfig from './pages/RicevuteTelematicheConfig';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
@@ -145,6 +147,10 @@ function App() {
           <Route path="/carica-quietanza" element={<CaricaQuietanza />} />
           <Route path="/carica-ricevuta" element={<RedirectPreserveQuery to="/carica-quietanza" />} />
 
+          {/* ── Route pubblica: compilazione/stampa modulo da parte del socio (nessuna autenticazione) ──
+               Intenzionalmente non presente in MENU_STRUCTURE: raggiungibile solo tramite link diretto. */}
+          <Route path="/ricevuta-telematica/:societaId" element={<RicevutaTelematica />} />
+
           {/* Login: se autenticato come socio → dashboard, altrimenti → /soci */}
           <Route path="/login" element={
             !isAuthenticated
@@ -192,6 +198,11 @@ function App() {
           <Route path="/modulistica" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Modulistica">
               <Modulistica />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/ricevute-telematiche" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Ricevute Telematiche">
+              <RicevuteTelematicheConfig />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/modulistica/template" element={isAuthenticated && !isSocio ? (
