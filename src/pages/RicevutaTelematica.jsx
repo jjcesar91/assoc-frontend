@@ -12,10 +12,13 @@ import { parseCodiceFiscale, lookupLuogoNascita } from '../utils/codiceFiscale';
 // Raggiungibile solo tramite link diretto /ricevuta-telematica/:societaId,
 // intenzionalmente NON presente nel menu laterale del backoffice.
 //
-// Appena nome, cognome e codice fiscale sono compilati, il codice fiscale viene
-// analizzato (utils/codiceFiscale.js) per dedurre sesso, data e luogo di nascita:
-// questi campi compaiono precompilati (ma restano modificabili, nel caso la
-// deduzione sbagli o il comune non sia nell'elenco).
+// Inizialmente è visibile solo il campo Codice fiscale. Appena è completo e ha
+// un formato valido, viene analizzato (utils/codiceFiscale.js, per dedurre
+// sesso/data/luogo di nascita) e verificato in tempo reale contro i soci già
+// esistenti (GET /users/api/public/soci, sola lettura — la creazione/aggiornamento
+// avviene solo alla conferma). Se il socio esiste già, tutti gli altri campi
+// compaiono precompilati con i suoi dati; altrimenti compaiono vuoti (tranne i
+// campi dedotti dal CF). In entrambi i casi i campi restano modificabili.
 
 const EMPTY_FORM = {
     nome: '', cognome: '', codice_fiscale: '', indirizzo: '', email: '', telefono: '',
@@ -33,8 +36,11 @@ export default function RicevutaTelematica() {
     const [form, setForm] = useState(EMPTY_FORM);
     const [submitting, setSubmitting] = useState(false);
     // Esito dell'analisi del codice fiscale corrente: controlla se/come mostrare
-    // i campi dedotti (data/sesso/luogo di nascita) e l'eventuale avviso di CF non valido.
+    // il resto del form e l'eventuale avviso di CF non valido.
     const [cfInfo, setCfInfo] = useState(null);
+    // Esito del check in tempo reale sul socio esistente: null (non ancora verificato),
+    // 'checking', 'found' (dati precompilati da un socio esistente) o 'not-found'.
+    const [socioLookup, setSocioLookup] = useState(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -57,31 +63,39 @@ export default function RicevutaTelematica() {
         return () => { cancelled = true; };
     }, [societaId]);
 
-    // Appena il codice fiscale raggiunge 16 caratteri, deduce sesso/data/comune
-    // di nascita e precompila i campi corrispondenti (restano modificabili).
+    // Appena il codice fiscale raggiunge 16 caratteri e ha un formato valido:
+    // 1) lo analizza per dedurre sesso/data/comune di nascita;
+    // 2) verifica in tempo reale se esiste già un socio con questo CF per la società
+    //    e, in caso, precompila tutti i campi con i suoi dati.
     useEffect(() => {
         const cf = form.codice_fiscale.trim();
 
-        // Se il CF non è (più) valido, oltre a nascondere i campi dedotti li svuota:
-        // altrimenti resterebbero in form (anche se non visibili) e finirebbero nel
-        // payload inviato al submit, associati a un codice fiscale diverso da quello attuale.
-        const clearDeducedFields = () => {
+        // Se il CF non è (più) valido/completo, nasconde e svuota il resto del form:
+        // altrimenti i dati resterebbero in form (anche se non visibili) e finirebbero
+        // nel payload inviato al submit, associati a un codice fiscale diverso da quello attuale.
+        const clearAll = () => {
             setCfInfo(null);
-            setForm((prev) => ({ ...prev, sesso: '', data_nascita: '', comune_nascita: '', nazione_nascita: '' }));
+            setSocioLookup(null);
+            setForm((prev) => ({
+                ...prev,
+                nome: '', cognome: '', indirizzo: '', email: '', telefono: '',
+                sesso: '', data_nascita: '', comune_nascita: '', nazione_nascita: '',
+            }));
         };
 
         if (cf.length !== 16) {
-            clearDeducedFields();
+            clearAll();
             return;
         }
 
         const parsed = parseCodiceFiscale(cf);
         if (!parsed) {
-            clearDeducedFields();
+            clearAll();
             return;
         }
 
         let cancelled = false;
+        setSocioLookup('checking');
         (async () => {
             const luogo = await lookupLuogoNascita(parsed.codiceCatastale);
             if (cancelled) return;
@@ -89,16 +103,47 @@ export default function RicevutaTelematica() {
             // se per qualche motivo non è presente nell'elenco caricato.
             const estero = luogo ? luogo.estero : parsed.codiceCatastale.startsWith('Z');
             setCfInfo({ ...parsed, estero, luogoNome: luogo?.nome || null });
-            setForm((prev) => ({
-                ...prev,
-                sesso: parsed.sesso,
-                data_nascita: parsed.dataNascita,
-                comune_nascita: estero ? 'Estero' : (luogo?.nome || prev.comune_nascita),
-                nazione_nascita: estero ? (luogo?.nome || prev.nazione_nascita) : '',
-            }));
+
+            let existing = null;
+            try {
+                const res = await fetch(`/users/api/public/soci?societa_id=${societaId}&codice_fiscale=${encodeURIComponent(cf)}`);
+                if (!cancelled && res.ok) {
+                    const data = await res.json();
+                    if (data.exists) existing = data.socio;
+                }
+            } catch (err) {
+                console.error('Errore verifica socio esistente:', err);
+            }
+            if (cancelled) return;
+
+            if (existing) {
+                const placeName = existing.luogo_nascita || luogo?.nome || '';
+                setSocioLookup('found');
+                setForm((prev) => ({
+                    ...prev,
+                    nome: existing.nome || '',
+                    cognome: existing.cognome || '',
+                    indirizzo: existing.indirizzo || '',
+                    email: existing.email || '',
+                    telefono: existing.telefono || '',
+                    sesso: existing.sesso || parsed.sesso,
+                    data_nascita: existing.data_nascita || parsed.dataNascita,
+                    comune_nascita: estero ? 'Estero' : placeName,
+                    nazione_nascita: estero ? placeName : '',
+                }));
+            } else {
+                setSocioLookup('not-found');
+                setForm((prev) => ({
+                    ...prev,
+                    sesso: parsed.sesso,
+                    data_nascita: parsed.dataNascita,
+                    comune_nascita: estero ? 'Estero' : (luogo?.nome || prev.comune_nascita),
+                    nazione_nascita: estero ? (luogo?.nome || prev.nazione_nascita) : '',
+                }));
+            }
         })();
         return () => { cancelled = true; };
-    }, [form.codice_fiscale]);
+    }, [form.codice_fiscale, societaId]);
 
     const handleChange = (field) => (e) => {
         setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -225,17 +270,6 @@ export default function RicevutaTelematica() {
                 <p style={styles.subtitle}>Inserisci i tuoi dati per compilare e stampare il modulo.</p>
 
                 <form onSubmit={handleConferma}>
-                    <div style={styles.row}>
-                        <div style={styles.field}>
-                            <label style={styles.label}>Nome *</label>
-                            <input style={styles.input} value={form.nome} onChange={handleChange('nome')} required />
-                        </div>
-                        <div style={styles.field}>
-                            <label style={styles.label}>Cognome *</label>
-                            <input style={styles.input} value={form.cognome} onChange={handleChange('cognome')} required />
-                        </div>
-                    </div>
-
                     <div style={styles.field}>
                         <label style={styles.label}>Codice fiscale *</label>
                         <input
@@ -243,15 +277,33 @@ export default function RicevutaTelematica() {
                             value={form.codice_fiscale}
                             onChange={handleChange('codice_fiscale')}
                             maxLength={16}
+                            autoFocus
                             required
                         />
+                        {socioLookup === 'checking' && (
+                            <p style={styles.hint}>Verifica in corso...</p>
+                        )}
+                        {socioLookup === 'found' && (
+                            <p style={styles.hint}>Ti abbiamo già trovato: controlla i tuoi dati qui sotto e conferma.</p>
+                        )}
                         {cfInfo && !cfInfo.checksumValid && (
-                            <p style={styles.warning}>Il codice fiscale inserito non sembra valido: controlla i dati dedotti qui sotto.</p>
+                            <p style={styles.warning}>Il codice fiscale inserito non sembra valido: controlla i dati qui sotto.</p>
                         )}
                     </div>
 
                     {cfInfo && (
                         <>
+                            <div style={styles.row}>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Nome *</label>
+                                    <input style={styles.input} value={form.nome} onChange={handleChange('nome')} required />
+                                </div>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Cognome *</label>
+                                    <input style={styles.input} value={form.cognome} onChange={handleChange('cognome')} required />
+                                </div>
+                            </div>
+
                             <div style={styles.row}>
                                 <div style={styles.field}>
                                     <label style={styles.label}>Data di nascita</label>
@@ -291,28 +343,28 @@ export default function RicevutaTelematica() {
                                     </div>
                                 )}
                             </div>
+
+                            <div style={styles.field}>
+                                <label style={styles.label}>Indirizzo</label>
+                                <input style={styles.input} value={form.indirizzo} onChange={handleChange('indirizzo')} />
+                            </div>
+
+                            <div style={styles.row}>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Email</label>
+                                    <input type="email" style={styles.input} value={form.email} onChange={handleChange('email')} />
+                                </div>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Telefono</label>
+                                    <input style={styles.input} value={form.telefono} onChange={handleChange('telefono')} />
+                                </div>
+                            </div>
+
+                            <button type="submit" style={styles.button} disabled={submitting}>
+                                {submitting ? 'Attendere...' : 'Conferma e stampa'}
+                            </button>
                         </>
                     )}
-
-                    <div style={styles.field}>
-                        <label style={styles.label}>Indirizzo</label>
-                        <input style={styles.input} value={form.indirizzo} onChange={handleChange('indirizzo')} />
-                    </div>
-
-                    <div style={styles.row}>
-                        <div style={styles.field}>
-                            <label style={styles.label}>Email</label>
-                            <input type="email" style={styles.input} value={form.email} onChange={handleChange('email')} />
-                        </div>
-                        <div style={styles.field}>
-                            <label style={styles.label}>Telefono</label>
-                            <input style={styles.input} value={form.telefono} onChange={handleChange('telefono')} />
-                        </div>
-                    </div>
-
-                    <button type="submit" style={styles.button} disabled={submitting}>
-                        {submitting ? 'Attendere...' : 'Conferma e stampa'}
-                    </button>
                 </form>
             </div>
         </div>
@@ -344,6 +396,7 @@ const styles = {
     field: { flex: 1, marginBottom: '16px' },
     label: { display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: '#374151' },
     warning: { fontSize: '12px', color: '#b45309', margin: '6px 0 0' },
+    hint: { fontSize: '12px', color: '#2563eb', margin: '6px 0 0' },
     input: {
         width: '100%',
         padding: '10px 12px',
