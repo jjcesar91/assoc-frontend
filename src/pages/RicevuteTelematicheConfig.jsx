@@ -9,6 +9,9 @@ const RicevuteTelematicheConfig = () => {
     const [moduli, setModuli] = useState([]);
     const [selectedModuloId, setSelectedModuloId] = useState('');
     const [originalModuloId, setOriginalModuloId] = useState('');
+    const [prodotti, setProdotti] = useState([]);
+    const [selectedProdottoId, setSelectedProdottoId] = useState('');
+    const [originalProdottoId, setOriginalProdottoId] = useState('');
 
     const societa = societaList.find(s => s.id == selectedSocietaId);
     const publicLink = selectedSocietaId ? `${window.location.origin}/ricevuta-telematica/${selectedSocietaId}` : '';
@@ -16,7 +19,7 @@ const RicevuteTelematicheConfig = () => {
     useEffect(() => {
         setMessage(null);
         if (!selectedSocietaId || societaList.length === 0) {
-            if (!selectedSocietaId) setModuli([]);
+            if (!selectedSocietaId) { setModuli([]); setProdotti([]); }
             return;
         }
 
@@ -37,6 +40,26 @@ const RicevuteTelematicheConfig = () => {
                 console.error('Error fetching moduli:', error);
             }
         })();
+
+        (async () => {
+            try {
+                const response = await fetch(`/products/api?societaId=${selectedSocietaId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setProdotti(Array.isArray(data) ? data : []);
+
+                    // A differenza del modulo, per il prodotto non c'è un default automatico:
+                    // se non è (più) configurato un prodotto valido per questa società, resta "Nessuno".
+                    const configured = societa?.ricevuta_telematica_prodotto_id;
+                    const configuredExists = configured && data.some(p => p.id === configured);
+                    const defaultId = configuredExists ? configured : '';
+                    setSelectedProdottoId(defaultId);
+                    setOriginalProdottoId(defaultId);
+                }
+            } catch (error) {
+                console.error('Error fetching prodotti:', error);
+            }
+        })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedSocietaId, societaList]);
 
@@ -50,7 +73,10 @@ const RicevuteTelematicheConfig = () => {
             const response = await fetch(`/users/api/societa/${selectedSocietaId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ricevuta_telematica_modulo_id: selectedModuloId || null })
+                body: JSON.stringify({
+                    ricevuta_telematica_modulo_id: selectedModuloId || null,
+                    ricevuta_telematica_prodotto_id: selectedProdottoId || null,
+                })
             });
 
             if (!response.ok) {
@@ -59,6 +85,7 @@ const RicevuteTelematicheConfig = () => {
             }
 
             setOriginalModuloId(selectedModuloId);
+            setOriginalProdottoId(selectedProdottoId);
             setMessage({ type: 'success', text: 'Configurazione salvata con successo' });
             fetchSocieta();
         } catch (error) {
@@ -118,6 +145,24 @@ const RicevuteTelematicheConfig = () => {
                 </div>
 
                 <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Proforma automatica</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                        Se selezioni un prodotto, alla conferma il socio genera automaticamente anche una proforma per quel prodotto (da registrare poi in Ricevute, come le altre proforma). Lascia su "Nessuno" per non generare alcuna proforma.
+                    </p>
+                    <select
+                        className="md-input"
+                        value={selectedProdottoId}
+                        onChange={(e) => setSelectedProdottoId(Number(e.target.value) || '')}
+                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: 'white' }}
+                    >
+                        <option value="">Nessuno (non generare una proforma)</option>
+                        {prodotti.map(p => (
+                            <option key={p.id} value={p.id}>{p.description} (€{Number(p.basePrice || 0).toFixed(2)})</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
                     <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Link pubblico per i soci</label>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
                         Condividi questo link con i soci: potranno inserire i propri dati e stampare subito il modulo, senza bisogno di accedere al backoffice.
@@ -142,7 +187,7 @@ const RicevuteTelematicheConfig = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #eee' }}>
                 <button
                     onClick={handleSave}
-                    disabled={loading || selectedModuloId === originalModuloId}
+                    disabled={loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId)}
                     style={{
                         padding: '10px 24px',
                         borderRadius: '4px',
@@ -154,7 +199,7 @@ const RicevuteTelematicheConfig = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        opacity: (loading || selectedModuloId === originalModuloId) ? 0.7 : 1
+                        opacity: (loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId)) ? 0.7 : 1
                     }}
                 >
                     <Save size={18} /> Salva

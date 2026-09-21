@@ -199,6 +199,35 @@ export default function RicevutaTelematica() {
             }
             const socio = await socioRes.json();
 
+            // Proforma automatica (best-effort): se la società ha configurato un
+            // prodotto per la Ricevuta Telematica, genera anche una proforma per il
+            // socio. Non deve mai bloccare la stampa del modulo, che resta l'esito
+            // principale della conferma: un eventuale errore qui viene solo loggato.
+            if (societa?.ricevuta_telematica_prodotto_id) {
+                try {
+                    const proformaRes = await fetch('/payments/api/public/proforma-telematica', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            societa_id: societaId,
+                            prodotto_id: societa.ricevuta_telematica_prodotto_id,
+                            socio: {
+                                id: socio.id,
+                                nome: socio.nome,
+                                cognome: socio.cognome,
+                                codice_fiscale: socio.codice_fiscale,
+                            },
+                        }),
+                    });
+                    if (!proformaRes.ok) {
+                        const err = await proformaRes.json().catch(() => ({}));
+                        console.error('Errore creazione proforma automatica:', err.error || proformaRes.status);
+                    }
+                } catch (err) {
+                    console.error('Errore creazione proforma automatica:', err);
+                }
+            }
+
             const moduloRes = await fetch(
                 `/documents/api/public/moduli/effettivo?societa_id=${societaId}&modulo_id=${societa?.ricevuta_telematica_modulo_id || ''}`
             );
