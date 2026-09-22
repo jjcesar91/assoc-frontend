@@ -32,6 +32,7 @@ import SocioDashboard from './pages/SocioDashboard';
 import CaricaQuietanza from './pages/CaricaQuietanza'
 import RicevutaTelematica from './pages/RicevutaTelematica'
 import RicevuteTelematicheConfig from './pages/RicevuteTelematicheConfig';
+import RicevuteTelematicheInvio from './pages/RicevuteTelematicheInvio';
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
@@ -200,9 +201,15 @@ function App() {
               <Modulistica />
             </Layout>
           ) : <Navigate to="/login" />} />
-          <Route path="/ricevute-telematiche" element={isAuthenticated && !isSocio ? (
-            <Layout onLogout={handleLogout} title="Ricevute Telematiche">
+          <Route path="/ricevute-telematiche" element={<Navigate to="/ricevute-telematiche/configurazione" replace />} />
+          <Route path="/ricevute-telematiche/configurazione" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Ricevute Telematiche - Configurazione">
               <RicevuteTelematicheConfig />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/ricevute-telematiche/invio" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Ricevute Telematiche - Invio Ricevute">
+              <RicevuteTelematicheInvio />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/modulistica/template" element={isAuthenticated && !isSocio ? (

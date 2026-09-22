@@ -76,7 +76,15 @@ export const MENU_STRUCTURE = [
             { id: 'modulistica-template',  label: 'Footer',             path: '/modulistica/template' },
         ],
     },
-    { id: 'ricevute-telematiche', label: 'Ricevute Telematiche', Icon: Send, path: '/ricevute-telematiche' },
+    {
+        id: 'ricevute-telematiche',
+        label: 'Ricevute Telematiche',
+        Icon: Send,
+        children: [
+            { id: 'ricevute-telematiche-configurazione', label: 'Configurazione', path: '/ricevute-telematiche/configurazione' },
+            { id: 'ricevute-telematiche-invio',           label: 'Invio Ricevute', path: '/ricevute-telematiche/invio' },
+        ],
+    },
     {
         id: 'societa',
         label: 'Configurazione',

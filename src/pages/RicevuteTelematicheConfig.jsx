@@ -12,6 +12,9 @@ const RicevuteTelematicheConfig = () => {
     const [prodotti, setProdotti] = useState([]);
     const [selectedProdottoId, setSelectedProdottoId] = useState('');
     const [originalProdottoId, setOriginalProdottoId] = useState('');
+    const [conti, setConti] = useState([]);
+    const [selectedContoId, setSelectedContoId] = useState('');
+    const [originalContoId, setOriginalContoId] = useState('');
 
     const societa = societaList.find(s => s.id == selectedSocietaId);
     const publicLink = selectedSocietaId ? `${window.location.origin}/ricevuta-telematica/${selectedSocietaId}` : '';
@@ -19,7 +22,7 @@ const RicevuteTelematicheConfig = () => {
     useEffect(() => {
         setMessage(null);
         if (!selectedSocietaId || societaList.length === 0) {
-            if (!selectedSocietaId) { setModuli([]); setProdotti([]); }
+            if (!selectedSocietaId) { setModuli([]); setProdotti([]); setConti([]); }
             return;
         }
 
@@ -60,6 +63,25 @@ const RicevuteTelematicheConfig = () => {
                 console.error('Error fetching prodotti:', error);
             }
         })();
+
+        (async () => {
+            try {
+                const response = await fetch(`/payments/api/conti?societa_id=${selectedSocietaId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setConti(Array.isArray(data) ? data : []);
+
+                    // Come per il prodotto, nessun default automatico.
+                    const configured = societa?.ricevuta_telematica_conto_id;
+                    const configuredExists = configured && data.some(c => c.id === configured);
+                    const defaultId = configuredExists ? configured : '';
+                    setSelectedContoId(defaultId);
+                    setOriginalContoId(defaultId);
+                }
+            } catch (error) {
+                console.error('Error fetching conti:', error);
+            }
+        })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedSocietaId, societaList]);
 
@@ -76,6 +98,7 @@ const RicevuteTelematicheConfig = () => {
                 body: JSON.stringify({
                     ricevuta_telematica_modulo_id: selectedModuloId || null,
                     ricevuta_telematica_prodotto_id: selectedProdottoId || null,
+                    ricevuta_telematica_conto_id: selectedContoId || null,
                 })
             });
 
@@ -86,6 +109,7 @@ const RicevuteTelematicheConfig = () => {
 
             setOriginalModuloId(selectedModuloId);
             setOriginalProdottoId(selectedProdottoId);
+            setOriginalContoId(selectedContoId);
             setMessage({ type: 'success', text: 'Configurazione salvata con successo' });
             fetchSocieta();
         } catch (error) {
@@ -163,6 +187,24 @@ const RicevuteTelematicheConfig = () => {
                 </div>
 
                 <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Conto per l'incasso</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                        Conto usato quando, dalla pagina "Invio Ricevute", confermi in blocco le proforme trasformandole in ricevute pagate. Obbligatorio per poter usare quella pagina.
+                    </p>
+                    <select
+                        className="md-input"
+                        value={selectedContoId}
+                        onChange={(e) => setSelectedContoId(Number(e.target.value) || '')}
+                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: 'white' }}
+                    >
+                        <option value="">Nessuno selezionato</option>
+                        {conti.map(c => (
+                            <option key={c.id} value={c.id}>{c.descrizione}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
                     <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Link pubblico per i soci</label>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
                         Condividi questo link con i soci: potranno inserire i propri dati e stampare subito il modulo, senza bisogno di accedere al backoffice.
@@ -187,7 +229,7 @@ const RicevuteTelematicheConfig = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #eee' }}>
                 <button
                     onClick={handleSave}
-                    disabled={loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId)}
+                    disabled={loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId && selectedContoId === originalContoId)}
                     style={{
                         padding: '10px 24px',
                         borderRadius: '4px',
@@ -199,7 +241,7 @@ const RicevuteTelematicheConfig = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        opacity: (loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId)) ? 0.7 : 1
+                        opacity: (loading || (selectedModuloId === originalModuloId && selectedProdottoId === originalProdottoId && selectedContoId === originalContoId)) ? 0.7 : 1
                     }}
                 >
                     <Save size={18} /> Salva
