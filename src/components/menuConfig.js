@@ -33,6 +33,27 @@ export const getVisibleMenu = () => {
     });
 };
 
+/** Restituisce il percorso di destinazione predefinito dopo il login */
+export const getHomePath = () => {
+    const role = localStorage.getItem('user_role') || 'user';
+    let featuresRaw;
+    try { featuresRaw = JSON.parse(localStorage.getItem('user_features')); } catch { featuresRaw = null; }
+
+    // admin/superuser e utenti senza restrizioni: comportamento invariato
+    if (role === 'superuser' || role === 'admin' || featuresRaw === null || featuresRaw === undefined) {
+        return '/soci';
+    }
+
+    // altrimenti apre la prima funzionalità abilitata (nell'ordine del menu)
+    for (const item of MENU_STRUCTURE) {
+        if (item.id === 'amministrazione') continue;
+        if (!featuresRaw.includes(item.id)) continue;
+        if (item.path) return item.path;
+        if (item.children?.length) return item.children[0].path;
+    }
+    return '/soci';
+};
+
 export const MENU_STRUCTURE = [
     { id: 'soci',         label: 'Soci',          Icon: User,          path: '/soci' },
     {

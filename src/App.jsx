@@ -33,6 +33,7 @@ import CaricaQuietanza from './pages/CaricaQuietanza'
 import RicevutaTelematica from './pages/RicevutaTelematica'
 import RicevuteTelematicheConfig from './pages/RicevuteTelematicheConfig';
 import RicevuteTelematicheInvio from './pages/RicevuteTelematicheInvio';
+import { getHomePath } from './components/menuConfig'
 import { SocietaProvider } from './data/SocietaContext'
 import { AnnoProvider } from './data/AnnoContext'
 import { ConfirmProvider } from './components/ConfirmModal'
@@ -158,7 +159,7 @@ function App() {
               ? <Login onLoginSuccess={handleLogin} />
               : isSocio
                 ? <Navigate to="/area-soci" />
-                : <Navigate to="/soci" />
+                : <Navigate to={getHomePath()} />
           } />
 
           {/* ── Area Soci (solo role=socio) ── */}
@@ -319,7 +320,7 @@ function App() {
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/" element={isAuthenticated
-            ? isSocio ? <Navigate to="/area-soci" /> : <Navigate to="/soci" />
+            ? isSocio ? <Navigate to="/area-soci" /> : <Navigate to={getHomePath()} />
             : <Navigate to="/login" />
           } />
         </Routes>
