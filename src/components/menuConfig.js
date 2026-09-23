@@ -30,7 +30,10 @@ export const getVisibleMenu = () => {
         if (item.id === 'amministrazione') return false;
         if (featuresRaw === null || featuresRaw === undefined) return true;
         return featuresRaw.includes(item.id);
-    });
+    }).map(item => ({
+        ...item,
+        children: item.children?.filter(c => !c.superuserOnly),
+    }));
 };
 
 /** Restituisce il percorso di destinazione predefinito dopo il login */
@@ -49,7 +52,8 @@ export const getHomePath = () => {
         if (item.id === 'amministrazione') continue;
         if (!featuresRaw.includes(item.id)) continue;
         if (item.path) return item.path;
-        if (item.children?.length) return item.children[0].path;
+        const firstChild = item.children?.find(c => !c.superuserOnly);
+        if (firstChild) return firstChild.path;
     }
     return '/soci';
 };
@@ -102,7 +106,7 @@ export const MENU_STRUCTURE = [
         label: 'Ricevute Telematiche',
         Icon: Send,
         children: [
-            { id: 'ricevute-telematiche-configurazione', label: 'Configurazione', path: '/ricevute-telematiche/configurazione' },
+            { id: 'ricevute-telematiche-configurazione', label: 'Configurazione', path: '/ricevute-telematiche/configurazione', superuserOnly: true },
             { id: 'ricevute-telematiche-invio',           label: 'Invio Ricevute', path: '/ricevute-telematiche/invio' },
         ],
     },
