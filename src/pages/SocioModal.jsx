@@ -1841,7 +1841,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.tipo_socio !== 'associazione' && isMinorenne) {
             const errors = {
@@ -1858,7 +1858,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             }
         }
         setGenitoreErrors({});
-        onSave({ ...formData, etichette: etichetteList.length > 0 ? JSON.stringify(etichetteList) : null });
+        // Il modal resta aperto dopo il salvataggio: onSave aggiorna i dati (incl.
+        // l'id per un nuovo socio) senza chiudere la scheda.
+        const ok = await onSave({ ...formData, etichette: etichetteList.length > 0 ? JSON.stringify(etichetteList) : null });
+        if (ok) {
+            showSnackbar('Modifiche salvate con successo');
+        }
     };
 
     // ── Attività helpers ──────────────────────────────────────────────────────

@@ -491,17 +491,24 @@ const Soci = ({ onLogout }) => {
             });
 
             if (response.ok) {
-                setShowModal(false);
+                const savedSocio = await response.json();
+                // Il modal resta aperto: aggiorna la scheda con i dati salvati
+                // (per una creazione, questo valorizza l'id così un salvataggio
+                // successivo diventa un update invece di creare un duplicato).
+                setSelectedSocio(savedSocio);
                 // Soft refresh: ricarica i dati della pagina senza reload del browser
                 fetchSoci();
                 fetchPayments();
+                return true;
             } else {
                 const err = await response.json();
                 showAlert(err.error || err.message, 'Errore salvataggio');
+                return false;
             }
         } catch (error) {
             console.error(error);
             showAlert('Errore di rete', 'Errore');
+            return false;
         }
     };
 
