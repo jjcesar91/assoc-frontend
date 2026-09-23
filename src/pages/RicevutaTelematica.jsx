@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAlert } from '../components/AlertModal';
+import CityAutocomplete from '../components/CityAutocomplete';
 import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 import { parseCodiceFiscale, lookupLuogoNascita } from '../utils/codiceFiscale';
 
@@ -21,9 +22,14 @@ import { parseCodiceFiscale, lookupLuogoNascita } from '../utils/codiceFiscale';
 // campi dedotti dal CF). In entrambi i casi i campi restano modificabili.
 
 const EMPTY_FORM = {
-    nome: '', cognome: '', codice_fiscale: '', indirizzo: '', email: '', telefono: '',
+    nome: '', cognome: '', codice_fiscale: '', indirizzo: '', comune: '', cap: '', email: '', telefono: '',
     sesso: '', data_nascita: '', comune_nascita: '', nazione_nascita: '',
 };
+
+// Il form è sempre in maiuscolo: applicato sia in scrittura diretta (handleChange)
+// sia ai valori precompilati automaticamente (dal CF o da un socio esistente), così
+// il dato resta coerente indipendentemente da come è finito nel campo.
+const upper = (v) => (v || '').toString().toUpperCase();
 
 export default function RicevutaTelematica() {
     const { societaId } = useParams();
@@ -78,7 +84,7 @@ export default function RicevutaTelematica() {
             setSocioLookup(null);
             setForm((prev) => ({
                 ...prev,
-                nome: '', cognome: '', indirizzo: '', email: '', telefono: '',
+                nome: '', cognome: '', indirizzo: '', comune: '', cap: '', email: '', telefono: '',
                 sesso: '', data_nascita: '', comune_nascita: '', nazione_nascita: '',
             }));
         };
@@ -121,15 +127,17 @@ export default function RicevutaTelematica() {
                 setSocioLookup('found');
                 setForm((prev) => ({
                     ...prev,
-                    nome: existing.nome || '',
-                    cognome: existing.cognome || '',
-                    indirizzo: existing.indirizzo || '',
-                    email: existing.email || '',
-                    telefono: existing.telefono || '',
+                    nome: upper(existing.nome),
+                    cognome: upper(existing.cognome),
+                    indirizzo: upper(existing.indirizzo),
+                    comune: upper(existing.comune),
+                    cap: existing.cap || '',
+                    email: upper(existing.email),
+                    telefono: upper(existing.telefono),
                     sesso: existing.sesso || parsed.sesso,
                     data_nascita: existing.data_nascita || parsed.dataNascita,
-                    comune_nascita: estero ? 'Estero' : placeName,
-                    nazione_nascita: estero ? placeName : '',
+                    comune_nascita: estero ? 'ESTERO' : upper(placeName),
+                    nazione_nascita: estero ? upper(placeName) : '',
                 }));
             } else {
                 setSocioLookup('not-found');
@@ -137,8 +145,8 @@ export default function RicevutaTelematica() {
                     ...prev,
                     sesso: parsed.sesso,
                     data_nascita: parsed.dataNascita,
-                    comune_nascita: estero ? 'Estero' : (luogo?.nome || prev.comune_nascita),
-                    nazione_nascita: estero ? (luogo?.nome || prev.nazione_nascita) : '',
+                    comune_nascita: estero ? 'ESTERO' : upper(luogo?.nome || prev.comune_nascita),
+                    nazione_nascita: estero ? upper(luogo?.nome || prev.nazione_nascita) : '',
                 }));
             }
         })();
@@ -146,7 +154,7 @@ export default function RicevutaTelematica() {
     }, [form.codice_fiscale, societaId]);
 
     const handleChange = (field) => (e) => {
-        setForm((prev) => ({ ...prev, [field]: e.target.value }));
+        setForm((prev) => ({ ...prev, [field]: upper(e.target.value) }));
     };
 
     const validate = () => {
@@ -186,6 +194,8 @@ export default function RicevutaTelematica() {
                     cognome: form.cognome.trim(),
                     codice_fiscale: form.codice_fiscale.trim().toUpperCase(),
                     indirizzo: form.indirizzo.trim(),
+                    comune: form.comune.trim(),
+                    cap: form.cap.trim(),
                     email: form.email.trim(),
                     telefono: form.telefono.trim(),
                     sesso: form.sesso || null,
@@ -374,8 +384,24 @@ export default function RicevutaTelematica() {
                             </div>
 
                             <div style={styles.field}>
-                                <label style={styles.label}>Indirizzo</label>
+                                <label style={styles.label}>Indirizzo di Residenza</label>
                                 <input style={styles.input} value={form.indirizzo} onChange={handleChange('indirizzo')} />
+                            </div>
+
+                            <div style={styles.row}>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Comune di residenza</label>
+                                    <CityAutocomplete
+                                        name="comune"
+                                        value={form.comune}
+                                        onChange={handleChange('comune')}
+                                        onSelect={(c) => setForm((prev) => ({ ...prev, comune: upper(c.nome), cap: c.cap || prev.cap }))}
+                                    />
+                                </div>
+                                <div style={styles.field}>
+                                    <label style={styles.label}>CAP</label>
+                                    <input style={{ ...styles.input, backgroundColor: '#f3f4f6' }} value={form.cap} readOnly />
+                                </div>
                             </div>
 
                             <div style={styles.row}>
