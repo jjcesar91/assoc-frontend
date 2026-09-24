@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
-import { Save, Copy } from 'lucide-react';
+import { Save, Copy, ShieldCheck, RefreshCw } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmModal';
 
 const RicevuteTelematicheConfig = () => {
     const { selectedSocietaId, societaList, fetchSocieta } = useSocieta();
+    const confirm = useConfirm();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [moduli, setModuli] = useState([]);
@@ -15,6 +17,7 @@ const RicevuteTelematicheConfig = () => {
     const [conti, setConti] = useState([]);
     const [selectedContoId, setSelectedContoId] = useState('');
     const [originalContoId, setOriginalContoId] = useState('');
+    const [certLoading, setCertLoading] = useState(false);
 
     const societa = societaList.find(s => s.id == selectedSocietaId);
     const publicLink = selectedSocietaId ? `${window.location.origin}/ricevuta-telematica/${selectedSocietaId}` : '';
@@ -129,6 +132,78 @@ const RicevuteTelematicheConfig = () => {
         }
     };
 
+    // Il file scaricato non è un vero certificato TLS: è una pagina che, aperta nel
+    // browser del cliente, naviga verso l'endpoint pubblico che installa il cookie
+    // di verifica per questa società (vedi backend: certificatoController.installaCertificato).
+    // Aprirlo una volta sul browser del cliente "installa" il certificato su quel browser.
+    const buildCertificatoHtml = (societaId, token, denominazione) => {
+        const installUrl = `${window.location.origin}/users/api/public/rt-certificato/installa?societaId=${societaId}&token=${token}`;
+        return `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="utf-8"><title>Installazione certificato</title></head>
+<body>
+<p>Installazione del certificato per "${denominazione}" in corso...</p>
+<p>Se non vieni reindirizzato automaticamente, <a href="${installUrl}">clicca qui</a>.</p>
+<script>window.location.replace(${JSON.stringify(installUrl)});</script>
+</body>
+</html>`;
+    };
+
+    const handleDownloadCertificato = async () => {
+        if (!selectedSocietaId) return;
+        setCertLoading(true);
+        setMessage(null);
+        try {
+            const response = await fetch(`/users/api/societa/${selectedSocietaId}/certificato`);
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Errore durante la generazione del certificato');
+            }
+            const { societaId, token } = await response.json();
+            const html = buildCertificatoHtml(societaId, token, societa?.denominazione || 'società');
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const slug = (societa?.denominazione || 'societa').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            a.download = `certificato-${slug}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            setMessage({ type: 'error', text: error.message || 'Errore di rete' });
+        } finally {
+            setCertLoading(false);
+        }
+    };
+
+    const handleRigeneraCertificato = async () => {
+        const ok = await confirm(
+            'Il certificato già installato sui browser dei client smetterà di funzionare: dovrai riscaricarlo e reinstallarlo. Continuare?',
+            'Rigenera certificato',
+            { confirmLabel: 'Rigenera', confirmColor: 'var(--warning)' }
+        );
+        if (!ok) return;
+
+        setCertLoading(true);
+        setMessage(null);
+        try {
+            const response = await fetch(`/users/api/societa/${selectedSocietaId}/certificato/rigenera`, { method: 'POST' });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Errore durante la rigenerazione del certificato');
+            }
+            setMessage({ type: 'success', text: 'Certificato rigenerato: scarica e installa la nuova versione sui browser dei client.' });
+        } catch (error) {
+            console.error(error);
+            setMessage({ type: 'error', text: error.message || 'Errore di rete' });
+        } finally {
+            setCertLoading(false);
+        }
+    };
+
     if (!selectedSocietaId) {
         return <div style={{ padding: '20px' }}>Seleziona una società per gestire la configurazione delle ricevute telematiche.</div>;
     }
@@ -221,6 +296,30 @@ const RicevuteTelematicheConfig = () => {
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer' }}
                         >
                             <Copy size={16} /> Copia
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Certificato di sicurezza</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                        Il link pubblico si apre solo dai browser su cui è stato installato il certificato di questa società: senza, la pagina risponde 403. Scarica il file e aprilo (una sola volta) sul browser del computer del cliente per installarlo; da quel momento il link sopra si aprirà normalmente su quel browser.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleDownloadCertificato}
+                            disabled={certLoading}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary-color)', color: 'white', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
+                        >
+                            <ShieldCheck size={16} /> Scarica certificato
+                        </button>
+                        <button
+                            onClick={handleRigeneraCertificato}
+                            disabled={certLoading}
+                            title="Invalida il certificato già installato sui client: dovrà essere riscaricato e reinstallato"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
+                        >
+                            <RefreshCw size={16} /> Rigenera certificato
                         </button>
                     </div>
                 </div>

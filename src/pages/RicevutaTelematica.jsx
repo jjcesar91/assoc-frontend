@@ -38,6 +38,9 @@ export default function RicevutaTelematica() {
     const [societa, setSocieta] = useState(null);
     const [loadingSocieta, setLoadingSocieta] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    // Il browser non ha il certificato installato per questa società (vedi pagina
+    // Configurazione > Certificato di sicurezza): il backend risponde 403.
+    const [forbidden, setForbidden] = useState(false);
 
     const [form, setForm] = useState(EMPTY_FORM);
     const [submitting, setSubmitting] = useState(false);
@@ -55,7 +58,11 @@ export default function RicevutaTelematica() {
                 const res = await fetch(`/users/api/public/societa/${societaId}`);
                 if (cancelled) return;
                 if (!res.ok) {
-                    setNotFound(true);
+                    if (res.status === 403) {
+                        setForbidden(true);
+                    } else {
+                        setNotFound(true);
+                    }
                     return;
                 }
                 const data = await res.json();
@@ -284,6 +291,17 @@ export default function RicevutaTelematica() {
         return (
             <div style={styles.page}>
                 <div style={styles.card}>Caricamento...</div>
+            </div>
+        );
+    }
+
+    if (forbidden) {
+        return (
+            <div style={styles.page}>
+                <div style={styles.card}>
+                    <h1 style={styles.title}>403 - Accesso non autorizzato</h1>
+                    <p>Questo browser non è abilitato a compilare questo modulo. Rivolgiti all'associazione per procedere.</p>
+                </div>
             </div>
         );
     }
