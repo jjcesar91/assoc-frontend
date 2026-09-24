@@ -226,6 +226,30 @@ const RicevuteTelematicheConfig = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }}>
                 <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Certificato di sicurezza</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                        Il link pubblico si apre solo dai browser su cui è stato installato il certificato di questa società: senza, la pagina risponde 403. Scarica il file e aprilo (una sola volta) sul browser del computer del cliente per installarlo; da quel momento il link sotto si aprirà normalmente su quel browser.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleDownloadCertificato}
+                            disabled={certLoading}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary-color)', color: 'white', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
+                        >
+                            <ShieldCheck size={16} /> Scarica certificato
+                        </button>
+                        <button
+                            onClick={handleRigeneraCertificato}
+                            disabled={certLoading}
+                            title="Invalida il certificato già installato sui client: dovrà essere riscaricato e reinstallato"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
+                        >
+                            <RefreshCw size={16} /> Rigenera certificato
+                        </button>
+                    </div>
+                </div>
+
+                <div>
                     <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Modulo da compilare</label>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
                         Seleziona quale modulo (tra quelli configurati in Modulistica) viene compilato e stampato quando un socio inserisce i propri dati dalla pagina pubblica. Di default viene usato il primo modulo creato.
@@ -296,30 +320,6 @@ const RicevuteTelematicheConfig = () => {
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer' }}
                         >
                             <Copy size={16} /> Copia
-                        </button>
-                    </div>
-                </div>
-
-                <div>
-                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Certificato di sicurezza</label>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
-                        Il link pubblico si apre solo dai browser su cui è stato installato il certificato di questa società: senza, la pagina risponde 403. Scarica il file e aprilo (una sola volta) sul browser del computer del cliente per installarlo; da quel momento il link sopra si aprirà normalmente su quel browser.
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={handleDownloadCertificato}
-                            disabled={certLoading}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--primary-color)', color: 'white', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
-                        >
-                            <ShieldCheck size={16} /> Scarica certificato
-                        </button>
-                        <button
-                            onClick={handleRigeneraCertificato}
-                            disabled={certLoading}
-                            title="Invalida il certificato già installato sui client: dovrà essere riscaricato e reinstallato"
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer', opacity: certLoading ? 0.7 : 1 }}
-                        >
-                            <RefreshCw size={16} /> Rigenera certificato
                         </button>
                     </div>
                 </div>
