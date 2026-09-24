@@ -250,6 +250,27 @@ const RicevuteTelematicheConfig = () => {
                 </div>
 
                 <div>
+                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Link pubblico per i soci</label>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                        Condividi questo link con i soci: potranno inserire i propri dati e stampare subito il modulo, senza bisogno di accedere al backoffice.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input
+                            readOnly
+                            value={publicLink}
+                            className="md-input"
+                            style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: 'var(--surface-1)' }}
+                        />
+                        <button
+                            onClick={handleCopyLink}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer' }}
+                        >
+                            <Copy size={16} /> Copia
+                        </button>
+                    </div>
+                </div>
+
+                <div>
                     <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Modulo da compilare</label>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
                         Seleziona quale modulo (tra quelli configurati in Modulistica) viene compilato e stampato quando un socio inserisce i propri dati dalla pagina pubblica. Di default viene usato il primo modulo creato.
@@ -301,27 +322,6 @@ const RicevuteTelematicheConfig = () => {
                             <option key={c.id} value={c.id}>{c.descrizione}</option>
                         ))}
                     </select>
-                </div>
-
-                <div>
-                    <label style={{ display: 'block', fontSize: '0.95rem', marginBottom: '15px', color: '#333', fontWeight: '600', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Link pubblico per i soci</label>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
-                        Condividi questo link con i soci: potranno inserire i propri dati e stampare subito il modulo, senza bisogno di accedere al backoffice.
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <input
-                            readOnly
-                            value={publicLink}
-                            className="md-input"
-                            style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ddd', color: '#333', backgroundColor: 'var(--surface-1)' }}
-                        />
-                        <button
-                            onClick={handleCopyLink}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: 'white', color: '#333', cursor: 'pointer' }}
-                        >
-                            <Copy size={16} /> Copia
-                        </button>
-                    </div>
                 </div>
             </div>
 
