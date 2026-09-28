@@ -23,9 +23,21 @@ const RicevuteTelematicheInvio = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [conti, setConti] = useState([]);
     const [confirming, setConfirming] = useState(false);
+    // Letto direttamente da /users/api/societa/:id invece che dalla lista condivisa
+    // di SocietaContext: un utente con permessi limitati (es. solo "Invio Ricevute")
+    // può atterrare su questa pagina prima che quella lista sia popolata, mostrando
+    // per un attimo (o in modo persistente, in caso di mismatch) un falso "non
+    // configurato". undefined = non ancora caricato, altrimenti l'id del conto o null.
+    const [contoIdConfigurato, setContoIdConfigurato] = useState(undefined);
+    const [configLoading, setConfigLoading] = useState(true);
 
     const societa = societaList.find(s => s.id == selectedSocietaId);
-    const contoConfigurato = conti.find(c => c.id === societa?.ricevuta_telematica_conto_id) || null;
+    // Unione delle due fonti: quella condivisa (societaList) e quella dedicata
+    // (fetch diretto qui sotto). Basta che una delle due confermi il conto per
+    // considerarlo configurato, cosi' un ritardo/mismatch sull'una non genera un
+    // falso errore se l'altra ha già il dato corretto.
+    const contoIdEffettivo = contoIdConfigurato ?? societa?.ricevuta_telematica_conto_id ?? null;
+    const contoConfigurato = conti.find(c => c.id === contoIdEffettivo) || (contoIdEffettivo ? { id: contoIdEffettivo, descrizione: null } : null);
 
     const fetchProforme = async () => {
         if (!selectedSocietaId) {
@@ -58,8 +70,11 @@ const RicevuteTelematicheInvio = () => {
 
         if (!selectedSocietaId) {
             setConti([]);
+            setContoIdConfigurato(undefined);
+            setConfigLoading(false);
             return;
         }
+        setConfigLoading(true);
         (async () => {
             try {
                 const response = await fetch(`/payments/api/conti?societa_id=${selectedSocietaId}`);
@@ -69,6 +84,22 @@ const RicevuteTelematicheInvio = () => {
                 }
             } catch (error) {
                 console.error('Error fetching conti:', error);
+            }
+        })();
+        (async () => {
+            try {
+                const response = await fetch(`/users/api/societa/${selectedSocietaId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setContoIdConfigurato(data?.ricevuta_telematica_conto_id ?? null);
+                } else {
+                    setContoIdConfigurato(null);
+                }
+            } catch (error) {
+                console.error('Error fetching societa (conto configurato):', error);
+                setContoIdConfigurato(null);
+            } finally {
+                setConfigLoading(false);
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,7 +142,7 @@ const RicevuteTelematicheInvio = () => {
                 const res = await fetch(`/payments/api/${id}/converti-proforma`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ conto_destinazione: contoConfigurato.descrizione }),
+                    body: JSON.stringify({ conto_destinazione: contoConfigurato.descrizione || undefined }),
                 });
                 if (res.ok) ok++; else fail++;
             } catch (error) {
@@ -130,7 +161,10 @@ const RicevuteTelematicheInvio = () => {
         }
     };
 
-    const contoMancante = !contoConfigurato;
+    // Non mostrare l'errore finché il conto configurato non è stato effettivamente
+    // verificato: evita un falso "non configurato" nel breve istante in cui i dati
+    // (società/conti) sono ancora in caricamento.
+    const contoMancante = !configLoading && !contoConfigurato;
 
     if (!selectedSocietaId) {
         return <div style={{ padding: '20px' }}>Seleziona una società per gestire l'invio delle ricevute telematiche.</div>;
@@ -142,16 +176,16 @@ const RicevuteTelematicheInvio = () => {
                 <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: '#333' }}>Invio Ricevute</h2>
                 <button
                     onClick={handleConfermaInvio}
-                    disabled={selectedCount === 0 || confirming}
+                    disabled={selectedCount === 0 || confirming || configLoading}
                     style={{
                         padding: '10px 20px',
                         borderRadius: '4px',
                         border: 'none',
                         backgroundColor: 'var(--success)',
                         color: 'white',
-                        cursor: (selectedCount === 0 || confirming) ? 'not-allowed' : 'pointer',
+                        cursor: (selectedCount === 0 || confirming || configLoading) ? 'not-allowed' : 'pointer',
                         fontSize: '0.9rem',
-                        opacity: (selectedCount === 0 || confirming) ? 0.6 : 1,
+                        opacity: (selectedCount === 0 || confirming || configLoading) ? 0.6 : 1,
                     }}
                 >
                     {confirming ? 'Conferma in corso...' : `Conferma e invia ricevute${selectedCount ? ` (${selectedCount})` : ''}`}
