@@ -16,7 +16,7 @@ import { combineIscrizioneStato, isIscrittoDaStato, bestScadTsIscrizioneDaPagame
 import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
-import { ensureHtml2PdfScript, generateModuloPdf } from '../utils/moduloPdf';
+import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -450,11 +450,6 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const [notaFile, setNotaFile] = useState(null);
     const [notaLoading, setNotaLoading] = useState(false);
 
-    // Load html2pdf
-    useEffect(() => {
-        ensureHtml2PdfScript();
-    }, []);
-
     // Carica i primi due moduli della società corrente per il menu Azioni
     useEffect(() => {
         if (!selectedSocietaId) {
@@ -510,6 +505,11 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
             return;
         }
 
+        // Apertura sincrona, prima degli await, per evitare che il popup blocker
+        // del browser blocchi la finestra (stesso schema di handlePrintPayment e
+        // di RicevutaTelematica.jsx).
+        const printWindow = window.open('', '_blank');
+
         try {
             let modulo = null;
 
@@ -522,13 +522,14 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 const response = await fetch(`/documents/api/moduli?societa_id=${selectedSocietaId}`);
                 if (!response.ok) throw new Error('Failed to fetch modules');
                 const moduli = await response.json();
-                
+
                 // Exact match first, then loose match by description (case insensitive)
                 modulo = moduli.find(m => m.descrizione === targetModuleName)
                     || moduli.find(m => m.descrizione.toLowerCase() === targetModuleName.toLowerCase().replace(/_/g, ' '));
             }
-            
+
             if (!modulo) {
+                if (printWindow) printWindow.close();
                 showAlert(`Modulo "${targetModuleName.replace(/_/g, ' ')}" non trovato nella sezione Modulistica.`, 'Modulo non trovato', 'warning');
                 return;
             }
@@ -539,11 +540,28 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 societa = societaList.find(s => s.id == selectedSocietaId);
             }
 
-            await generateModuloPdf({ modulo, societa, dateToPrint: printDate, socio: formData });
+            const logoUrl = resolveLogoUrl(societa);
+            let logoBase64 = null;
+            if (logoUrl) {
+                try {
+                    logoBase64 = await loadImageAsBase64(logoUrl);
+                } catch (e) {
+                    console.error('Errore caricamento logo:', e);
+                }
+            }
+
+            const html = buildModuloPrintHtml({ modulo, societa, logoBase64, today: printDate, socio: formData });
+
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+            }
             setShowPrintModal(false);
 
         } catch (e) {
             console.error("Print Error:", e);
+            if (printWindow) printWindow.close();
             showAlert(e.message || "Errore durante la generazione del modulo", 'Errore');
         }
     };

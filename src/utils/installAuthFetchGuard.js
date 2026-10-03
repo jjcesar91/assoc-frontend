@@ -48,7 +48,8 @@ function hasFeatureAccess(featureId) {
 function hasApiAccess(requestUrl) {
   if (requestUrl.includes('/payments/')) {
     // payments è una API condivisa usata da ricevute, soci (stato iscrizione/tesseramento),
-    // scadenziario, contabilità, attività (abbonamenti/corsi) e societa (anno contabile):
+    // scadenziario, contabilità, attività (abbonamenti/corsi), societa (anno contabile) e
+    // ricevute-telematiche (lista/conferma invio in RicevuteTelematicheInvio.jsx):
     // basta che l'utente abbia almeno una delle feature che la utilizzano.
     return (
       hasFeatureAccess('ricevute') ||
@@ -56,7 +57,8 @@ function hasApiAccess(requestUrl) {
       hasFeatureAccess('scadenziario') ||
       hasFeatureAccess('contabilita') ||
       hasFeatureAccess('attivita') ||
-      hasFeatureAccess('societa')
+      hasFeatureAccess('societa') ||
+      hasFeatureAccess('ricevute-telematiche')
     );
   }
   if (requestUrl.includes('/products/')) {

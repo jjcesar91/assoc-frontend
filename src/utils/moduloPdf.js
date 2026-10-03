@@ -1,23 +1,9 @@
-// Costruzione e generazione del PDF di un modulo (stampa "in bianco" da Modulistica.jsx
-// oppure precompilata con i dati di un socio da SocioModal.jsx). Estratto per evitare che
-// le due pagine divergano nel template HTML o nella configurazione di html2pdf (è già
-// successo: un fix al problema dello spazio vuoto dopo la tabella anagrafica era stato
-// applicato solo in una delle due copie).
+// Costruzione dell'HTML del modulo (stampa "in bianco" da Modulistica.jsx, precompilata
+// con i dati di un socio da SocioModal.jsx, o dalla pagina pubblica RicevutaTelematica.jsx)
+// per l'anteprima + stampa via window.print(). Estratto per evitare che le varie pagine
+// divergano nel template HTML (è già successo: un fix al problema dello spazio vuoto dopo
+// la tabella anagrafica era stato applicato solo in una delle due copie).
 import { formatDateIT } from './dateUtils';
-
-const HTML2PDF_SCRIPT_ID = 'html2pdf-script';
-const HTML2PDF_SCRIPT_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-
-/** Inserisce lo script html2pdf nella pagina se non è già presente/in caricamento. */
-export function ensureHtml2PdfScript() {
-    if (typeof document === 'undefined') return;
-    if (window.html2pdf || document.getElementById(HTML2PDF_SCRIPT_ID)) return;
-    const script = document.createElement('script');
-    script.id = HTML2PDF_SCRIPT_ID;
-    script.src = HTML2PDF_SCRIPT_SRC;
-    script.async = true;
-    document.body.appendChild(script);
-}
 
 /** Converte un'immagine (es. il logo della società) in data URL base64, per evitare problemi CORS nel PDF. */
 export function loadImageAsBase64(url) {
@@ -195,58 +181,4 @@ ${body}
 ${autoPrint ? '<script>window.onload = () => window.print();</script>' : ''}
 </body>
 </html>`;
-}
-
-/**
- * Genera e scarica il PDF di un modulo, in bianco o precompilato con i dati di un socio.
- * @param {Object} p
- * @param {Object} p.modulo - { descrizione, htmlContent|testo }
- * @param {Object|null} p.societa
- * @param {string} p.dateToPrint - data ISO da mostrare come data di stampa
- * @param {Object|null} [p.socio] - dati del socio per precompilare la tabella anagrafica
- */
-export async function generateModuloPdf({ modulo, societa, dateToPrint, socio = null }) {
-    if (!window.html2pdf) {
-        throw new Error('La libreria PDF sta caricando, riprova tra un secondo.');
-    }
-
-    const logoUrl = resolveLogoUrl(societa);
-    let logoBase64 = null;
-    if (logoUrl) {
-        try {
-            logoBase64 = await loadImageAsBase64(logoUrl);
-        } catch (e) {
-            console.error('Errore caricamento logo:', e);
-        }
-    }
-
-    const today = formatDateIT(dateToPrint);
-    const element = document.createElement('div');
-    element.style.width = '100%';
-    element.style.maxWidth = '800px';
-    element.innerHTML = buildModuloHtml({ modulo, societa, logoBase64, today, socio });
-
-    const filenameParts = [modulo.descrizione.replace(/[^a-z0-9]/gi, '_').toLowerCase()];
-    if (socio) filenameParts.push(socio.cognome, socio.nome);
-    const filename = `${filenameParts.filter(Boolean).join('_')}.pdf`;
-
-    const opt = {
-        margin: 0.5,
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-        // Non usare 'avoid-all': forzerebbe l'intero blocco di testo del modulo
-        // (che può essere lungo) a saltare per intero su pagina 2 se non entra
-        // nello spazio residuo di pagina 1, lasciando la prima pagina quasi vuota.
-        // Si evita lo spezzamento solo sugli elementi che devono restare integri:
-        // ogni singolo paragrafo/riga del testo del modulo (figli diretti di
-        // .pdf-body-content) viene spostato per intero a pagina successiva se non
-        // ci sta, invece di tagliare a metà una riga di testo.
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.pdf-table', '.pdf-no-break', '.pdf-body-content > *'] }
-    };
-
-    // html2pdf.js impagina in modo affidabile solo dopo che il layout si è assestato.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return window.html2pdf().set(opt).from(element).save();
 }

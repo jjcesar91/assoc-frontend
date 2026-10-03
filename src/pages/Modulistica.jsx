@@ -3,7 +3,7 @@ import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, 
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
-import { ensureHtml2PdfScript, generateModuloPdf } from '../utils/moduloPdf';
+import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 
 const Modulistica = () => {
     const { selectedSocietaId, societaList } = useSocieta();
@@ -32,10 +32,6 @@ const Modulistica = () => {
             }, 50);
         }
     }, [isModalOpen, modalContent]); // Depend on modalContent too, so initial load works correctly
-
-    useEffect(() => {
-        ensureHtml2PdfScript();
-    }, []);
 
     useEffect(() => {
         // Chiudi modali aperti al cambio società
@@ -95,10 +91,32 @@ const Modulistica = () => {
             societa = societaList.find(s => s.id == selectedSocietaId);
         }
 
+        // Apertura sincrona, prima degli await, per evitare che il popup blocker
+        // del browser blocchi la finestra (stesso schema di SocioModal.jsx e
+        // RicevutaTelematica.jsx).
+        const printWindow = window.open('', '_blank');
+
         try {
-            await generateModuloPdf({ modulo, societa, dateToPrint });
+            const logoUrl = resolveLogoUrl(societa);
+            let logoBase64 = null;
+            if (logoUrl) {
+                try {
+                    logoBase64 = await loadImageAsBase64(logoUrl);
+                } catch (e) {
+                    console.error('Errore caricamento logo:', e);
+                }
+            }
+
+            const html = buildModuloPrintHtml({ modulo, societa, logoBase64, today: dateToPrint });
+
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+            }
         } catch (e) {
             console.error("Print Error:", e);
+            if (printWindow) printWindow.close();
             showAlert(e.message || "Errore durante la generazione del modulo", 'Errore', 'warning');
         }
     };
