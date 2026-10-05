@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
@@ -771,22 +771,11 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 };
 
 // ---------------------------------------------------------------------------
-// Mapping automatico quote_types → codice sottogruppo APS
-const QUOTE_TYPE_TO_CODICE = {
-    quota_associativa: 'AE1',
-    inscription:       'AE1', // retrocompatibilità pagamenti precedenti alla migrazione
-    subscription:      'AE3',
-    tesseramento:      'AE3',
-    generic:           'AE3',
-};
-
 // Tab: Bilancio (Mod. D - Rendiconto per Cassa)
 // ---------------------------------------------------------------------------
 const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     const { selectedSocietaId, societaList } = useSocieta();
     const [gruppi, setGruppi] = useState([]);
-    const [vociConfig, setVociConfig] = useState([]);
-    const [products, setProducts] = useState([]);
     const [loadingGruppi, setLoadingGruppi] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [escludiZero, setEscludiZero] = useState(false);
@@ -893,16 +882,12 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
     };
 
     useEffect(() => {
-        if (!selectedSocietaId) { setGruppi([]); setVociConfig([]); setProducts([]); return; }
+        if (!selectedSocietaId) { setGruppi([]); return; }
         setLoadingGruppi(true);
         const token = localStorage.getItem('token');
-        const headers = { 'Authorization': `Bearer ${token}` };
-        Promise.all([
-            fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
-            fetch(`/payments/api/voci-config?societa_id=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
-            fetch(`/products/api?societaId=${selectedSocietaId}`, { headers }).then(r => r.ok ? r.json() : []),
-        ])
-            .then(([gruppiData, configData, productsData]) => { setGruppi(gruppiData); setVociConfig(configData); setProducts(productsData); })
+        fetch(`/payments/api/gruppi?societa_id=${selectedSocietaId}`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(setGruppi)
             .catch(() => {})
             .finally(() => setLoadingGruppi(false));
     }, [selectedSocietaId]);
@@ -919,74 +904,21 @@ const BilancioTab = ({ payments, loading, selectedAnno, societa }) => {
         };
     }, [selectedAnno, societa]);
 
-    // Mappa tipo prodotto → id sottogruppo. Parte dal default hardcoded
-    // (retrocompatibilità) e viene sovrascritta dalla configurazione salvata.
-    const quoteTypeToGruppoId = useMemo(() => {
-        const codiceToId = {};
-        gruppi.forEach(g => { if (g.codice) codiceToId[g.codice] = g.id; });
-        const validIds = new Set(gruppi.map(g => g.id));
-        const map = {};
-        Object.entries(QUOTE_TYPE_TO_CODICE).forEach(([t, codice]) => {
-            if (codiceToId[codice]) map[t] = codiceToId[codice];
-        });
-        vociConfig.forEach(c => {
-            if (c.gruppo_id && validIds.has(c.gruppo_id)) map[c.quote_type] = c.gruppo_id;
-        });
-        // Retrocompat: i pagamenti legacy con tipo 'inscription' seguono 'quota_associativa'
-        if (!map.inscription && map.quota_associativa) map.inscription = map.quota_associativa;
-        return map;
-    }, [gruppi, vociConfig]);
-
-    // Mappa product_id → id sottogruppo, per i prodotti (tipicamente generici) a cui
-    // è stato assegnato un sottogruppo specifico in anagrafica prodotto.
-    const productIdToGruppoId = useMemo(() => {
-        const validIds = new Set(gruppi.map(g => g.id));
-        const map = {};
-        products.forEach(p => {
-            if (p.gruppoId && validIds.has(p.gruppoId)) map[p.id] = p.gruppoId;
-        });
-        return map;
-    }, [products, gruppi]);
-
-    // Risolve il sottogruppo di un pagamento con priorità:
-    // 1) gruppo assegnato esplicitamente sul pagamento (operazioni manuali/import)
-    // 2) sottogruppo assegnato al prodotto (product_id) in anagrafica prodotto
-    // 3) default per tipo prodotto (Configurazione → Contabilità)
-    // I giroconti (trasferimenti tra conti propri) non sono mai un'entrata/uscita
-    // reale: vanno esclusi dal bilancio a prescindere da un eventuale gruppo_id.
-    const resolveGruppoId = useCallback((p) => {
-        if (p.modalita_pagamento === 'Giroconto') return null;
-        if (p.gruppo_id) return p.gruppo_id;
-        if (p.product_id && productIdToGruppoId[p.product_id]) return productIdToGruppoId[p.product_id];
-        if (p.quote_types) {
-            const types = p.quote_types.split(',').map(t => t.trim());
-            for (const t of types) {
-                if (quoteTypeToGruppoId[t]) return quoteTypeToGruppoId[t];
-            }
-        }
-        return null;
-    }, [quoteTypeToGruppoId, productIdToGruppoId]);
-
-    // Pagamenti validi del periodo: con gruppo risolvibile (esplicito, da prodotto o da tipo)
-    const paymentsValidi = useMemo(() => payments.filter(p => {
-        if (p.stato_pagamento?.startsWith('3.')) return false;
-        if (!resolveGruppoId(p)) return false;
-        if (dateRange.dataDa && p.data_pagamento < dateRange.dataDa) return false;
-        if (dateRange.dataA && p.data_pagamento > dateRange.dataA) return false;
-        return true;
-    }), [payments, dateRange, resolveGruppoId]);
-
-    // Totale per gruppo/sottogruppo (sempre positivo — il segno è dato dal tipo)
-    const totaliPerGruppo = useMemo(() => {
-        const map = {};
-        paymentsValidi.forEach(p => {
-            const targetId = resolveGruppoId(p);
-            if (targetId) {
-                map[targetId] = (map[targetId] || 0) + Math.abs(parseFloat(p.importo || 0));
-            }
-        });
-        return map;
-    }, [paymentsValidi, resolveGruppoId]);
+    // Totale per gruppo/sottogruppo (sempre positivo — il segno è dato dal tipo),
+    // calcolato dal backend: le ricevute con più prodotti vengono ripartite voce
+    // per voce sui rispettivi sottogruppi. Ricaricato quando cambiano i pagamenti.
+    const [totaliPerGruppo, setTotaliPerGruppo] = useState({});
+    useEffect(() => {
+        if (!selectedSocietaId) { setTotaliPerGruppo({}); return; }
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams({ societa_id: selectedSocietaId, data_da: dateRange.dataDa, data_a: dateRange.dataA });
+        let cancelled = false;
+        fetch(`/payments/api/gruppi/totali?${params}`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : { totali: {} })
+            .then(data => { if (!cancelled) setTotaliPerGruppo(data.totali || {}); })
+            .catch(() => { if (!cancelled) setTotaliPerGruppo({}); });
+        return () => { cancelled = true; };
+    }, [selectedSocietaId, dateRange.dataDa, dateRange.dataA, payments]);
 
     const gruppiRadice = useMemo(() => gruppi.filter(g => !g.gruppo_id), [gruppi]);
     const allSotto = useMemo(() => gruppi.filter(g => g.gruppo_id), [gruppi]);
