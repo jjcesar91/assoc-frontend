@@ -220,6 +220,9 @@ export default function RicevutaTelematica() {
             // prodotto per la Ricevuta Telematica, genera anche una proforma per il
             // socio. Non deve mai bloccare la stampa del modulo, che resta l'esito
             // principale della conferma: un eventuale errore qui viene solo loggato.
+            // Avviso da mostrare a fine flusso (dopo la stampa) se la proforma non è
+            // stata generata perché ne esiste già una, o una ricevuta, per l'anno.
+            let avvisoProforma = null;
             if (societa?.ricevuta_telematica_prodotto_id) {
                 try {
                     const proformaRes = await fetch('/payments/api/public/proforma-telematica', {
@@ -238,7 +241,11 @@ export default function RicevutaTelematica() {
                     });
                     if (!proformaRes.ok) {
                         const err = await proformaRes.json().catch(() => ({}));
-                        console.error('Errore creazione proforma automatica:', err.error || proformaRes.status);
+                        if (proformaRes.status === 409) {
+                            avvisoProforma = err.error || 'Esiste già una proforma o una ricevuta per l\'anno in corso: la proforma non è stata generata.';
+                        } else {
+                            console.error('Errore creazione proforma automatica:', err.error || proformaRes.status);
+                        }
                     }
                 } catch (err) {
                     console.error('Errore creazione proforma automatica:', err);
@@ -278,6 +285,7 @@ export default function RicevutaTelematica() {
                 printWindow.document.write(html);
                 printWindow.document.close();
             }
+            if (avvisoProforma) showAlert(avvisoProforma, 'Proforma non generata', 'warning');
         } catch (err) {
             console.error('Errore generazione modulo:', err);
             if (printWindow) printWindow.close();
