@@ -285,6 +285,11 @@ export default function RicevutaTelematica() {
                 printWindow.document.write(html);
                 printWindow.document.close();
             }
+            // Invio completato (modulo in stampa nel nuovo tab): torna allo stato
+            // iniziale con il solo campo Codice fiscale, pronto per il socio successivo.
+            // Svuotare il CF fa nascondere e ripulire il resto del form all'effetto sul CF.
+            setForm(EMPTY_FORM);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             if (avvisoProforma) showAlert(avvisoProforma, 'Proforma non generata', 'warning');
         } catch (err) {
             console.error('Errore generazione modulo:', err);
