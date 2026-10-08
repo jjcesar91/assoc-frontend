@@ -88,10 +88,12 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
 
     const setQta = (productId, qty) => {
         setErrore('');
+        // Quota associativa: una sola per anno
+        const isQuota = catalogo.find(p => String(p.id) === String(productId))?.type === 'quota_associativa';
         setCarrello(prev => {
             const next = { ...prev };
             if (qty <= 0) delete next[productId];
-            else next[productId] = Math.min(qty, 99);
+            else next[productId] = Math.min(qty, isQuota ? 1 : 99);
             return next;
         });
     };

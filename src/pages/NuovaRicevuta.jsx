@@ -276,6 +276,10 @@ const NuovaRicevuta = () => {
     const [tessCurrentCFs, setTessCurrentCFs] = useState(new Set());
     const [quotaPaymentSocioIds, setQuotaPaymentSocioIds] = useState(new Set());
     const [tessCurrentSocioIds, setTessCurrentSocioIds] = useState(new Set());
+    // Ricevute quota_associativa PAGATE (no proforma, no annullate) nell'anno selezionato:
+    // servono a impedire una seconda quota associativa per lo stesso anno.
+    const [quotaPagataCFs, setQuotaPagataCFs] = useState(new Set());
+    const [quotaPagataSocioIds, setQuotaPagataSocioIds] = useState(new Set());
 
     // Products
     const [products, setProducts] = useState([]);
@@ -343,6 +347,12 @@ const NuovaRicevuta = () => {
                         .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; })
                         .map(p => p.socio_id)
                 );
+                const quotaPagate = data
+                    .filter(p => p.quote_types && p.quote_types.split(',').map(t => t.trim()).includes('quota_associativa'))
+                    .filter(p => (p.tipo_documento || 'pagamento') !== 'proforma' && !p.stato_pagamento?.startsWith('3.'))
+                    .filter(p => { const d = new Date(p.data_pagamento); return d >= start && d <= end; });
+                setQuotaPagataCFs(new Set(quotaPagate.filter(p => p.codice_fiscale).map(p => p.codice_fiscale.toUpperCase())));
+                setQuotaPagataSocioIds(new Set(quotaPagate.filter(p => p.socio_id).map(p => p.socio_id)));
                 setQuotaPaymentCFs(quotaCFs);
                 setTessCurrentCFs(tessCFs);
                 setQuotaPaymentSocioIds(quotaSocioIds);
@@ -398,13 +408,31 @@ const NuovaRicevuta = () => {
         }
     };
 
+    // true se il socio ha già una ricevuta pagata di quota associativa nell'anno selezionato
+    const socioHasQuotaPagata = (socio) => {
+        if (!socio) return false;
+        const cf = (socio.codice_fiscale || '').toUpperCase();
+        return Boolean((cf && quotaPagataCFs.has(cf)) || (socio.id && quotaPagataSocioIds.has(socio.id)));
+    };
+    const quotaGiaPagata = socioHasQuotaPagata(selectedSocio);
+
     useEffect(() => {
+        const visibili = quotaGiaPagata ? products.filter(p => p.type !== 'quota_associativa') : products;
         if (productSearch) {
-            setFilteredProducts(products.filter(p => (p.description || p.name || '').toLowerCase().includes(productSearch.toLowerCase())));
+            setFilteredProducts(visibili.filter(p => (p.description || p.name || '').toLowerCase().includes(productSearch.toLowerCase())));
         } else {
-            setFilteredProducts(products);
+            setFilteredProducts(visibili);
         }
-    }, [productSearch, products]);
+    }, [productSearch, products, quotaGiaPagata]);
+
+    // Se il socio/anno cambia e la quota risulta già pagata, la togliamo dal carrello
+    // (es. prodotto pre-aggiunto dallo scadenziario o socio cambiato dopo l'aggiunta).
+    useEffect(() => {
+        if (quotaGiaPagata && cart.some(item => item.type === 'quota_associativa')) {
+            setCart(c => c.filter(item => item.type !== 'quota_associativa'));
+            showSnackbar(`Quota associativa già pagata per l'anno ${selectedAnno}: rimossa dal carrello`, 'error');
+        }
+    }, [quotaGiaPagata, cart]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSocioSelect = async (socio) => {
         setSelectedSocio(socio);
@@ -443,6 +471,10 @@ const NuovaRicevuta = () => {
         cart.some(item => item.type === 'quota_associativa' || item.type === 'tesseramento');
 
     const addToCart = (product) => {
+        if (product.type === 'quota_associativa' && quotaGiaPagata) {
+            showSnackbar(`Quota associativa già pagata per l'anno ${selectedAnno}`, 'error');
+            return;
+        }
         if (product.type === 'subscription' && !isSocioIscrittoOTesserato(selectedSocio) && !cartHasIscrizione()) {
             setShowAbbWarningModal(true);
             return;
@@ -452,6 +484,10 @@ const NuovaRicevuta = () => {
             return;
         }
         const existing = cart.find(item => item.id === product.id);
+        if (product.type === 'quota_associativa' && cart.some(item => item.type === 'quota_associativa')) {
+            showSnackbar('La quota associativa è già nel carrello (una sola per anno)', 'error');
+            return;
+        }
         if (existing) {
             setCart(cart.map(item => item.id === product.id ? {...item, qty: item.qty + 1} : item));
         } else {
@@ -463,7 +499,12 @@ const NuovaRicevuta = () => {
     const updateCartQty = (productId, val) => {
         if (/^\d*$/.test(val)) {
             const qty = parseInt(val) || 1;
-            setCart(cart.map(item => item.id === productId ? { ...item, qty, qtyStr: val } : item));
+            setCart(cart.map(item => {
+                if (item.id !== productId) return item;
+                // quota associativa: al massimo 1 per anno
+                if (item.type === 'quota_associativa' && qty > 1) return { ...item, qty: 1, qtyStr: '1' };
+                return { ...item, qty, qtyStr: val };
+            }));
         }
     };
 
@@ -566,7 +607,9 @@ const NuovaRicevuta = () => {
                 setShowSuccessOverlay(true);
                 setTimeout(() => navigate('/ricevute', { replace: true }), 1200);
             } else {
-                showSnackbar('Errore durante la generazione del pagamento', 'error');
+                let errMsg = 'Errore durante la generazione del pagamento';
+                try { const errBody = await response.json(); if (errBody?.error) errMsg = errBody.error; } catch { /* ignore */ }
+                showSnackbar(errMsg, 'error');
             }
         } catch (e) {
             console.error("Errore salvataggio pagamento", e);

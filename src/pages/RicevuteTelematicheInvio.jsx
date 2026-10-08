@@ -137,6 +137,7 @@ const RicevuteTelematicheInvio = () => {
         setConfirming(true);
         let ok = 0;
         let fail = 0;
+        let quoteDuplicate = 0;
         for (const id of selectedIds) {
             try {
                 const res = await fetch(`/payments/api/${id}/converti-proforma`, {
@@ -144,7 +145,11 @@ const RicevuteTelematicheInvio = () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ conto_destinazione: contoConfigurato.descrizione || undefined }),
                 });
-                if (res.ok) ok++; else fail++;
+                if (res.ok) ok++;
+                else {
+                    fail++;
+                    if (res.status === 409) quoteDuplicate++;
+                }
             } catch (error) {
                 console.error('Errore conferma proforma', id, error);
                 fail++;
@@ -157,7 +162,10 @@ const RicevuteTelematicheInvio = () => {
         if (fail === 0) {
             showAlert(`${ok} ricevute confermate con successo.`, 'Fatto', 'success');
         } else {
-            showAlert(`${ok} ricevute confermate, ${fail} non riuscite. Riprova per quelle rimaste in elenco.`, 'Completato parzialmente', 'warning');
+            const dettaglioQuote = quoteDuplicate > 0
+                ? ` Di queste, ${quoteDuplicate} contengono una quota associativa già pagata per l'anno: vanno annullate o corrette.`
+                : ' Riprova per quelle rimaste in elenco.';
+            showAlert(`${ok} ricevute confermate, ${fail} non riuscite.${dettaglioQuote}`, 'Completato parzialmente', 'warning');
         }
     };
 

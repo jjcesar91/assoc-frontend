@@ -225,6 +225,10 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                 } catch (e) {
                     console.error('Errore gestione comunicazione pagamento', e);
                 }
+            } else {
+                let errMsg = 'Errore durante la registrazione del pagamento';
+                try { const errBody = await res.json(); if (errBody?.error) errMsg = errBody.error; } catch { /* ignore */ }
+                showComFeedback(errMsg, 'error');
             }
         } catch (e) {
             console.error(e);

@@ -1437,6 +1437,14 @@ const Soci = ({ onLogout }) => {
                     )}
                 </div>
 
+                {/* Riepilogo totale soci */}
+                <div style={{margin: '8px 0', fontSize: '0.9rem', color: 'var(--text-secondary)'}}>
+                    Totale soci: <strong>{filteredSoci.length}</strong>
+                    {filteredSoci.length !== soci.length && (
+                        <span> (su {soci.length} complessivi)</span>
+                    )}
+                </div>
+
                 {/* Data Table */}
                 <div className="table-card">
                     <div className="table-responsive">
