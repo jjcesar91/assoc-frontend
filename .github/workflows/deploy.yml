@@ -7,6 +7,28 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Due ambienti di produzione sullo stesso host, stesso branch master:
+    #   prod  → app.nonprofitgest.it      (porta 6173, ~/management-software-prod)
+    #   prod2 → app.gestionalenonprofit.it (porta 7173, ~/management-software-prod2)
+    # Ognuno si aggancia alla rete del proprio backend (backend_prod / backend_prod2).
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - env_name: prod
+            path_secret: DEPLOY_PATH_PROD
+            project: frontend_prod
+            app_network: backend_prod_app_network
+            container_name: assoc_frontend_prod
+            port: "6173"
+          - env_name: prod2
+            path_secret: DEPLOY_PATH_PROD2
+            project: frontend_prod2
+            app_network: backend_prod2_app_network
+            container_name: assoc_frontend_prod2
+            port: "7173"
+    name: deploy (${{ matrix.env_name }})
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -17,21 +39,29 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ${{ secrets.DEPLOY_PATH_PROD }}
+            DEPLOY_DIR="${{ secrets[matrix.path_secret] }}"
+            # Ambiente non ancora inizializzato sull'host (secret mancante o checkout
+            # assente): si salta senza far fallire il deploy degli altri ambienti.
+            if [ -z "$DEPLOY_DIR" ] || [ ! -d "$DEPLOY_DIR/.git" ]; then
+              echo "::warning::Ambiente ${{ matrix.env_name }} non inizializzato ($DEPLOY_DIR): deploy saltato."
+              exit 0
+            fi
+            cd "$DEPLOY_DIR"
 
             # Builder classico: le immagini includono "ContainerConfig", evitando il
             # bug di docker-compose v1 "KeyError: 'ContainerConfig'" alla ricreazione.
             export DOCKER_BUILDKIT=0
             export COMPOSE_DOCKER_CLI_BUILD=0
-            # Progetto compose isolato, distinto da dev (frontend) e dal backend prod.
-            export COMPOSE_PROJECT_NAME=frontend_prod
-            # Rete del gateway API creata dal compose backend_prod (COMPOSE_PROJECT_NAME
-            # li' e' backend_prod, quindi la rete si chiama backend_prod_app_network).
-            export APP_NETWORK=backend_prod_app_network
-            # Nome container e porta host distinti dal deploy dev (stesso docker-compose.yml
-            # usato da entrambi gli ambienti sullo stesso host).
-            export FRONTEND_CONTAINER_NAME=assoc_frontend_prod
-            export FRONTEND_PORT=6173
+            # Progetto compose isolato per ambiente, distinto da dev (frontend) e dai backend.
+            export COMPOSE_PROJECT_NAME=${{ matrix.project }}
+            # Rete del gateway API creata dal compose backend dell'ambiente
+            # (<COMPOSE_PROJECT_NAME del backend>_app_network).
+            export APP_NETWORK=${{ matrix.app_network }}
+            # Nome container e porta host distinti per ambiente (stesso docker-compose.yml
+            # usato da dev e dalle prod sullo stesso host).
+            export FRONTEND_CONTAINER_NAME=${{ matrix.container_name }}
+            export FRONTEND_PORT=${{ matrix.port }}
+            echo "Ambiente: ${{ matrix.env_name }}"
             echo "Rete API condivisa: $APP_NETWORK"
 
             git pull origin master
