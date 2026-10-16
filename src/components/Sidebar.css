@@ -74,13 +74,20 @@
 }
 .sidebar-item.active svg { color: var(--on-primary-container); }
 
-/* Sezioni riservate ai superuser (es. Backoffice): sottolineate col colore
-   primario dell'header per distinguerle dal resto del menu. */
-.sidebar-item--reserved {
+/* Sezioni riservate ai superuser (es. Backoffice): riga col colore primario
+   dell'header e testo bianco, per distinguerle dal resto del menu. */
+.sidebar-item--reserved,
+.sidebar-item--reserved.active {
     margin-top: var(--space-3);
-    border-bottom: 2px solid var(--primary-color);
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background-color: var(--primary-color);
+    color: #fff;
 }
+.sidebar-item--reserved:hover {
+    background-color: var(--primary-color);
+    filter: brightness(1.1);
+}
+.sidebar-item--reserved svg,
+.sidebar-item--reserved.active svg { color: #fff; }
 
 .sidebar-sub-menu {
     margin: 2px 0 var(--space-2);
