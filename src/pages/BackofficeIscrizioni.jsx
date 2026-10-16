@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Edit2, Building2 } from 'lucide-react';
+import { Edit2, Building2, Plus } from 'lucide-react';
 import BackofficeSocietaModal, { ABBONAMENTO_DEFAULT } from './BackofficeSocietaModal';
+import NuovaSocietaModal from './NuovaSocietaModal';
+import { useSocieta } from '../data/SocietaContext';
+import { useAlert } from '../components/AlertModal';
 import { formatDateIT } from '../utils/dateUtils';
 import './Prodotti.css';
 
@@ -8,9 +11,14 @@ const TIPO_OPTIONS = ['ASD', 'APS'];
 
 // Backoffice → Iscrizioni: società registrate (solo superuser).
 const BackofficeIscrizioni = () => {
+    const { fetchSocieta } = useSocieta();
+    const showAlert = useAlert();
     const [societa, setSocieta] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState(null);
+    // Apertura del modal dopo la creazione: tab iniziale + link appena generato
+    const [selectedOpts, setSelectedOpts] = useState({});
+    const [isNewOpen, setIsNewOpen] = useState(false);
     const [filters, setFilters] = useState({ denominazione: '', tipo_associazione: '' });
 
     const fetchAll = useCallback(async () => {
@@ -26,6 +34,74 @@ const BackofficeIscrizioni = () => {
     }, []);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
+
+    const openSocieta = (s, opts = {}) => { setSelectedOpts(opts); setSelected(s); };
+
+    // Nuova iscrizione: crea la società (con i default di sempre: moduli, conto
+    // CASSA, gruppi) e poi l'utente amministratore senza password + link.
+    const handleCreate = async (form, logoFile) => {
+        const { admin_nome, admin_cognome, admin_email, admin_telefono, ...societaData } = form;
+        let created;
+        try {
+            const res = await fetch('/users/api/societa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(societaData),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showAlert(err.error || err.message || 'Errore creazione società', 'Errore');
+                return;
+            }
+            created = await res.json();
+        } catch (e) {
+            console.error('Errore creazione società', e);
+            showAlert('Errore di rete', 'Errore');
+            return;
+        }
+
+        if (logoFile) {
+            try {
+                const fd = new FormData();
+                fd.append('logo', logoFile);
+                await fetch(`/users/api/societa/${created.id}/logo`, { method: 'POST', body: fd });
+            } catch (logoErr) {
+                console.error('Errore caricamento logo società', logoErr);
+            }
+        }
+
+        setIsNewOpen(false);
+        fetchAll();
+        fetchSocieta(); // aggiorna il selettore società nel layout
+
+        try {
+            const res = await fetch('/auth/api/admin/onboarding-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    societaId: created.id,
+                    email: admin_email.trim(),
+                    nome: admin_nome.trim(),
+                    cognome: admin_cognome.trim(),
+                    telefono: admin_telefono.trim(),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                showAlert(`Società creata, ma l'amministratore non è stato creato: ${data.error || 'errore'}. Puoi crearlo dal tab Utenti.`, 'Attenzione', 'warning');
+                openSocieta(created, { initialTab: 'utenti' });
+                return;
+            }
+            openSocieta(created, {
+                initialTab: 'registrazione',
+                initialLink: { userId: data.user.id, token: data.token, expiresAt: data.expiresAt, email: data.user.email },
+            });
+        } catch (e) {
+            console.error('Errore creazione amministratore', e);
+            showAlert('Società creata, ma errore di rete nella creazione dell\'amministratore. Puoi crearlo dal tab Utenti.', 'Attenzione', 'warning');
+            openSocieta(created, { initialTab: 'utenti' });
+        }
+    };
 
     // Dopo il salvataggio dell'anagrafica aggiorna la riga e la società aperta nel modal
     const handleSaved = (updated) => {
@@ -65,6 +141,15 @@ const BackofficeIscrizioni = () => {
                                 <option value="">Tutti</option>
                                 {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
+                        </div>
+                        <div className="actions-group" style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                            <button
+                                className="btn-contained"
+                                style={{ backgroundColor: 'var(--success-color)' }}
+                                onClick={() => setIsNewOpen(true)}
+                            >
+                                <Plus size={18} /> Nuova iscrizione
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -128,7 +213,7 @@ const BackofficeIscrizioni = () => {
                                                 className="btn-icon-small"
                                                 title="Modifica"
                                                 style={{ backgroundColor: 'var(--warning)', color: '#fff', borderRadius: '4px', padding: '5px 8px' }}
-                                                onClick={() => setSelected(s)}
+                                                onClick={() => openSocieta(s)}
                                             >
                                                 <Edit2 size={16} />
                                             </button>
@@ -151,10 +236,20 @@ const BackofficeIscrizioni = () => {
                 <BackofficeSocietaModal
                     key={selected.id}
                     societa={selected}
+                    initialTab={selectedOpts.initialTab}
+                    initialLink={selectedOpts.initialLink}
                     onClose={() => setSelected(null)}
                     onSaved={handleSaved}
                 />
             )}
+
+            <NuovaSocietaModal
+                isOpen={isNewOpen}
+                onClose={() => setIsNewOpen(false)}
+                onSave={handleCreate}
+                withAdmin
+                title="Nuova iscrizione"
+            />
         </div>
     );
 };

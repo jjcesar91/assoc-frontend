@@ -29,6 +29,7 @@ import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
 import BackofficeIscrizioni from './pages/BackofficeIscrizioni';
+import ResetPassword from './pages/ResetPassword';
 import SocioDashboard from './pages/SocioDashboard';
 import CaricaQuietanza from './pages/CaricaQuietanza'
 import RicevutaTelematica from './pages/RicevutaTelematica'
@@ -153,6 +154,9 @@ function App() {
           {/* ── Route pubblica: compilazione/stampa modulo da parte del socio (nessuna autenticazione) ──
                Intenzionalmente non presente in MENU_STRUCTURE: raggiungibile solo tramite link diretto. */}
           <Route path="/ricevuta-telematica/:societaId" element={<RicevutaTelematica />} />
+
+          {/* ── Route pubblica: impostazione password tramite link monouso (token nel frammento #t=) ── */}
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Login: se autenticato come socio → dashboard, altrimenti → /soci */}
           <Route path="/login" element={

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { X, Building2, Users, ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Building2, Users, ClipboardList, KeyRound } from 'lucide-react';
+import ResetLinkBox from '../components/ResetLinkBox';
+import { useAlert } from '../components/AlertModal';
 import SocietaAnagrafica from './SocietaAnagrafica';
 import Utenti from './Utenti';
 import { formatDateTimeIT } from '../utils/dateUtils';
@@ -21,10 +23,70 @@ const InfoRow = ({ label, children }) => (
     </div>
 );
 
+// Amministratori della società con la generazione del link "imposta password".
+// initialLink: link appena creato in fase di iscrizione ({ userId, token, expiresAt, email }).
+const AmministratoriLinks = ({ societaId, initialLink }) => {
+    const showAlert = useAlert();
+    const [admins, setAdmins] = useState(null);
+    const [links, setLinks] = useState(initialLink ? { [initialLink.userId]: initialLink } : {});
+    const [generating, setGenerating] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetch(`/auth/api/admin/users?societaId=${societaId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(list => { if (!cancelled) setAdmins(list.filter(u => u.role === 'admin')); })
+            .catch(() => { if (!cancelled) setAdmins([]); });
+        return () => { cancelled = true; };
+    }, [societaId]);
+
+    const handleGenerate = async (user) => {
+        setGenerating(user.id);
+        try {
+            const res = await fetch(`/auth/api/admin/users/${user.id}/password-reset-link`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showAlert(data.error || 'Errore nella generazione del link', 'Errore'); return; }
+            setLinks(prev => ({ ...prev, [user.id]: { userId: user.id, token: data.token, expiresAt: data.expiresAt, email: data.email } }));
+        } catch {
+            showAlert('Errore di rete', 'Errore');
+        } finally {
+            setGenerating(null);
+        }
+    };
+
+    if (admins === null) return <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Caricamento amministratori…</div>;
+    if (admins.length === 0) return <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Nessun amministratore: crealo dal tab Utenti.</div>;
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {admins.map(u => (
+                <div key={u.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                        <div>
+                            <div style={{ fontWeight: 500, textTransform: 'uppercase' }}>{[u.cognome, u.nome].filter(Boolean).join(' ') || '—'}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{u.email}</div>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn-contained"
+                            disabled={generating === u.id}
+                            onClick={() => handleGenerate(u)}
+                            style={{ backgroundColor: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <KeyRound size={16} /> {links[u.id] ? 'Genera nuovo link' : 'Genera link imposta password'}
+                        </button>
+                    </div>
+                    {links[u.id] && <ResetLinkBox token={links[u.id].token} expiresAt={links[u.id].expiresAt} email={links[u.id].email} />}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 // Modal Backoffice di una società registrata: anagrafica, utenti, dati di registrazione.
-const BackofficeSocietaModal = ({ societa, onClose, onSaved }) => {
-    // Il parent monta il modal con key={societa.id}: il tab riparte da Anagrafica a ogni apertura.
-    const [activeTab, setActiveTab] = useState('anagrafica');
+// Il parent lo monta con key={societa.id}: lo stato riparte da zero a ogni apertura.
+const BackofficeSocietaModal = ({ societa, onClose, onSaved, initialTab = 'anagrafica', initialLink = null }) => {
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     if (!societa) return null;
 
@@ -89,6 +151,10 @@ const BackofficeSocietaModal = ({ societa, onClose, onSaved }) => {
                             <InfoRow label="Tipo abbonamento">
                                 <span className="badge badge-info">{ABBONAMENTO_DEFAULT}</span>
                             </InfoRow>
+                            <div style={{ marginTop: '24px' }}>
+                                <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Accesso amministratori</div>
+                                <AmministratoriLinks societaId={societa.id} initialLink={initialLink} />
+                            </div>
                         </div>
                     )}
                 </div>

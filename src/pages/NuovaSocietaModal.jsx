@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, Calendar, Settings, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { X, Building2, Calendar, Settings, ChevronLeft, ChevronRight, Check, UserPlus } from 'lucide-react';
 import './SocioModal.css';
 
 const TIPO_OPTIONS = ['ASD', 'APS'];
@@ -16,6 +16,11 @@ const EMPTY = {
     data_inizio_anno_associativo: '01-01',
     // Impostazioni
     quota_tesseramento_unico: false,
+    // Amministratore (solo con withAdmin, Backoffice → Nuova iscrizione)
+    admin_nome: '',
+    admin_cognome: '',
+    admin_email: '',
+    admin_telefono: '',
 };
 
 const MONTHS = [
@@ -27,13 +32,19 @@ const MONTHS = [
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
-const STEPS = [
+const BASE_STEPS = [
     { key: 'dati', label: 'Dati società', icon: Building2 },
     { key: 'anno', label: 'Anno contabile', icon: Calendar },
     { key: 'impostazioni', label: 'Impostazioni', icon: Settings },
 ];
+const ADMIN_STEP = { key: 'admin', label: 'Amministratore', icon: UserPlus };
 
-const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// withAdmin: aggiunge lo step "Amministratore" (dati dell'utente admin da creare
+// insieme alla società). title: titolo del modal.
+const NuovaSocietaModal = ({ isOpen, onClose, onSave, withAdmin = false, title = 'Nuova società' }) => {
+    const STEPS = withAdmin ? [...BASE_STEPS, ADMIN_STEP] : BASE_STEPS;
     const [step, setStep] = useState(0);
     const [form, setForm] = useState(EMPTY);
     const [customDay, setCustomDay] = useState('01');
@@ -98,6 +109,14 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
         return e;
     };
 
+    const validateAdminStep = () => {
+        const e = {};
+        if (!withAdmin) return e;
+        if (!form.admin_email.trim()) e.admin_email = 'Campo obbligatorio';
+        else if (!EMAIL_RE.test(form.admin_email.trim())) e.admin_email = 'Email non valida';
+        return e;
+    };
+
     const goNext = () => {
         if (step === 0) {
             const errs = validateStep0();
@@ -111,6 +130,8 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
     const handleSubmit = async () => {
         const errs = validateStep0();
         if (Object.keys(errs).length > 0) { setStep(0); setErrors(errs); return; }
+        const adminErrs = validateAdminStep();
+        if (Object.keys(adminErrs).length > 0) { setErrors(adminErrs); return; }
         setSaving(true);
         try {
             await onSave(form, logoFile);
@@ -140,7 +161,7 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Building2 size={20} style={{ color: 'var(--success)' }} />
                         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            Nuova società
+                            {title}
                         </h2>
                     </div>
                     <button
@@ -423,6 +444,34 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* STEP 3 — Amministratore (solo withAdmin) */}
+                    {withAdmin && step === 3 && (
+                        <div className="md-form-grid-custom">
+                            <div className="form-group grid-span-12" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                Verrà creato un utente <strong>Amministratore</strong> della società senza password:
+                                al termine riceverai un link da inviargli per impostarla.
+                            </div>
+                            {[
+                                { name: 'admin_cognome', label: 'Cognome', span: 6 },
+                                { name: 'admin_nome', label: 'Nome', span: 6 },
+                                { name: 'admin_email', label: 'Email *', span: 6, type: 'email' },
+                                { name: 'admin_telefono', label: 'Telefono', span: 6 },
+                            ].map(f => (
+                                <div key={f.name} className={`form-group grid-span-${f.span}`}>
+                                    <label className="field-label">{f.label}</label>
+                                    <input
+                                        name={f.name}
+                                        type={f.type || 'text'}
+                                        className="md-input"
+                                        value={form[f.name]}
+                                        onChange={handleChange}
+                                    />
+                                    {errors[f.name] && <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '4px' }}>{errors[f.name]}</div>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -447,7 +496,7 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave }) => {
                             disabled={saving}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                            {saving ? 'Salvataggio...' : <><Check size={18} /> Crea società</>}
+                            {saving ? 'Salvataggio...' : <><Check size={18} /> {withAdmin ? 'Crea iscrizione' : 'Crea società'}</>}
                         </button>
                     ) : (
                         <button

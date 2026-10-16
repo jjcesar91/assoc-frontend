@@ -2,6 +2,7 @@ const AUTH_BYPASS_PATHS = [
   '/auth/api/login',
   '/auth/api/register',
   '/auth/api/refresh-token',
+  '/auth/api/password-reset', // pagina pubblica di impostazione password (nessuna sessione)
 ];
 
 const SESSION_VALIDATION_PATHS = [
