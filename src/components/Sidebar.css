@@ -74,6 +74,14 @@
 }
 .sidebar-item.active svg { color: var(--on-primary-container); }
 
+/* Sezioni riservate ai superuser (es. Backoffice): sottolineate col colore
+   primario dell'header per distinguerle dal resto del menu. */
+.sidebar-item--reserved {
+    margin-top: var(--space-3);
+    border-bottom: 2px solid var(--primary-color);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
 .sidebar-sub-menu {
     margin: 2px 0 var(--space-2);
 }

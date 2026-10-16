@@ -31,7 +31,7 @@ const Sidebar = ({ isOpen, onClose, bannerHeight = 0 }) => {
                         <React.Fragment key={item.id}>
                             {item.children ? (
                                 <>
-                                    <div className="sidebar-item" onClick={() => toggleGroup(item.id)}>
+                                    <div className={`sidebar-item ${item.superuserOnly ? 'sidebar-item--reserved' : ''}`} onClick={() => toggleGroup(item.id)}>
                                         <item.Icon size={20} />
                                         <span>{item.label}</span>
                                         <ChevronDown size={16} style={{ marginLeft: 'auto', transform: openGroups[item.id] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -52,7 +52,7 @@ const Sidebar = ({ isOpen, onClose, bannerHeight = 0 }) => {
                                 </>
                             ) : (
                                 <div
-                                    className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
+                                    className={`sidebar-item ${location.pathname === item.path ? 'active' : ''} ${item.superuserOnly ? 'sidebar-item--reserved' : ''}`}
                                     onClick={() => handleNavigation(item.path)}
                                 >
                                     <item.Icon size={20} />
