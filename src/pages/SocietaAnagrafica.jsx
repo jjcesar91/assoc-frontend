@@ -12,8 +12,34 @@ const ASSOCIAZIONE_OPTIONS = {
     'Federazioni': ['ACI', 'AeCI', 'CUSI', 'FASI', 'FCI', 'FCrI', 'FEDERKOMBAT', 'FGI', 'FIB', 'FIBA', 'FIBS', 'FIC', 'FICK', 'FICr', 'FIDAF', 'FIDAL', 'FIDASC', 'FIDESM', 'FIG', 'FIGC', 'FIGH', 'FIGS', 'FIH', 'FIJLKAM', 'FIM', 'FIN', 'FIP', 'FIPAV', 'FIPE', 'FIPM', 'FIPSAS', 'FIR', 'FIS', 'FISE', 'FISG', 'FISI', 'FISR', 'FISSW', 'FITA', 'FITArco', 'FITAV', 'FITET', 'FITP', 'FITRI', 'FIV', 'FMI', 'FMSI', 'UITS']
 };
 
-const SocietaAnagrafica = () => {
-    const { selectedSocietaId, societaList, fetchSocieta, userInfo } = useSocieta();
+const toFormData = (societa) => ({
+    denominazione: societa.denominazione || '',
+    codice_fiscale: societa.codice_fiscale || '',
+    partita_iva: societa.partita_iva || '',
+    codice_sdi: societa.codice_sdi || '',
+    pec: societa.pec || '',
+    email: societa.email || '',
+    telefono: societa.telefono || '',
+    indirizzo: societa.indirizzo || '',
+    comune: societa.comune || '',
+    cap: societa.cap || '',
+    affiliazioni: societa.affiliazioni || [],
+    tipo_associazione: societa.tipo_associazione || 'ASD',
+    cognome_rappr_legale: societa.cognome_rappr_legale || '',
+    nome_rappr_legale: societa.nome_rappr_legale || '',
+    alias_sms: societa.alias_sms || '',
+    alias_email: societa.alias_email || '',
+    gestore_ets_point: societa.gestore_ets_point || false
+});
+
+// Props opzionali (uso embedded, es. modal del Backoffice):
+//   societa  – la società da modificare (default: quella selezionata nella tendina)
+//   embedded – senza card/titolo della pagina
+//   onSaved  – callback con la società aggiornata dopo il salvataggio
+const SocietaAnagrafica = ({ societa: societaProp, embedded = false, onSaved } = {}) => {
+    const { selectedSocietaId: selectedSocietaIdCtx, societaList, fetchSocieta, userInfo } = useSocieta();
+    const selectedSocietaId = societaProp ? societaProp.id : selectedSocietaIdCtx;
+    const findSocieta = () => societaProp || societaList.find(s => s.id == selectedSocietaId);
     const isSuperuser = userInfo?.role === 'superuser';
     const [formData, setFormData] = useState({
         denominazione: '',
@@ -40,31 +66,10 @@ const SocietaAnagrafica = () => {
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-        if (selectedSocietaId && societaList.length > 0) {
-            const societa = societaList.find(s => s.id == selectedSocietaId);
-            if (societa) {
-                setFormData({
-                    denominazione: societa.denominazione || '',
-                    codice_fiscale: societa.codice_fiscale || '',
-                    partita_iva: societa.partita_iva || '',
-                    codice_sdi: societa.codice_sdi || '',
-                    pec: societa.pec || '',
-                    email: societa.email || '',
-                    telefono: societa.telefono || '',
-                    indirizzo: societa.indirizzo || '',
-                    comune: societa.comune || '',
-                    cap: societa.cap || '',
-                    affiliazioni: societa.affiliazioni || [],
-                    tipo_associazione: societa.tipo_associazione || 'ASD',
-                    cognome_rappr_legale: societa.cognome_rappr_legale || '',
-                    nome_rappr_legale: societa.nome_rappr_legale || '',
-                    alias_sms: societa.alias_sms || '',
-                    alias_email: societa.alias_email || '',
-                    gestore_ets_point: societa.gestore_ets_point || false
-                });
-            }
-        }
-    }, [selectedSocietaId, societaList]);
+        const societa = findSocieta();
+        if (societa) setFormData(toFormData(societa));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSocietaId, societaList, societaProp]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -124,13 +129,14 @@ const SocietaAnagrafica = () => {
             if (response.ok) {
                 const updatedSocieta = await response.json();
                 setMessage({ type: 'success', text: 'Dati salvati con successo' });
-                document.querySelector('.content-area')?.scrollTo({ top: 0, behavior: 'smooth' });
+                if (!embedded) document.querySelector('.content-area')?.scrollTo({ top: 0, behavior: 'smooth' });
                 // Update form data with the response
                 setFormData(prev => ({
                     ...prev,
                     affiliazioni: updatedSocieta.affiliazioni || formData.affiliazioni
                 }));
                 fetchSocieta(); // Refresh list/context
+                onSaved?.(updatedSocieta);
             } else {
                 const err = await response.json();
                 setMessage({ type: 'error', text: 'Errore durante il salvataggio: ' + (err.error || err.message) });
@@ -144,36 +150,14 @@ const SocietaAnagrafica = () => {
     };
 
     const handleCancel = () => {
-        // Reset form to current societa values
-        if (selectedSocietaId && societaList.length > 0) {
-            const societa = societaList.find(s => s.id == selectedSocietaId);
-            if (societa) {
-                 setFormData({
-                    denominazione: societa.denominazione || '',
-                    codice_fiscale: societa.codice_fiscale || '',
-                    partita_iva: societa.partita_iva || '',
-                    codice_sdi: societa.codice_sdi || '',
-                    pec: societa.pec || '',
-                    email: societa.email || '',
-                    telefono: societa.telefono || '',
-                    indirizzo: societa.indirizzo || '',
-                    comune: societa.comune || '',
-                    cap: societa.cap || '',
-                    affiliazioni: societa.affiliazioni || [],
-                    tipo_associazione: societa.tipo_associazione || 'ASD',
-                    cognome_rappr_legale: societa.cognome_rappr_legale || '',
-                    nome_rappr_legale: societa.nome_rappr_legale || '',
-                    alias_sms: societa.alias_sms || '',
-                    alias_email: societa.alias_email || '',
-                    gestore_ets_point: societa.gestore_ets_point || false
-                });
-            }
-        }
+        // Ripristina i valori correnti della società
+        const societa = findSocieta();
+        if (societa) setFormData(toFormData(societa));
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ marginBottom: '24px', fontSize: '1.2rem', fontWeight: 600, color: '#333' }}>Anagrafica Società</h2>
+        <div style={embedded ? {} : { padding: '20px', maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            {!embedded && <h2 style={{ marginBottom: '24px', fontSize: '1.2rem', fontWeight: 600, color: '#333' }}>Anagrafica Società</h2>}
             
             {message && (
                 <div style={{ 

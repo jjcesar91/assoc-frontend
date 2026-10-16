@@ -9,7 +9,8 @@ const PAGE_SIZE = 15;
 
 // Voci di menu esposte come funzionalità gestibili
 // "amministrazione" viene inclusa ma viene nascosta agli utenti non-admin a lato Sidebar
-const FEATURES = MENU_STRUCTURE.map(item => ({
+// Le voci riservate ai superuser (es. Backoffice) non sono assegnabili come funzionalità
+const FEATURES = MENU_STRUCTURE.filter(item => !item.superuserOnly).map(item => ({
     id: item.id,
     label: item.label.toUpperCase(),
 }));

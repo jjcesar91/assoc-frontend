@@ -45,8 +45,11 @@ const ToggleSwitch = ({ checked, onChange }) => (
     </div>
 );
 
-const Utenti = () => {
-    const { selectedSocietaId, societaList } = useSocieta();
+// societaId (opzionale): gestisce gli utenti di una società specifica invece di
+// quella selezionata nella tendina (es. tab Utenti del Backoffice).
+const Utenti = ({ societaId } = {}) => {
+    const { selectedSocietaId: selectedSocietaIdCtx, societaList } = useSocieta();
+    const selectedSocietaId = societaId ?? selectedSocietaIdCtx;
     const confirm = useConfirm();
     const showAlert = useAlert();
 

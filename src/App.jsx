@@ -28,6 +28,7 @@ import Staff from './pages/Staff';
 import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
+import BackofficeIscrizioni from './pages/BackofficeIscrizioni';
 import SocioDashboard from './pages/SocioDashboard';
 import CaricaQuietanza from './pages/CaricaQuietanza'
 import RicevutaTelematica from './pages/RicevutaTelematica'
@@ -317,6 +318,11 @@ function App() {
           <Route path="/amministrazione/societa" element={isAuthenticated && userRole === 'superuser' ? (
             <Layout onLogout={handleLogout} title="Amministrazione - Società">
               <SuperuserSocieta />
+            </Layout>
+          ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
+          <Route path="/backoffice/iscrizioni" element={isAuthenticated && userRole === 'superuser' ? (
+            <Layout onLogout={handleLogout} title="Backoffice - Iscrizioni">
+              <BackofficeIscrizioni />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/" element={isAuthenticated

@@ -1,4 +1,4 @@
-import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle, Send } from 'lucide-react';
+import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle, Send, Briefcase } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -10,6 +10,7 @@ import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileT
  *   Icon      – componente icona lucide-react
  *   path      – (solo voci senza children) percorso di navigazione
  *   children  – (opzionale) array di sottovoci { id, label, path }
+ *   superuserOnly – (opzionale, su voce o sottovoce) visibile solo ai superuser
  */
 /** Restituisce le voci di menu visibili per l'utente corrente */
 export const getVisibleMenu = () => {
@@ -21,13 +22,13 @@ export const getVisibleMenu = () => {
         ...item,
         children: item.children, // superuser vede tutti i children
     }));
-    if (role === 'admin') return MENU_STRUCTURE.map(item => ({
+    if (role === 'admin') return MENU_STRUCTURE.filter(item => !item.superuserOnly).map(item => ({
         ...item,
         children: item.children?.filter(c => !c.superuserOnly),
     }));
     // null = nessuna restrizione, array = solo quelle abilitate
     return MENU_STRUCTURE.filter(item => {
-        if (item.id === 'amministrazione') return false;
+        if (item.id === 'amministrazione' || item.superuserOnly) return false;
         if (featuresRaw === null || featuresRaw === undefined) return true;
         return featuresRaw.includes(item.id);
     }).map(item => ({
@@ -49,7 +50,7 @@ export const getHomePath = () => {
 
     // altrimenti apre la prima funzionalità abilitata (nell'ordine del menu)
     for (const item of MENU_STRUCTURE) {
-        if (item.id === 'amministrazione') continue;
+        if (item.id === 'amministrazione' || item.superuserOnly) continue;
         if (!featuresRaw.includes(item.id)) continue;
         if (item.path) return item.path;
         const firstChild = item.children?.find(c => !c.superuserOnly);
@@ -134,4 +135,13 @@ export const MENU_STRUCTURE = [
         ],
     },
     { id: 'faq',           label: 'FAQ / Guida',    Icon: HelpCircle,    path: '/faq' },
+    {
+        id: 'backoffice',
+        label: 'Backoffice',
+        Icon: Briefcase,
+        superuserOnly: true,
+        children: [
+            { id: 'backoffice-iscrizioni', label: 'Iscrizioni', path: '/backoffice/iscrizioni' },
+        ],
+    },
 ];
