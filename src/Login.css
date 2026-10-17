@@ -69,6 +69,7 @@
   font-weight: 700;
   margin: 0 0 8px;
   letter-spacing: -0.5px;
+  color: inherit; /* bianco del pannello: h1 del design system usa --text-primary */
 }
 
 .login-brand-subtitle {
