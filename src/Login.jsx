@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, LogIn, Building2, UserRound, ArrowLeft } from 'lucide-react';
 import './Login.css';
+import LoginBrandPanel from './components/LoginBrandPanel';
+import { useBranding } from './data/branding';
 
 function Login({ onLoginSuccess }) {
+  const { branding } = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -50,24 +53,8 @@ function Login({ onLoginSuccess }) {
 
   return (
     <div className="login-page">
-      {/* Pannello branding */}
-      <div className="login-brand">
-        <div className="login-brand-inner">
-          <div className="login-brand-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-          </div>
-          <h1 className="login-brand-title">Gestionale</h1>
-          <p className="login-brand-subtitle">Portale di gestione associazioni</p>
-          <div className="login-brand-features">
-            <div className="login-brand-feature">Gestione soci e iscrizioni</div>
-            <div className="login-brand-feature">Pagamenti e ricevute</div>
-            <div className="login-brand-feature">Modulistica e comunicazioni</div>
-          </div>
-        </div>
-      </div>
+      {/* Pannello branding (personalizzabile in Backoffice → Configurazione) */}
+      <LoginBrandPanel branding={branding} />
 
       {/* Pannello form */}
       <div className="login-form-panel">

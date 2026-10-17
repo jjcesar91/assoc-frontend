@@ -78,6 +78,25 @@
   line-height: 1.5;
 }
 
+/* Logo e descrizione personalizzati (Backoffice → Configurazione) */
+.login-brand-logo {
+  display: block;
+  max-width: 200px;
+  max-height: 96px;
+  object-fit: contain;
+  margin: 0 auto 24px;
+}
+
+.login-brand-description {
+  text-align: left;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+.login-brand-description ul,
+.login-brand-description ol { padding-left: 1.2em; margin: 0.5em 0; }
+.login-brand-description p { margin: 0 0 0.6em; }
+
 .login-brand-features {
   display: flex;
   flex-direction: column;
@@ -338,8 +357,14 @@
     padding: 32px 24px;
   }
 
-  .login-brand-features {
+  .login-brand-features,
+  .login-brand-description {
     display: none;
+  }
+
+  .login-brand-logo {
+    max-height: 64px;
+    margin-bottom: 16px;
   }
 
   .login-brand-subtitle {

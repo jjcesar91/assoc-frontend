@@ -198,7 +198,7 @@ const Layout = ({ children, onLogout, title }) => {
             {/* AppBar */}
             <div className="app-bar" style={{
                 height: '64px', 
-                backgroundColor: 'var(--primary-color)', 
+                backgroundColor: 'var(--header-bg, var(--primary-color))',
                 color: 'white',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 display: 'flex', 

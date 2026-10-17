@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Valori per ambiente di docker-compose sul server (non versionati)
+docker/.env

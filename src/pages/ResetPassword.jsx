@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, Check, LogIn } from 'lucide-react';
 import { getPasswordValidationErrors } from '../utils/passwordValidation';
 import '../Login.css';
+import LoginBrandPanel from '../components/LoginBrandPanel';
+import { useBranding } from '../data/branding';
 
 // Il token arriva nel frammento dell'URL (/reset-password#t=...): il frammento non
 // viene mai inviato al server, quindi non compare nei log né nel Referer.
@@ -12,6 +14,7 @@ const readTokenFromHash = () => {
 
 // Pagina pubblica: impostazione/reimpostazione password tramite link monouso.
 const ResetPassword = () => {
+    const { branding } = useBranding();
     const [token] = useState(readTokenFromHash);
     const [status, setStatus] = useState(token ? 'checking' : 'invalid'); // checking | ready | invalid | done
     const [email, setEmail] = useState('');
@@ -84,13 +87,7 @@ const ResetPassword = () => {
 
     return (
         <div className="login-page">
-            <div className="login-brand">
-                <div className="login-brand-inner">
-                    <div className="login-brand-icon"><Lock size={48} strokeWidth={1.5} /></div>
-                    <h1 className="login-brand-title">Gestionale</h1>
-                    <p className="login-brand-subtitle">Portale di gestione associazioni</p>
-                </div>
-            </div>
+            <LoginBrandPanel branding={branding} icon={<Lock size={48} strokeWidth={1.5} />} showDescription={false} />
 
             <div className="login-form-panel">
                 <div className="login-card">

@@ -142,6 +142,7 @@ export const MENU_STRUCTURE = [
         superuserOnly: true,
         children: [
             { id: 'backoffice-iscrizioni', label: 'Iscrizioni', path: '/backoffice/iscrizioni' },
+            { id: 'backoffice-configurazione', label: 'Configurazione', path: '/backoffice/configurazione' },
         ],
     },
 ];

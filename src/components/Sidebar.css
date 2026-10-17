@@ -79,11 +79,11 @@
 .sidebar-item--reserved,
 .sidebar-item--reserved.active {
     margin-top: var(--space-3);
-    background-color: var(--primary-color);
+    background-color: var(--header-bg, var(--primary-color));
     color: #fff;
 }
 .sidebar-item--reserved:hover {
-    background-color: var(--primary-color);
+    background-color: var(--header-bg, var(--primary-color));
     filter: brightness(1.1);
 }
 .sidebar-item--reserved svg,
