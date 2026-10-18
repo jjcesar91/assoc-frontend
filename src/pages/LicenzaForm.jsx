@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Copy, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Save, Copy, Check, CheckCircle2 } from 'lucide-react';
 import { useAlert } from '../components/AlertModal';
 import { PIANI, STATI, ANNI_ASSOCIATIVI, formatRiepilogoRegistrazione } from '../data/licenze';
 
@@ -23,51 +23,38 @@ const Input = ({ name, form, onChange, ...rest }) => (
     <input className="md-input" value={form[name] || ''} onChange={e => onChange(name, e.target.value)} style={{ width: '100%' }} {...rest} />
 );
 
-// Licenza della società: piano/stato/date + snapshot dei dati di registrazione.
-// onSaved(licenza) aggiorna l'elenco Iscrizioni (colonna Piano).
-const LicenzaForm = ({ societaId, onSaved }) => {
+// Licenza: piano/stato/date + snapshot dei dati di registrazione.
+// licenza: dati già caricati dal modal (che lo rimonta con key=updatedAt quando
+// la licenza cambia); onSaved(licenza) aggiorna modal ed elenco.
+const LicenzaForm = ({ licenza, onSaved }) => {
     const showAlert = useAlert();
-    const [saved, setSaved] = useState(null);
-    const [form, setForm] = useState(null);
+    const saved = licenza;
+    const [form, setForm] = useState(() => pick(licenza));
     const [saving, setSaving] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    useEffect(() => {
-        let cancelled = false;
-        fetch(`/users/api/licenze/${societaId}`)
-            .then(r => (r.ok ? r.json() : null))
-            .then(data => {
-                if (cancelled || !data) return;
-                setSaved(data);
-                setForm(pick(data));
-            })
-            .catch(() => {});
-        return () => { cancelled = true; };
-    }, [societaId]);
-
-    if (!form) return <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Caricamento licenza…</div>;
 
     const set = (name, value) => setForm(f => ({ ...f, [name]: value }));
     const dirty = EDITABLE.some(k => (form[k] || '') !== (saved?.[k] ?? ''));
     const [gg, mm] = (form.anno_associativo_inizio || '01-01').split('-');
 
-    const handleSave = async () => {
-        if (form.data_inizio && form.data_scadenza && form.data_scadenza < form.data_inizio) {
+    const save = async (payloadOverride) => {
+        const source = { ...form, ...(payloadOverride || {}) };
+        if (source.data_inizio && source.data_scadenza && source.data_scadenza < source.data_inizio) {
             showAlert('La data di scadenza è precedente alla data di inizio', 'Errore');
             return;
         }
         setSaving(true);
         try {
-            const payload = { ...form };
+            const payload = { ...source };
             if (payload.anno_associativo_tipo !== 'personalizzato') payload.anno_associativo_inizio = null;
-            const res = await fetch(`/users/api/licenze/${societaId}`, {
+            const res = await fetch(`/users/api/licenze/${licenza.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) { showAlert(data.error || 'Errore nel salvataggio', 'Errore'); return; }
-            setSaved(data);
             setForm(pick(data));
             onSaved?.(data);
         } catch {
@@ -87,8 +74,20 @@ const LicenzaForm = ({ societaId, onSaved }) => {
         }
     };
 
+    const handleSave = () => save();
+    // Attivazione rapida di una registrazione dal sito (salva anche le altre modifiche)
+    const handleAttiva = () => save({ stato: 'attiva' });
+
     return (
         <div>
+            {saved?.stato === 'in_attesa' && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '12px 16px', marginBottom: '16px', borderRadius: '8px', backgroundColor: 'var(--warning-container)', color: 'var(--on-warning-container)' }}>
+                    <span>Licenza registrata dal sito e <strong>in attesa di attivazione</strong>: gli amministratori non possono ancora accedere.</span>
+                    <button type="button" className="btn-contained" onClick={handleAttiva} disabled={saving} style={{ backgroundColor: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle2 size={16} /> Attiva licenza
+                    </button>
+                </div>
+            )}
             <div style={sectionTitle}>Licenza</div>
             <div style={grid('repeat(auto-fit, minmax(160px, 1fr))')}>
                 <div>

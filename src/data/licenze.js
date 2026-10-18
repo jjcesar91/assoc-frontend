@@ -7,9 +7,10 @@ export const PIANI = [
 ];
 
 export const STATI = [
-    { value: 'attiva',  label: 'Attiva',  badge: 'badge-success' },
-    { value: 'sospesa', label: 'Sospesa', badge: 'badge-warning' },
-    { value: 'scaduta', label: 'Scaduta', badge: 'badge-danger' },
+    { value: 'attiva',    label: 'Attiva',     badge: 'badge-success' },
+    { value: 'in_attesa', label: 'In attesa',  badge: 'badge-warning' },
+    { value: 'sospesa',   label: 'Sospesa',    badge: 'badge-danger' },
+    { value: 'scaduta',   label: 'Scaduta',    badge: 'badge-danger' },
 ];
 
 export const ANNI_ASSOCIATIVI = [

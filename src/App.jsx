@@ -28,7 +28,8 @@ import Staff from './pages/Staff';
 import Calendario from './pages/Calendario';
 import Utenti from './pages/Utenti';
 import SuperuserSocieta from './pages/SuperuserSocieta';
-import BackofficeIscrizioni from './pages/BackofficeIscrizioni';
+import BackofficeLicenze from './pages/BackofficeLicenze';
+import Registrazione from './pages/Registrazione';
 import BackofficeConfigurazione from './pages/BackofficeConfigurazione';
 import ResetPassword from './pages/ResetPassword';
 import SocioDashboard from './pages/SocioDashboard';
@@ -155,6 +156,9 @@ function App() {
           {/* ── Route pubblica: compilazione/stampa modulo da parte del socio (nessuna autenticazione) ──
                Intenzionalmente non presente in MENU_STRUCTURE: raggiungibile solo tramite link diretto. */}
           <Route path="/ricevuta-telematica/:societaId" element={<RicevutaTelematica />} />
+
+          {/* ── Route pubblica: registrazione di una nuova associazione (licenza Free in attesa) ── */}
+          <Route path="/registrazione" element={<Registrazione />} />
 
           {/* ── Route pubblica: impostazione password tramite link monouso (token nel frammento #t=) ── */}
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -327,7 +331,7 @@ function App() {
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/iscrizioni" element={isAuthenticated && userRole === 'superuser' ? (
             <Layout onLogout={handleLogout} title="Backoffice - Licenze">
-              <BackofficeIscrizioni />
+              <BackofficeLicenze />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/configurazione" element={isAuthenticated && userRole === 'superuser' ? (

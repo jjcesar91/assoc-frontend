@@ -160,6 +160,9 @@ function Login({ onLoginSuccess }) {
               )}
               {loading ? 'Accesso in corso…' : 'Accedi'}
             </button>
+            <p className="login-register-link">
+              Non hai ancora un account? <a href="/registrazione">Registra la tua associazione</a>
+            </p>
           </form>
           )}
         </div>

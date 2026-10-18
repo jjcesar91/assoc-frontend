@@ -1,0 +1,57 @@
+/* Pagina pubblica di registrazione: layout della pagina di login con un form più ampio */
+
+.reg-page { align-items: stretch; }
+.reg-page .login-brand { position: sticky; top: 0; height: 100vh; }
+
+.reg-form-panel { align-items: flex-start; overflow-y: auto; }
+.reg-card { max-width: 720px; width: 100%; margin: 24px auto; }
+
+.reg-section {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.reg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.reg-field { display: flex; flex-direction: column; min-width: 0; }
+.reg-input { padding-left: 12px !important; width: 100%; }
+.reg-field .input-wrapper .reg-input { padding-right: 40px !important; }
+
+.reg-error { color: var(--danger); font-size: 0.78rem; margin-top: 4px; }
+.reg-hint { font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 0; }
+
+.reg-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.reg-privacy input { margin-top: 3px; }
+
+/* Campo trappola anti-bot: fuori schermo, non display:none (alcuni bot lo saltano) */
+.reg-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .reg-page .login-brand { position: static; height: auto; }
+  .reg-grid { grid-template-columns: 1fr; }
+  .reg-grid .reg-field { grid-column: span 1 !important; }
+  .reg-card { margin: 0 auto; }
+}
