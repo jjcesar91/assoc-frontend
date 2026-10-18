@@ -31,7 +31,8 @@ const BackofficeLicenze = () => {
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
     // Nuova licenza da Backoffice (dati ricevuti via email): crea la prima società,
-    // che apre una licenza Free attiva, poi l'amministratore senza password + link.
+    // che apre una licenza Free in attesa di attivazione, poi l'amministratore senza
+    // password + link (potrà accedere dopo l'attivazione dal tab Licenza).
     const handleCreate = async (form, logoFile) => {
         const { admin_nome, admin_cognome, admin_email, admin_telefono, ...societaData } = form;
         let created;
