@@ -10,6 +10,7 @@ import './SocioModal.css';
 import './Soci.css';
 import { getPasswordValidationErrors } from '../utils/passwordValidation';
 import { formatDateTimeIT } from '../utils/dateUtils';
+import { usePianoLicenza, MESSAGGIO_PIANO } from '../data/pianoLicenza';
 
 const PAGE_SIZE = 15;
 
@@ -50,6 +51,9 @@ const ToggleSwitch = ({ checked, onChange }) => (
 const Utenti = ({ societaId } = {}) => {
     const { selectedSocietaId: selectedSocietaIdCtx, societaList } = useSocieta();
     const selectedSocietaId = societaId ?? selectedSocietaIdCtx;
+    // Piano senza creazione utenti: resta solo l'amministratore della licenza
+    const piano = usePianoLicenza(selectedSocietaId);
+    const creazioneBloccata = piano.bloccata('creazione_utenti');
     const confirm = useConfirm();
     const showAlert = useAlert();
 
@@ -309,6 +313,8 @@ const Utenti = ({ societaId } = {}) => {
                             className="btn-contained"
                             style={{ backgroundColor: 'var(--success-color)', height: '35px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', padding: '0 12px', marginLeft: 'auto' }}
                             onClick={() => { setSelectedUtente(null); setShowModal(true); }}
+                            disabled={creazioneBloccata}
+                            title={creazioneBloccata ? `${MESSAGGIO_PIANO(piano.info)}: è attivo solo l'amministratore della licenza` : undefined}
                         >
                             <Plus size={14} /> Nuovo utente
                         </button>

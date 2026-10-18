@@ -3,6 +3,7 @@ import {
     ShoppingCart, Plus, Minus, Trash2, Package, Landmark,
     CheckCircle, ArrowLeft, Upload, FileText,
 } from 'lucide-react';
+import { usePianoLicenza } from '../data/pianoLicenza';
 import UploadQuietanza from '../components/UploadQuietanza';
 import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
@@ -41,6 +42,8 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
     const [loading, setLoading] = useState(true);
 
     const [carrello, setCarrello] = useState({});  // { [productId]: qty }
+    // Piano della licenza senza ordini online dei prodotti generici
+    const genericiBloccati = usePianoLicenza().bloccata('ordini_prodotti_generici');
     const [contoId, setContoId] = useState('');
     const [note, setNote] = useState('');
 
@@ -252,7 +255,11 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
                                         <div className="sd-prodotto-tipo">{TIPO_LABELS[p.type] || 'Prodotto'}</div>
                                         <div className="sd-prodotto-nome">{p.description}</div>
                                         <div className="sd-prodotto-prezzo">{euro(p.basePrice)}</div>
-                                        {qty === 0 ? (
+                                        {genericiBloccati && p.type === 'generic' ? (
+                                            <button className="sd-btn sd-btn-primary sd-btn-block" disabled title="Questo prodotto non è ordinabile online: contatta l'associazione">
+                                                Non ordinabile online
+                                            </button>
+                                        ) : qty === 0 ? (
                                             <button className="sd-btn sd-btn-primary sd-btn-block" onClick={() => setQta(p.id, 1)}>
                                                 <Plus size={15} /> Aggiungi
                                             </button>

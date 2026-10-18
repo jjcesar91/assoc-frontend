@@ -7,6 +7,7 @@ import NuovaOperazioneModal from './NuovaOperazioneModal';
 import GirocontoModal from './GirocontoModal';
 import ImportPrimaNotaModal from './ImportPrimaNotaModal';
 import { formatDateIT } from '../utils/dateUtils';
+import { usePianoLicenza, MESSAGGIO_PIANO } from '../data/pianoLicenza';
 import './Soci.css';
 
 // ---------------------------------------------------------------------------
@@ -1393,6 +1394,9 @@ const ConfigurazioneTab = () => {
 const Contabilita = () => {
     const [activeTab, setActiveTab] = useState('prima-nota');
     const { selectedSocietaId, societaList } = useSocieta();
+    // Piano senza Bilancio: tab disabilitato
+    const piano = usePianoLicenza(selectedSocietaId);
+    const bilancioBloccato = piano.bloccata('bilancio');
     const { selectedAnno } = useAnno();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -1490,7 +1494,9 @@ const Contabilita = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('bilancio')}
+                        onClick={() => { if (!bilancioBloccato) setActiveTab('bilancio'); }}
+                        disabled={bilancioBloccato}
+                        title={bilancioBloccato ? MESSAGGIO_PIANO(piano.info) : undefined}
                         style={{
                             padding: '12px 32px',
                             border: 'none',
@@ -1553,7 +1559,7 @@ const Contabilita = () => {
                     />
                 )}
 
-                {activeTab === 'bilancio' && (
+                {activeTab === 'bilancio' && !bilancioBloccato && (
                     <BilancioTab
                         payments={payments}
                         loading={loading}

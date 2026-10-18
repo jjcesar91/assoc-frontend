@@ -11,6 +11,8 @@ import { computeScadenzaCertificatoStr, computeDataCertificatoDaScadenzaStr } fr
 import { scadenzaPagamentoIscrizione, combineIscrizioneStato, scadenzaPagamentoTesseramento, getTesseramentoProductId, getTesseramentoStato } from '../utils/iscrizioneStatoUtils';
 import { formatDateIT } from '../utils/dateUtils';
 import { useAlert } from '../components/AlertModal';
+import { usePianoLicenza } from '../data/pianoLicenza';
+import ContatorePiano from '../components/ContatorePiano';
 import { Search, Plus, Filter, User, Building2, Mail, CreditCard, Menu, Bell, Settings, MoreVertical, Zap, QrCode, FileSpreadsheet, FileDown, FileUp, Check, X, Calendar, ListOrdered, Star, Tag, ClipboardList, RefreshCw, Euro, LogOut, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 
 const TAG_PALETTE = [
@@ -53,6 +55,12 @@ const Soci = ({ onLogout }) => {
     const { selectedAnno, currentRefYear } = useAnno();
     const showAlert = useAlert();
     const [soci, setSoci] = useState([]);
+    // Limite soci del piano (conteggio su tutta la licenza, aggiornato al variare dell'elenco)
+    const piano = usePianoLicenza(selectedSocietaId);
+    const maxSoci = piano.massimo('max_soci');
+    const sociLicenza = piano.info?.utilizzo?.soci ?? 0;
+    const { refresh: refreshPiano } = piano;
+    useEffect(() => { refreshPiano(); }, [soci.length, refreshPiano]);
     // Pagamenti della società (grezzi): le scadenze vengono precalcolate una sola volta (vedi scadenzaMaps)
     const [payments, setPayments] = useState([]);
     // Prodotti della società: servono a risolvere i giorni di avviso scadenza per tipo prodotto (es. tesseramento)
@@ -1324,7 +1332,13 @@ const Soci = ({ onLogout }) => {
                         <button 
                             className="btn-contained" 
                             style={{backgroundColor: 'var(--success-color)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}} 
-                            onClick={() => { setSelectedSocio(null); setShowModal(true); }}
+                            onClick={() => {
+                                if (maxSoci != null && sociLicenza >= maxSoci) {
+                                    showAlert(`Hai raggiunto il limite di ${maxSoci} soci del piano ${piano.info?.piano_nome}. Per aggiungerne altri passa a un piano superiore.`, 'Limite del piano', 'warning');
+                                    return;
+                                }
+                                setSelectedSocio(null); setShowModal(true);
+                            }}
                         >
                             <Plus size={14}/> Nuovo socio
                         </button>
@@ -1443,6 +1457,7 @@ const Soci = ({ onLogout }) => {
                     {filteredSoci.length !== soci.length && (
                         <span> (su {soci.length} complessivi)</span>
                     )}
+                    <ContatorePiano usati={sociLicenza} massimo={maxSoci} etichetta="Soci della licenza" pianoNome={piano.info?.piano_nome} style={{ marginLeft: '10px' }} />
                 </div>
 
                 {/* Data Table */}

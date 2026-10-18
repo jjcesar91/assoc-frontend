@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
+import { usePianoLicenza, MESSAGGIO_PIANO } from '../data/pianoLicenza';
 import './Soci.css';
 
 const API = '/payments/api';
@@ -34,7 +35,7 @@ const FORM_EMPTY_SOTTO  = { descrizione: '', tipo: 'Entrata', sezione: '', numer
 // ---------------------------------------------------------------------------
 // Tab: Gruppi
 // ---------------------------------------------------------------------------
-const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
+const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId, creazioneBloccata, motivoBlocco }) => {
     const [form, setForm] = useState(FORM_EMPTY_GRUPPO);
     const [editingId, setEditingId] = useState(null);
     const [error, setError] = useState(null);
@@ -147,7 +148,13 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
                         {editingId && <button type="button" className="btn-outlined" onClick={resetForm} style={{ height: '42px' }}>Annulla</button>}
-                        <button type="submit" className="btn-contained" style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                            type="submit"
+                            className="btn-contained"
+                            disabled={!editingId && creazioneBloccata}
+                            title={!editingId && creazioneBloccata ? motivoBlocco : undefined}
+                            style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        >
                             {editingId ? <Edit2 size={16} /> : <Plus size={16} />}
                             {editingId ? 'Aggiorna' : 'Crea'}
                         </button>
@@ -213,7 +220,7 @@ const GruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
 // ---------------------------------------------------------------------------
 // Tab: Sottogruppi
 // ---------------------------------------------------------------------------
-const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
+const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId, creazioneBloccata, motivoBlocco }) => {
     const [form, setForm] = useState(FORM_EMPTY_SOTTO);
     const [editingId, setEditingId] = useState(null);
     const [error, setError] = useState(null);
@@ -346,7 +353,13 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
                         {editingId && <button type="button" className="btn-outlined" onClick={resetForm} style={{ height: '42px' }}>Annulla</button>}
-                        <button type="submit" className="btn-contained" style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                            type="submit"
+                            className="btn-contained"
+                            disabled={!editingId && creazioneBloccata}
+                            title={!editingId && creazioneBloccata ? motivoBlocco : undefined}
+                            style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        >
                             {editingId ? <Edit2 size={16} /> : <Plus size={16} />}
                             {editingId ? 'Aggiorna' : 'Crea'}
                         </button>
@@ -417,6 +430,10 @@ const SottogruppiTab = ({ gruppi, loading, onRefresh, selectedSocietaId }) => {
 const GruppiSottogruppi = () => {
     const [activeTab, setActiveTab] = useState('gruppi');
     const { selectedSocietaId } = useSocieta();
+    // Piano senza gruppi personalizzati: si usano solo quelli predefiniti
+    const piano = usePianoLicenza(selectedSocietaId);
+    const creazioneBloccata = piano.bloccata('gruppi_personalizzati');
+    const motivoBlocco = `${MESSAGGIO_PIANO(piano.info)}: sono disponibili solo i gruppi e sottogruppi predefiniti`;
     const [gruppi, setGruppi] = useState([]);
     const [loading, setLoading] = useState(false);
     const [globalError, setGlobalError] = useState(null);
@@ -474,11 +491,16 @@ const GruppiSottogruppi = () => {
                     >Sottogruppi</button>
                 </div>
 
+                {creazioneBloccata && (
+                    <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', backgroundColor: 'var(--info-container)', color: 'var(--on-info-container)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Lock size={16} /> Con il piano {piano.info?.piano_nome} puoi usare i gruppi e sottogruppi predefiniti; la creazione di nuovi non è inclusa.
+                    </div>
+                )}
                 {activeTab === 'gruppi' && (
-                    <GruppiTab gruppi={gruppi} loading={loading} onRefresh={fetchGruppi} selectedSocietaId={selectedSocietaId} />
+                    <GruppiTab gruppi={gruppi} loading={loading} onRefresh={fetchGruppi} selectedSocietaId={selectedSocietaId} creazioneBloccata={creazioneBloccata} motivoBlocco={motivoBlocco} />
                 )}
                 {activeTab === 'sottogruppi' && (
-                    <SottogruppiTab gruppi={gruppi} loading={loading} onRefresh={fetchGruppi} selectedSocietaId={selectedSocietaId} />
+                    <SottogruppiTab gruppi={gruppi} loading={loading} onRefresh={fetchGruppi} selectedSocietaId={selectedSocietaId} creazioneBloccata={creazioneBloccata} motivoBlocco={motivoBlocco} />
                 )}
             </div>
         </div>

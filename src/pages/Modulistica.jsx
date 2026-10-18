@@ -3,6 +3,8 @@ import { Search, Plus, Edit, Trash2, X, Bold, Italic, Underline, List, Printer, 
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
+import { usePianoLicenza } from '../data/pianoLicenza';
+import ContatorePiano from '../components/ContatorePiano';
 import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 
 const Modulistica = () => {
@@ -22,6 +24,9 @@ const Modulistica = () => {
     const [moduloToPrint, setModuloToPrint] = useState(null);
 
     const [moduli, setModuli] = useState([]);
+    // Limite moduli del piano (per società)
+    const piano = usePianoLicenza(selectedSocietaId);
+    const maxModuli = piano.massimo('max_moduli');
 
     useEffect(() => {
         if (isModalOpen && contentRef.current) {
@@ -177,7 +182,8 @@ const Modulistica = () => {
                     setModuli([...moduli, newModulo]);
                     setIsModalOpen(false);
                 } else {
-                    showAlert('Errore durante la creazione del modulo', 'Errore');
+                    const err = await response.json().catch(() => ({}));
+                    showAlert(err.error || 'Errore durante la creazione del modulo', err.code === 'LIMITE_PIANO' ? 'Limite del piano' : 'Errore');
                 }
             }
         } catch (error) {
@@ -235,11 +241,18 @@ const Modulistica = () => {
                         cursor: 'pointer',
                         fontSize: '0.9rem'
                     }}
-                    onClick={handleOpenModal}
+                    onClick={() => {
+                        if (maxModuli != null && moduli.length >= maxModuli) {
+                            showAlert(`Il piano ${piano.info?.piano_nome} consente al massimo ${maxModuli} moduli. Puoi modificare quelli esistenti; per crearne altri passa a un piano superiore.`, 'Limite del piano', 'warning');
+                            return;
+                        }
+                        handleOpenModal();
+                    }}
                 >
                     <Plus size={18} />
                     Nuovo modulo
                 </button>
+                <ContatorePiano usati={moduli.length} massimo={maxModuli} etichetta="Moduli" pianoNome={piano.info?.piano_nome} style={{ alignSelf: 'center' }} />
             </div>
 
             {/* Table */}

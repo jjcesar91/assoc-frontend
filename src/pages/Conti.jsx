@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSocieta } from '../data/SocietaContext';
 import { Plus, Edit2, Trash2, Banknote, CreditCard, Landmark, DollarSign, Star } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
+import { usePianoLicenza } from '../data/pianoLicenza';
+import ContatorePiano from '../components/ContatorePiano';
 import ContoBonificoModal from './ContoBonificoModal';
 import ContoModal from './ContoModal';
 import NuovoContoModal from './NuovoContoModal';
@@ -12,7 +15,11 @@ const API_GATEWAY = '/payments/api';
 const Conti = () => {
     const { selectedSocietaId } = useSocieta();
     const confirm = useConfirm();
+    const showAlert = useAlert();
     const [conti, setConti] = useState([]);
+    // Limite conti del piano (per società)
+    const piano = usePianoLicenza(selectedSocietaId);
+    const maxConti = piano.massimo('max_conti');
     const [loading, setLoading] = useState(false);
 
     // Filtri di ricerca (in tempo reale, come nelle altre schermate di elenco)
@@ -87,7 +94,10 @@ const Conti = () => {
             },
             body: JSON.stringify({ societa_id: selectedSocietaId, ...data })
         });
-        if (!res.ok) throw new Error('Errore nel salvataggio del conto');
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Errore nel salvataggio del conto');
+        }
         setNuovoContoModalOpen(false);
         fetchConti();
     };
@@ -215,11 +225,18 @@ const Conti = () => {
                         </select>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', alignItems: 'center' }}>
+                        <ContatorePiano usati={conti.length} massimo={maxConti} etichetta="Conti" pianoNome={piano.info?.piano_nome} />
                         <button
                             className="btn-contained"
                             style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                            onClick={() => setNuovoContoModalOpen(true)}
+                            onClick={() => {
+                                if (maxConti != null && conti.length >= maxConti) {
+                                    showAlert(`Il piano ${piano.info?.piano_nome} consente al massimo ${maxConti} conti (di solito CASSA e una BANCA). Per aggiungerne altri passa a un piano superiore.`, 'Limite del piano', 'warning');
+                                    return;
+                                }
+                                setNuovoContoModalOpen(true);
+                            }}
                         >
                             <Plus size={16} />
                             Crea
