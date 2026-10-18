@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, Users, ClipboardList, KeyRound } from 'lucide-react';
 import ResetLinkBox from '../components/ResetLinkBox';
+import LicenzaForm from './LicenzaForm';
 import { useAlert } from '../components/AlertModal';
 import SocietaAnagrafica from './SocietaAnagrafica';
 import Utenti from './Utenti';
 import { formatDateTimeIT } from '../utils/dateUtils';
 import './SocioModal.css';
 
-// Tipo abbonamento mostrato finché non esiste l'entità abbonamenti.
-export const ABBONAMENTO_DEFAULT = 'Gratuito';
 
 const TABS = [
     { id: 'anagrafica',    label: 'Anagrafica',    Icon: Building2 },
@@ -85,7 +84,8 @@ const AmministratoriLinks = ({ societaId, initialLink }) => {
 
 // Modal Backoffice di una società registrata: anagrafica, utenti, dati di registrazione.
 // Il parent lo monta con key={societa.id}: lo stato riparte da zero a ogni apertura.
-const BackofficeSocietaModal = ({ societa, onClose, onSaved, initialTab = 'anagrafica', initialLink = null }) => {
+// onLicenzaSaved(licenza): aggiorna la colonna Piano dell'elenco Iscrizioni.
+const BackofficeSocietaModal = ({ societa, onClose, onSaved, onLicenzaSaved, initialTab = 'anagrafica', initialLink = null }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
 
     if (!societa) return null;
@@ -144,13 +144,13 @@ const BackofficeSocietaModal = ({ societa, onClose, onSaved, initialTab = 'anagr
                     )}
 
                     {activeTab === 'registrazione' && (
-                        <div style={{ maxWidth: '720px' }}>
+                        <div style={{ maxWidth: '900px' }}>
                             <InfoRow label="ID società">{societa.id}</InfoRow>
                             <InfoRow label="Data registrazione">{societa.createdAt ? formatDateTimeIT(societa.createdAt) : '–'}</InfoRow>
                             <InfoRow label="Ultimo aggiornamento">{societa.updatedAt ? formatDateTimeIT(societa.updatedAt) : '–'}</InfoRow>
-                            <InfoRow label="Tipo abbonamento">
-                                <span className="badge badge-info">{ABBONAMENTO_DEFAULT}</span>
-                            </InfoRow>
+                            <div style={{ marginTop: '16px' }}>
+                                <LicenzaForm societaId={societa.id} onSaved={onLicenzaSaved} />
+                            </div>
                             <div style={{ marginTop: '24px' }}>
                                 <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Accesso amministratori</div>
                                 <AmministratoriLinks societaId={societa.id} initialLink={initialLink} />

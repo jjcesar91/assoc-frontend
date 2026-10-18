@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Edit2, Building2, Plus } from 'lucide-react';
-import BackofficeSocietaModal, { ABBONAMENTO_DEFAULT } from './BackofficeSocietaModal';
+import BackofficeSocietaModal from './BackofficeSocietaModal';
+import { pianoInfo, statoInfo } from '../data/licenze';
 import NuovaSocietaModal from './NuovaSocietaModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAlert } from '../components/AlertModal';
@@ -19,6 +20,7 @@ const BackofficeIscrizioni = () => {
     // Apertura del modal dopo la creazione: tab iniziale + link appena generato
     const [selectedOpts, setSelectedOpts] = useState({});
     const [isNewOpen, setIsNewOpen] = useState(false);
+    const [licenze, setLicenze] = useState({}); // societa_id → { piano, stato, ... }
     const [filters, setFilters] = useState({ denominazione: '', tipo_associazione: '' });
 
     const fetchAll = useCallback(async () => {
@@ -34,6 +36,13 @@ const BackofficeIscrizioni = () => {
     }, []);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
+
+    const fetchLicenze = useCallback(() => fetch('/users/api/licenze')
+        .then(r => (r.ok ? r.json() : []))
+        .then(list => setLicenze(Object.fromEntries(list.map(l => [l.societa_id, l]))))
+        .catch(() => {}), []);
+
+    useEffect(() => { fetchLicenze(); }, [fetchLicenze]);
 
     const openSocieta = (s, opts = {}) => { setSelectedOpts(opts); setSelected(s); };
 
@@ -72,6 +81,7 @@ const BackofficeIscrizioni = () => {
 
         setIsNewOpen(false);
         fetchAll();
+        fetchLicenze(); // la nuova società nasce con licenza Free
         fetchSocieta(); // aggiorna il selettore società nel layout
 
         try {
@@ -164,7 +174,7 @@ const BackofficeIscrizioni = () => {
                                     <th>Codice fiscale</th>
                                     <th>Email</th>
                                     <th>Data registrazione</th>
-                                    <th>Abbonamento</th>
+                                    <th>Piano</th>
                                     <th style={{ textAlign: 'right' }}>Azioni</th>
                                 </tr>
                             </thead>
@@ -207,7 +217,20 @@ const BackofficeIscrizioni = () => {
                                         <td style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{s.codice_fiscale || '–'}</td>
                                         <td style={{ fontSize: '0.875rem' }}>{s.email || '–'}</td>
                                         <td style={{ fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{s.createdAt ? formatDateIT(s.createdAt) : '–'}</td>
-                                        <td><span className="badge badge-info">{ABBONAMENTO_DEFAULT}</span></td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>
+                                            {(() => {
+                                                const l = licenze[s.id];
+                                                if (!l) return '–';
+                                                const piano = pianoInfo(l.piano);
+                                                const stato = statoInfo(l.stato);
+                                                return (
+                                                    <>
+                                                        <span className={`badge ${piano.badge}`}>{piano.label}</span>
+                                                        {l.stato !== 'attiva' && <span className={`badge ${stato.badge}`} style={{ marginLeft: '4px' }}>{stato.label}</span>}
+                                                    </>
+                                                );
+                                            })()}
+                                        </td>
                                         <td style={{ textAlign: 'right' }}>
                                             <button
                                                 className="btn-icon-small"
@@ -240,6 +263,7 @@ const BackofficeIscrizioni = () => {
                     initialLink={selectedOpts.initialLink}
                     onClose={() => setSelected(null)}
                     onSaved={handleSaved}
+                    onLicenzaSaved={l => setLicenze(prev => ({ ...prev, [l.societa_id]: l }))}
                 />
             )}
 
