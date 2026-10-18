@@ -16,7 +16,7 @@ const EMPTY = {
     data_inizio_anno_associativo: '01-01',
     // Impostazioni
     quota_tesseramento_unico: false,
-    // Amministratore (solo con withAdmin, Backoffice → Nuova iscrizione)
+    // Amministratore (solo con withAdmin, Backoffice → Nuova licenza)
     admin_nome: '',
     admin_cognome: '',
     admin_email: '',
@@ -496,7 +496,7 @@ const NuovaSocietaModal = ({ isOpen, onClose, onSave, withAdmin = false, title =
                             disabled={saving}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                            {saving ? 'Salvataggio...' : <><Check size={18} /> {withAdmin ? 'Crea iscrizione' : 'Crea società'}</>}
+                            {saving ? 'Salvataggio...' : <><Check size={18} /> {withAdmin ? 'Crea licenza' : 'Crea società'}</>}
                         </button>
                     ) : (
                         <button

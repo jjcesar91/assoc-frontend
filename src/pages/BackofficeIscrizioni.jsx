@@ -46,7 +46,7 @@ const BackofficeIscrizioni = () => {
 
     const openSocieta = (s, opts = {}) => { setSelectedOpts(opts); setSelected(s); };
 
-    // Nuova iscrizione: crea la società (con i default di sempre: moduli, conto
+    // Nuova licenza: crea la società (con i default di sempre: moduli, conto
     // CASSA, gruppi) e poi l'utente amministratore senza password + link.
     const handleCreate = async (form, logoFile) => {
         const { admin_nome, admin_cognome, admin_email, admin_telefono, ...societaData } = form;
@@ -158,7 +158,7 @@ const BackofficeIscrizioni = () => {
                                 style={{ backgroundColor: 'var(--success-color)' }}
                                 onClick={() => setIsNewOpen(true)}
                             >
-                                <Plus size={18} /> Nuova iscrizione
+                                <Plus size={18} /> Nuova licenza
                             </button>
                         </div>
                     </div>
@@ -272,7 +272,7 @@ const BackofficeIscrizioni = () => {
                 onClose={() => setIsNewOpen(false)}
                 onSave={handleCreate}
                 withAdmin
-                title="Nuova iscrizione"
+                title="Nuova licenza"
             />
         </div>
     );
