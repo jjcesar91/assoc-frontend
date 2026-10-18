@@ -326,7 +326,7 @@ function App() {
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/iscrizioni" element={isAuthenticated && userRole === 'superuser' ? (
-            <Layout onLogout={handleLogout} title="Backoffice - Iscrizioni">
+            <Layout onLogout={handleLogout} title="Backoffice - Licenze">
               <BackofficeIscrizioni />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
