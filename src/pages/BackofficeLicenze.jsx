@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, ScrollText, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ScrollText, ExternalLink, AlertTriangle } from 'lucide-react';
+import NuovaLicenzaMenu from '../components/NuovaLicenzaMenu';
 import LicenzaModal from './LicenzaModal';
 import NuovaSocietaModal from './NuovaSocietaModal';
 import { useAlert } from '../components/AlertModal';
@@ -140,9 +141,7 @@ const BackofficeLicenze = () => {
                             {PIANI.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                         </select>
                     </div>
-                    <button className="btn-contained" style={{ backgroundColor: 'var(--success-color)', marginLeft: 'auto' }} onClick={() => setIsNewOpen(true)}>
-                        <Plus size={18} /> Nuova licenza
-                    </button>
+                    <NuovaLicenzaMenu onCrea={() => setIsNewOpen(true)} style={{ marginLeft: 'auto' }} />
                 </div>
 
                 <div className="table-card">
