@@ -86,6 +86,7 @@ const Registrazione = () => {
             if (cancelled || !turnstileRef.current || widgetId.current !== null) return;
             widgetId.current = ts.render(turnstileRef.current, {
                 sitekey: siteKey,
+                action: 'registrazione', // verificata dal server insieme all'hostname
                 language: 'it',
                 callback: (t) => { setTurnstileToken(t); setErrors(er => ({ ...er, turnstile: undefined })); },
                 'expired-callback': () => setTurnstileToken(''),
