@@ -28,6 +28,18 @@
 .reg-field .input-wrapper .reg-input { padding-right: 40px !important; }
 
 .reg-error { color: var(--danger); font-size: 0.78rem; margin-top: 4px; }
+
+/* Campo con errore: bordo rosso, i dati inseriti restano */
+.reg-input--error,
+.reg-input--error:focus {
+  border-color: var(--danger) !important;
+  background-color: var(--danger-container) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent) !important;
+}
+.reg-field--error .form-label { color: var(--danger); }
+.reg-privacy.reg-field--error span { color: var(--danger); }
+
+.reg-turnstile { margin-top: 18px; min-height: 65px; }
 .reg-hint { font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 0; }
 
 .reg-privacy {

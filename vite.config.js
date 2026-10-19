@@ -12,31 +12,37 @@ export default defineConfig({
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
       '/users': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
       '/documents': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
       '/products': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
       '/payments': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
       '/activities': {
         target: process.env.VITE_API_TARGET || 'http://localhost:8081',
         changeOrigin: true,
         secure: false,
+        xfwd: true, // inoltra l'IP del visitatore (X-Forwarded-For) ai servizi
       },
     },
   },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, EyeOff, Check, LogIn, ClipboardList } from 'lucide-react';
 import LoginBrandPanel from '../components/LoginBrandPanel';
 import { useBranding } from '../data/branding';
@@ -27,8 +27,27 @@ const REQUIRED = {
     provincia: 'Provincia', presidente_nome: 'Nome del presidente', presidente_cognome: 'Cognome del presidente',
 };
 
-const Field = ({ label, required, error, span = 1, children }) => (
-    <div className="reg-field" style={{ gridColumn: `span ${span}` }}>
+const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+
+// Carica una sola volta lo script di Cloudflare Turnstile
+let turnstileScript = null;
+const loadTurnstile = () => {
+    if (window.turnstile) return Promise.resolve(window.turnstile);
+    if (!turnstileScript) {
+        turnstileScript = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = TURNSTILE_SRC;
+            s.async = true;
+            s.onload = () => resolve(window.turnstile);
+            s.onerror = () => { turnstileScript = null; reject(new Error('Turnstile non caricato')); };
+            document.head.appendChild(s);
+        });
+    }
+    return turnstileScript;
+};
+
+const Field = ({ name, label, required, error, span = 1, children }) => (
+    <div className={`reg-field${error ? ' reg-field--error' : ''}`} data-field={name} style={{ gridColumn: `span ${span}` }}>
         <label className="form-label">{label}{required && ' *'}</label>
         {children}
         {error && <div className="reg-error">{error}</div>}
@@ -46,14 +65,60 @@ const Registrazione = () => {
     const [serverError, setServerError] = useState('');
     const [done, setDone] = useState(false);
 
+    // Sessione anti-CSRF e Turnstile (chiave pubblica per ambiente, null = disattivato)
+    const [csrfToken, setCsrfToken] = useState('');
+    const [siteKey, setSiteKey] = useState(null);
+    const [turnstileToken, setTurnstileToken] = useState('');
+    const turnstileRef = useRef(null);
+    const widgetId = useRef(null);
+
+    const loadSessione = useCallback(() => fetch('/users/api/public/registrazione/sessione', { credentials: 'same-origin' })
+        .then(r => (r.ok ? r.json() : Promise.reject(new Error('sessione'))))
+        .then(d => { setCsrfToken(d.csrfToken); setSiteKey(d.turnstileSiteKey || null); })
+        .catch(() => setServerError('Impossibile preparare il modulo: ricarica la pagina.')), []);
+
+    useEffect(() => { loadSessione(); }, [loadSessione]);
+
+    useEffect(() => {
+        if (!siteKey || done || !turnstileRef.current) return undefined;
+        let cancelled = false;
+        loadTurnstile().then(ts => {
+            if (cancelled || !turnstileRef.current || widgetId.current !== null) return;
+            widgetId.current = ts.render(turnstileRef.current, {
+                sitekey: siteKey,
+                language: 'it',
+                callback: (t) => { setTurnstileToken(t); setErrors(er => ({ ...er, turnstile: undefined })); },
+                'expired-callback': () => setTurnstileToken(''),
+                'error-callback': () => setTurnstileToken(''),
+            });
+        }).catch(() => setServerError('Verifica anti-bot non disponibile: controlla la connessione e ricarica la pagina.'));
+        return () => {
+            cancelled = true;
+            if (widgetId.current !== null && window.turnstile) {
+                window.turnstile.remove(widgetId.current);
+                widgetId.current = null;
+            }
+        };
+    }, [siteKey, done]);
+
+    const resetTurnstile = () => {
+        setTurnstileToken('');
+        if (widgetId.current !== null && window.turnstile) window.turnstile.reset(widgetId.current);
+    };
+
+    const scrollToError = () => setTimeout(() => {
+        document.querySelector('.reg-field--error, .reg-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
     const set = (name) => (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setForm(f => ({ ...f, [name]: value }));
         setErrors(er => ({ ...er, [name]: undefined }));
         setServerError('');
     };
+    const cls = (name) => `form-input reg-input${errors[name] ? ' reg-input--error' : ''}`;
     const input = (name, props = {}) => (
-        <input className="form-input reg-input" value={form[name]} onChange={set(name)} {...props} />
+        <input className={cls(name)} value={form[name]} onChange={set(name)} aria-invalid={!!errors[name]} {...props} />
     );
 
     const validate = () => {
@@ -64,6 +129,7 @@ const Registrazione = () => {
         if (pwdErrors.length) e.password = pwdErrors.join('. ');
         if (form.password !== form.password_conferma) e.password_conferma = 'Le password non coincidono';
         if (!form.privacy) e.privacy = 'È necessario accettare l\'informativa privacy';
+        if (siteKey && !turnstileToken) e.turnstile = 'Completa la verifica anti-bot';
         return e;
     };
 
@@ -71,26 +137,37 @@ const Registrazione = () => {
         ev.preventDefault();
         const e = validate();
         setErrors(e);
-        if (Object.keys(e).length) {
-            document.querySelector('.reg-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-        }
+        if (Object.keys(e).length) { scrollToError(); return; }
         setSaving(true);
         setServerError('');
         try {
             const res = await fetch('/users/api/public/registrazione', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify({
                     ...form,
                     email: form.email.trim().toLowerCase(),
                     anno_associativo_inizio: form.anno_associativo_tipo === 'personalizzato' ? form.anno_associativo_inizio : null,
+                    turnstileToken,
                 }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setDone(true);
                 window.scrollTo({ top: 0 });
+                return;
+            }
+            // I dati inseriti restano nel form: si evidenzia il campo e si rigenera
+            // quanto serve per un nuovo invio (token monouso / sessione scaduta).
+            resetTurnstile();
+            if (data.code === 'CSRF') loadSessione();
+            if (data.field) {
+                setErrors(er => ({ ...er, [data.field]: data.error }));
+                scrollToError();
+            } else if (data.code === 'TURNSTILE') {
+                setErrors(er => ({ ...er, turnstile: data.error }));
+                scrollToError();
             } else {
                 setServerError(data.error || 'Registrazione non riuscita, riprova più tardi.');
             }
@@ -135,35 +212,35 @@ const Registrazione = () => {
 
                             <div className="reg-section">Associazione</div>
                             <div className="reg-grid">
-                                <Field label="Associazione" required error={errors.associazione} span={2}>{input('associazione')}</Field>
-                                <Field label="Tipologia" required>
-                                    <select className="form-input reg-input" value={form.tipologia} onChange={set('tipologia')}>
+                                <Field name="associazione" label="Associazione" required error={errors.associazione} span={2}>{input('associazione')}</Field>
+                                <Field name="tipologia" label="Tipologia" required error={errors.tipologia}>
+                                    <select className={cls('tipologia')} value={form.tipologia} onChange={set('tipologia')}>
                                         <option value="ASD">ASD</option>
                                         <option value="APS">APS</option>
                                     </select>
                                 </Field>
-                                <Field label="Codice fiscale" required error={errors.codice_fiscale}>{input('codice_fiscale', { style: { textTransform: 'uppercase' } })}</Field>
-                                <Field label="Email" required error={errors.email}>{input('email', { type: 'email', autoComplete: 'email' })}</Field>
-                                <Field label="Telefono associazione" required error={errors.telefono}>{input('telefono', { type: 'tel' })}</Field>
+                                <Field name="codice_fiscale" label="Codice fiscale" required error={errors.codice_fiscale}>{input('codice_fiscale', { style: { textTransform: 'uppercase' } })}</Field>
+                                <Field name="email" label="Email" required error={errors.email}>{input('email', { type: 'email', autoComplete: 'email' })}</Field>
+                                <Field name="telefono" label="Telefono associazione" required error={errors.telefono}>{input('telefono', { type: 'tel' })}</Field>
                             </div>
 
                             <div className="reg-section">Indirizzo</div>
                             <div className="reg-grid">
-                                <Field label="Via e numero civico" required error={errors.indirizzo} span={3}>{input('indirizzo')}</Field>
-                                <Field label="CAP" required error={errors.cap}>{input('cap', { maxLength: 10, inputMode: 'numeric' })}</Field>
-                                <Field label="Comune" required error={errors.comune}>{input('comune')}</Field>
-                                <Field label="Provincia" required error={errors.provincia}>{input('provincia', { maxLength: 30, placeholder: 'es. TV' })}</Field>
+                                <Field name="indirizzo" label="Via e numero civico" required error={errors.indirizzo} span={3}>{input('indirizzo')}</Field>
+                                <Field name="cap" label="CAP" required error={errors.cap}>{input('cap', { maxLength: 10, inputMode: 'numeric' })}</Field>
+                                <Field name="comune" label="Comune" required error={errors.comune}>{input('comune')}</Field>
+                                <Field name="provincia" label="Provincia" required error={errors.provincia}>{input('provincia', { maxLength: 30, placeholder: 'es. TV' })}</Field>
                             </div>
 
                             <div className="reg-section">Attività</div>
                             <div className="reg-grid">
-                                <Field label="Anno associativo" required span={form.anno_associativo_tipo === 'personalizzato' ? 2 : 3}>
-                                    <select className="form-input reg-input" value={form.anno_associativo_tipo} onChange={set('anno_associativo_tipo')}>
+                                <Field name="anno_associativo_tipo" label="Anno associativo" required error={errors.anno_associativo_tipo} span={form.anno_associativo_tipo === 'personalizzato' ? 2 : 3}>
+                                    <select className={cls('anno_associativo_tipo')} value={form.anno_associativo_tipo} onChange={set('anno_associativo_tipo')}>
                                         {ANNI_ASSOCIATIVI.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
                                     </select>
                                 </Field>
                                 {form.anno_associativo_tipo === 'personalizzato' && (
-                                    <Field label="Dal (giorno / mese)">
+                                    <Field name="anno_associativo_inizio" label="Dal (giorno / mese)" error={errors.anno_associativo_inizio}>
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             <select className="form-input reg-input" value={gg} onChange={e => setForm(f => ({ ...f, anno_associativo_inizio: `${e.target.value}-${mm}` }))}>
                                                 {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -174,16 +251,16 @@ const Registrazione = () => {
                                         </div>
                                     </Field>
                                 )}
-                                <Field label="Affiliazioni" span={3}>{input('affiliazioni', { placeholder: 'es. EPS: UISP, Federazioni: FIGC' })}</Field>
+                                <Field name="affiliazioni" label="Affiliazioni" error={errors.affiliazioni} span={3}>{input('affiliazioni', { placeholder: 'es. EPS: UISP, Federazioni: FIGC' })}</Field>
                             </div>
 
                             <div className="reg-section">Persone di riferimento</div>
                             <div className="reg-grid">
-                                <Field label="Nome del presidente" required error={errors.presidente_nome}>{input('presidente_nome')}</Field>
-                                <Field label="Cognome del presidente" required error={errors.presidente_cognome}>{input('presidente_cognome')}</Field>
+                                <Field name="presidente_nome" label="Nome del presidente" required error={errors.presidente_nome}>{input('presidente_nome')}</Field>
+                                <Field name="presidente_cognome" label="Cognome del presidente" required error={errors.presidente_cognome}>{input('presidente_cognome')}</Field>
                                 <div />
-                                <Field label="Referente (nome e cognome)">{input('referente_nome')}</Field>
-                                <Field label="Telefono referente">{input('referente_telefono', { type: 'tel' })}</Field>
+                                <Field name="referente_nome" label="Referente (nome e cognome)" error={errors.referente_nome}>{input('referente_nome')}</Field>
+                                <Field name="referente_telefono" label="Telefono referente" error={errors.referente_telefono}>{input('referente_telefono', { type: 'tel' })}</Field>
                             </div>
 
                             <div className="reg-section">Accesso al gestionale</div>
@@ -193,10 +270,11 @@ const Registrazione = () => {
                                     ['password', 'Password'],
                                     ['password_conferma', 'Conferma password'],
                                 ].map(([name, label]) => (
-                                    <Field key={name} label={label} required error={errors[name]} span={name === 'password' ? 2 : 1}>
+                                    <Field key={name} name={name} label={label} required error={errors[name]} span={name === 'password' ? 2 : 1}>
                                         <div className="input-wrapper">
                                             <input
-                                                className="form-input form-input--password reg-input"
+                                                className={`form-input form-input--password reg-input${errors[name] ? ' reg-input--error' : ''}`}
+                                                aria-invalid={!!errors[name]}
                                                 type={showPassword ? 'text' : 'password'}
                                                 value={form[name]}
                                                 onChange={set(name)}
@@ -211,7 +289,14 @@ const Registrazione = () => {
                             </div>
                             <p className="reg-hint">Almeno 14 caratteri, con una maiuscola, una minuscola, un numero e un carattere speciale.</p>
 
-                            <label className="reg-privacy">
+                            {siteKey && (
+                                <div className={`reg-turnstile${errors.turnstile ? ' reg-field--error' : ''}`}>
+                                    <div ref={turnstileRef} />
+                                    {errors.turnstile && <div className="reg-error">{errors.turnstile}</div>}
+                                </div>
+                            )}
+
+                            <label className={`reg-privacy${errors.privacy ? ' reg-field--error' : ''}`}>
                                 <input type="checkbox" checked={form.privacy} onChange={set('privacy')} />
                                 <span>Ho letto e accetto l'informativa sul trattamento dei dati personali *</span>
                             </label>
@@ -219,7 +304,7 @@ const Registrazione = () => {
 
                             {serverError && <div className="login-message login-message--error" style={{ marginTop: '12px' }}>{serverError}</div>}
 
-                            <button className="login-button" type="submit" disabled={saving} style={{ marginTop: '16px' }}>
+                            <button className="login-button" type="submit" disabled={saving || !csrfToken} style={{ marginTop: '16px' }}>
                                 {saving ? <span className="login-spinner" /> : <Check size={18} />}
                                 {saving ? 'Invio in corso…' : 'Registrati'}
                             </button>
