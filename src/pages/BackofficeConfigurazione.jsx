@@ -5,6 +5,7 @@ import LoginBrandPanel from '../components/LoginBrandPanel';
 import { useAlert } from '../components/AlertModal';
 import { useConfirm } from '../components/ConfirmModal';
 import { useBranding, assetUrl, writeCachedBranding, EMPTY_BRANDING, DEFAULT_TITLE, DEFAULT_SUBTITLE } from '../data/branding';
+import NotificheRegistrazioneSection from './NotificheRegistrazioneSection';
 import './Prodotti.css';
 
 const DEFAULT_PRIMARY = '#0d9488'; // teal del design system
@@ -109,7 +110,10 @@ const BackofficeConfigurazione = () => {
     const set = (key) => (value) => setDraft(d => ({ ...d, [key]: value }));
 
     const saved = (data) => {
+        // Solo i campi pubblici della skin: i dati privati (es. destinatari CCN)
+        // non finiscono nella cache del browser
         const next = { ...EMPTY_BRANDING, ...data };
+        delete next.registrazione_ccn;
         writeCachedBranding(next);
         setBranding(next);
         return next;
@@ -244,6 +248,8 @@ const BackofficeConfigurazione = () => {
                             <Save size={16} /> {saving ? 'Salvataggio…' : 'Salva'}
                         </button>
                     </div>
+
+                    <NotificheRegistrazioneSection wrapper={Section} />
                 </div>
 
                 <div style={{ position: 'sticky', top: '16px' }}>
