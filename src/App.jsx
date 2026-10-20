@@ -31,6 +31,7 @@ import SuperuserSocieta from './pages/SuperuserSocieta';
 import BackofficeLicenze from './pages/BackofficeLicenze';
 import Registrazione from './pages/Registrazione';
 import BackofficeConfigurazione from './pages/BackofficeConfigurazione';
+import BackofficeEmail from './pages/BackofficeEmail';
 import ResetPassword from './pages/ResetPassword';
 import SocioDashboard from './pages/SocioDashboard';
 import CaricaQuietanza from './pages/CaricaQuietanza'
@@ -332,6 +333,11 @@ function App() {
           <Route path="/backoffice/iscrizioni" element={isAuthenticated && userRole === 'superuser' ? (
             <Layout onLogout={handleLogout} title="Backoffice - Licenze">
               <BackofficeLicenze />
+            </Layout>
+          ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
+          <Route path="/backoffice/email" element={isAuthenticated && userRole === 'superuser' ? (
+            <Layout onLogout={handleLogout} title="Backoffice - Email">
+              <BackofficeEmail />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/configurazione" element={isAuthenticated && userRole === 'superuser' ? (

@@ -143,6 +143,7 @@ export const MENU_STRUCTURE = [
         children: [
             { id: 'backoffice-iscrizioni', label: 'Licenze', path: '/backoffice/iscrizioni' },
             { id: 'backoffice-configurazione', label: 'Configurazione', path: '/backoffice/configurazione' },
+            { id: 'backoffice-email', label: 'Email', path: '/backoffice/email' },
         ],
     },
 ];

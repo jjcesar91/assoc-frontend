@@ -5,7 +5,6 @@ import LoginBrandPanel from '../components/LoginBrandPanel';
 import { useAlert } from '../components/AlertModal';
 import { useConfirm } from '../components/ConfirmModal';
 import { useBranding, assetUrl, writeCachedBranding, EMPTY_BRANDING, DEFAULT_TITLE, DEFAULT_SUBTITLE } from '../data/branding';
-import NotificheRegistrazioneSection from './NotificheRegistrazioneSection';
 import './Prodotti.css';
 
 const DEFAULT_PRIMARY = '#0d9488'; // teal del design system
@@ -249,7 +248,6 @@ const BackofficeConfigurazione = () => {
                         </button>
                     </div>
 
-                    <NotificheRegistrazioneSection wrapper={Section} />
                 </div>
 
                 <div style={{ position: 'sticky', top: '16px' }}>
