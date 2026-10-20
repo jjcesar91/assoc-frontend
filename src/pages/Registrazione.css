@@ -39,6 +39,13 @@
 .reg-field--error .form-label { color: var(--danger); }
 .reg-privacy.reg-field--error span { color: var(--danger); }
 
+/* CAP e provincia: in sola lettura, compilati dal comune scelto */
+.reg-input--readonly {
+  background-color: var(--surface-2) !important;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
 .reg-turnstile { margin-top: 18px; min-height: 65px; }
 .reg-hint { font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 0; }
 

@@ -57,6 +57,19 @@ const LicenzaForm = ({ licenza, onSaved }) => {
             if (!res.ok) { showAlert(data.error || 'Errore nel salvataggio', 'Errore'); return; }
             setForm(pick(data));
             onSaved?.(data);
+            // Prima attivazione: esito dell'email con il link per impostare la password
+            const esito = data.email_attivazione;
+            if (esito) {
+                const ok = esito.inviate.length ? `Email di attivazione inviata a: ${esito.inviate.join(', ')}.` : '';
+                const ko = esito.errori.length
+                    ? ` Invio non riuscito${esito.errori.some(e => e.email) ? ` a: ${esito.errori.map(e => e.email).filter(Boolean).join(', ')}` : ''}: usa "Link imposta password" nel tab Amministratori.`
+                    : '';
+                if (!esito.inviate.length && !esito.errori.length) {
+                    showAlert('Licenza attivata, ma non ha amministratori a cui inviare il link: aggiungine uno nel tab Amministratori.', 'Attenzione', 'warning');
+                } else {
+                    showAlert(`Licenza attivata. ${ok}${ko}`.trim(), esito.errori.length ? 'Attenzione' : 'Licenza attivata', esito.errori.length ? 'warning' : 'success');
+                }
+            }
         } catch {
             showAlert('Errore di rete', 'Errore');
         } finally {

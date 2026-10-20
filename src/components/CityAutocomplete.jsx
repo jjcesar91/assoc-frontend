@@ -14,10 +14,15 @@ const fetchAllComuni = async () => {
             return res.json();
         })
         .then(data => {
-            cachedComuni = data.map(c => ({
-                nome: c.nome,
-                cap: Array.isArray(c.cap) ? (c.cap[0] || '') : (c.cap || '')
-            }));
+            cachedComuni = data.map(c => {
+                const caps = (Array.isArray(c.cap) ? c.cap : [c.cap]).filter(Boolean);
+                return {
+                    nome: c.nome,
+                    cap: caps[0] || '',
+                    caps,                 // tutti i CAP del comune (le grandi città ne hanno molti)
+                    sigla: c.sigla || ''  // sigla della provincia (es. TV)
+                };
+            });
             fetchPromise = null;
             return cachedComuni;
         })
@@ -30,7 +35,8 @@ const fetchAllComuni = async () => {
     return fetchPromise;
 };
 
-const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = false, disabled = false, style }) => {
+// inputClassName: classe del campo (default md-input), per adattarlo ad altri form
+const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = false, disabled = false, style, inputClassName = 'md-input' }) => {
     const [query, setQuery] = useState(value || '');
     const [suggestions, setSuggestions] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -142,7 +148,7 @@ const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = f
             {label && <label className="field-label" style={{marginBottom:'6px', display:'block'}}>{label} {required && '*'}</label>}
             <div style={{position:'relative', display: 'flex'}}>
                 <input 
-                    className="md-input"
+                    className={inputClassName}
                     ref={inputRef}
                     name={name}
                     value={query}
@@ -191,7 +197,7 @@ const CityAutocomplete = ({ label, value, onChange, onSelect, name, required = f
                             onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-color, var(--surface-1))'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         >
-                            {comune.nome}
+                            {comune.nome}{comune.sigla ? ` (${comune.sigla})` : ''}
                         </li>
                     ))}
                 </ul>

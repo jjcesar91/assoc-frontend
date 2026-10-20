@@ -75,6 +75,8 @@ const ResetPassword = () => {
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setStatus('done');
+                // Primo accesso: dopo un attimo si passa al login con l'email già nota
+                setTimeout(() => window.location.replace('/login'), 3000);
             } else {
                 setError(data.error || 'Impossibile impostare la password');
             }
@@ -99,7 +101,7 @@ const ResetPassword = () => {
                             {status === 'checking' && 'Verifica del link in corso…'}
                             {status === 'ready' && <>Account: <strong>{email}</strong></>}
                             {status === 'invalid' && 'Questo link non è valido, è già stato usato oppure è scaduto. Chiedi un nuovo link a chi te l\'ha inviato.'}
-                            {status === 'done' && 'Ora puoi accedere al portale con la tua email e la nuova password.'}
+                            {status === 'done' && 'Password impostata correttamente: tra pochi secondi verrai portato alla pagina di accesso, dove potrai entrare con la tua email e la nuova password.'}
                         </p>
                     </div>
 

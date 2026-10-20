@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, EyeOff, Check, LogIn, ClipboardList } from 'lucide-react';
+import { Check, LogIn, ClipboardList } from 'lucide-react';
 import LoginBrandPanel from '../components/LoginBrandPanel';
+import CityAutocomplete from '../components/CityAutocomplete';
 import { useBranding } from '../data/branding';
-import { getPasswordValidationErrors } from '../utils/passwordValidation';
 import { ANNI_ASSOCIATIVI } from '../data/licenze';
 import '../Login.css';
 import './Registrazione.css';
@@ -17,7 +17,7 @@ const EMPTY = {
     anno_associativo_tipo: 'solare', anno_associativo_inizio: '01-01',
     affiliazioni: '', presidente_nome: '', presidente_cognome: '',
     referente_nome: '', referente_telefono: '',
-    password: '', password_conferma: '', privacy: false,
+    privacy: false,
     website: '', // campo trappola anti-bot (nascosto)
 };
 
@@ -26,6 +26,10 @@ const REQUIRED = {
     telefono: 'Telefono associazione', indirizzo: 'Indirizzo', cap: 'CAP', comune: 'Comune',
     provincia: 'Provincia', presidente_nome: 'Nome del presidente', presidente_cognome: 'Cognome del presidente',
 };
+
+// Campi di testo salvati in maiuscolo (tutti tranne l'email)
+const MAIUSCOLO = new Set(['associazione', 'codice_fiscale', 'telefono', 'indirizzo', 'affiliazioni',
+    'presidente_nome', 'presidente_cognome', 'referente_nome', 'referente_telefono']);
 
 const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
@@ -60,7 +64,8 @@ const Registrazione = () => {
     const { branding } = useBranding();
     const [form, setForm] = useState(EMPTY);
     const [errors, setErrors] = useState({});
-    const [showPassword, setShowPassword] = useState(false);
+    // CAP del comune scelto dall'elenco (le grandi città ne hanno più di uno)
+    const [capComune, setCapComune] = useState([]);
     const [saving, setSaving] = useState(false);
     const [serverError, setServerError] = useState('');
     const [done, setDone] = useState(false);
@@ -112,7 +117,8 @@ const Registrazione = () => {
     }, 0);
 
     const set = (name) => (e) => {
-        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        const raw = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        const value = MAIUSCOLO.has(name) ? raw.toUpperCase() : raw;
         setForm(f => ({ ...f, [name]: value }));
         setErrors(er => ({ ...er, [name]: undefined }));
         setServerError('');
@@ -122,13 +128,25 @@ const Registrazione = () => {
         <input className={cls(name)} value={form[name]} onChange={set(name)} aria-invalid={!!errors[name]} {...props} />
     );
 
+    // Comune: si digita liberamente ma CAP e provincia arrivano solo dalla scelta
+    // nell'elenco; modificando il testo il collegamento si annulla.
+    const handleComuneChange = (e) => {
+        setForm(f => ({ ...f, comune: e.target.value.toUpperCase(), cap: '', provincia: '' }));
+        setCapComune([]);
+        setErrors(er => ({ ...er, comune: undefined, cap: undefined, provincia: undefined }));
+    };
+    const handleComuneSelect = (c) => {
+        setForm(f => ({ ...f, comune: c.nome.toUpperCase(), cap: c.caps?.[0] || c.cap || '', provincia: (c.sigla || '').toUpperCase() }));
+        setCapComune(c.caps?.length ? c.caps : (c.cap ? [c.cap] : []));
+        setErrors(er => ({ ...er, comune: undefined, cap: undefined, provincia: undefined }));
+    };
+
     const validate = () => {
         const e = {};
         Object.entries(REQUIRED).forEach(([k, label]) => { if (!String(form[k]).trim()) e[k] = `${label}: campo obbligatorio`; });
         if (form.email && !EMAIL.test(form.email.trim())) e.email = 'Email non valida';
-        const pwdErrors = getPasswordValidationErrors(form.password);
-        if (pwdErrors.length) e.password = pwdErrors.join('. ');
-        if (form.password !== form.password_conferma) e.password_conferma = 'Le password non coincidono';
+        if (form.comune && (!form.cap || !form.provincia)) e.comune = 'Seleziona il comune dall\'elenco';
+        delete e.cap; delete e.provincia; // arrivano dal comune: l'errore si mostra sul comune
         if (!form.privacy) e.privacy = 'È necessario accettare l\'informativa privacy';
         if (siteKey && !turnstileToken) e.turnstile = 'Completa la verifica anti-bot';
         return e;
@@ -192,9 +210,10 @@ const Registrazione = () => {
                             <div className="login-card-header">
                                 <h2 className="login-card-title">Registrazione inviata</h2>
                                 <p className="login-card-subtitle">
-                                    Grazie! La tua richiesta è stata registrata con il piano <strong>Free</strong>.
-                                    Potrai accedere con l'email <strong>{form.email.trim().toLowerCase()}</strong> e la password
-                                    scelta non appena la licenza sarà attivata.
+                                    Grazie! La tua richiesta è stata registrata con il piano <strong>Free</strong> e
+                                    ti abbiamo inviato un'email di conferma a <strong>{form.email.trim().toLowerCase()}</strong>.
+                                    Quando la licenza sarà attivata riceverai un'altra email con il link per impostare
+                                    la password e accedere.
                                 </p>
                             </div>
                             <button className="login-button" type="button" onClick={() => window.location.assign('/login')}>
@@ -228,9 +247,28 @@ const Registrazione = () => {
                             <div className="reg-section">Indirizzo</div>
                             <div className="reg-grid">
                                 <Field name="indirizzo" label="Via e numero civico" required error={errors.indirizzo} span={3}>{input('indirizzo')}</Field>
-                                <Field name="cap" label="CAP" required error={errors.cap}>{input('cap', { maxLength: 10, inputMode: 'numeric' })}</Field>
-                                <Field name="comune" label="Comune" required error={errors.comune}>{input('comune')}</Field>
-                                <Field name="provincia" label="Provincia" required error={errors.provincia}>{input('provincia', { maxLength: 30, placeholder: 'es. TV' })}</Field>
+                                <Field name="comune" label="Comune" required error={errors.comune}>
+                                    <CityAutocomplete
+                                        name="comune"
+                                        value={form.comune}
+                                        onChange={handleComuneChange}
+                                        onSelect={handleComuneSelect}
+                                        inputClassName={cls('comune')}
+                                        style={{ width: '100%' }}
+                                    />
+                                </Field>
+                                <Field name="cap" label="CAP" required error={errors.cap}>
+                                    {capComune.length > 1 ? (
+                                        <select className={cls('cap')} value={form.cap} onChange={set('cap')} title="CAP del comune scelto">
+                                            {capComune.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    ) : (
+                                        input('cap', { readOnly: true, tabIndex: -1, placeholder: 'dal comune', className: `${cls('cap')} reg-input--readonly` })
+                                    )}
+                                </Field>
+                                <Field name="provincia" label="Provincia" required error={errors.provincia}>
+                                    {input('provincia', { readOnly: true, tabIndex: -1, placeholder: 'dal comune', className: `${cls('provincia')} reg-input--readonly` })}
+                                </Field>
                             </div>
 
                             <div className="reg-section">Attività</div>
@@ -265,30 +303,10 @@ const Registrazione = () => {
                             </div>
 
                             <div className="reg-section">Accesso al gestionale</div>
-                            <p className="reg-hint">Email e password saranno le credenziali dell'amministratore della licenza.</p>
-                            <div className="reg-grid">
-                                {[
-                                    ['password', 'Password'],
-                                    ['password_conferma', 'Conferma password'],
-                                ].map(([name, label]) => (
-                                    <Field key={name} name={name} label={label} required error={errors[name]} span={name === 'password' ? 2 : 1}>
-                                        <div className="input-wrapper">
-                                            <input
-                                                className={`form-input form-input--password reg-input${errors[name] ? ' reg-input--error' : ''}`}
-                                                aria-invalid={!!errors[name]}
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={form[name]}
-                                                onChange={set(name)}
-                                                autoComplete="new-password"
-                                            />
-                                            <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)} tabIndex={-1} aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}>
-                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                            </button>
-                                        </div>
-                                    </Field>
-                                ))}
-                            </div>
-                            <p className="reg-hint">Almeno 14 caratteri, con una maiuscola, una minuscola, un numero e un carattere speciale.</p>
+                            <p className="reg-hint">
+                                L'email indicata sarà il nome utente dell'amministratore della licenza. La password la imposterai
+                                dal link che riceverai via email quando la licenza sarà attivata.
+                            </p>
 
                             {siteKey && (
                                 <div className={`reg-turnstile${errors.turnstile ? ' reg-field--error' : ''}`}>
