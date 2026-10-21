@@ -5,6 +5,7 @@ import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { formatOrari } from '../utils/corsoUtils';
 import { formatDateIT } from '../utils/dateUtils';
+import { ultimoAbbonamento, abbonamentiDelCorso, giorniAvvisoCorso } from '../utils/listino';
 
 const today = () => {
     const d = new Date();
@@ -45,7 +46,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
     const [iscrizioni, setIscrizioni] = useState([]);
     const [sociMap, setSociMap] = useState({});
     const [paymentsMap, setPaymentsMap] = useState({});
-    const [abbonamento, setAbbonamento] = useState(null);
+    const [abbonamenti, setAbbonamenti] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showRicerca, setShowRicerca] = useState(false);
     const confirm = useConfirm();
@@ -85,14 +86,15 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
         }
     }, [corso?.id, societaId]);
 
-    // Fetch abbonamento product for giorniAvvisoScadenza
+    // Abbonamenti che includono il corso (nome e giorniAvvisoScadenza)
     useEffect(() => {
-        if (!corso?.abbonamentoId) return;
-        fetch(`/products/api/${corso.abbonamentoId}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(p => setAbbonamento(p))
+        if (!corso?.id || !societaId) return;
+        const ids = abbonamentiDelCorso(corso);
+        fetch(`/products/api?societaId=${societaId}&type=subscription`)
+            .then(r => r.ok ? r.json() : [])
+            .then(list => setAbbonamenti((Array.isArray(list) ? list : []).filter(p => ids.includes(p.id))))
             .catch(() => {});
-    }, [corso?.abbonamentoId]);
+    }, [corso, societaId]);
 
     useEffect(() => {
         if (isOpen) fetchIscritti();
@@ -121,7 +123,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
 
     if (!isOpen) return null;
 
-    const giorniAvviso = abbonamento?.giorniAvvisoScadenza ?? 30;
+    const giorniAvviso = giorniAvvisoCorso(corso, abbonamenti);
 
     return (
         <>
@@ -137,9 +139,9 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                     {/* Sottotitolo corso */}
                     <div style={{ padding: '8px 20px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: '#555' }}>
                         {corso?.attivita?.descrizione || '—'} — {corso?.struttura?.descrizione || ''} — {formatOrari(corso)}
-                        {abbonamento && (
+                        {abbonamenti.length > 0 && (
                             <span style={{ marginLeft: 12, color: 'var(--primary)', fontWeight: 500 }}>
-                                Abbonamento: {abbonamento.description}
+                                {abbonamenti.length === 1 ? 'Abbonamento' : 'Abbonamenti'}: {abbonamenti.map(a => a.description).join(', ')}
                             </span>
                         )}
                     </div>
@@ -181,9 +183,7 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                             const socio = sociMap[i.socioId];
                                             const payments = paymentsMap[i.socioId] || [];
                                             const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                                            const abbPay = payments
-                                                .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                                .sort((x, y) => new Date(y.data_scadenza_abbonamento) - new Date(x.data_scadenza_abbonamento))[0];
+                                            const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                             const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                             if (certStatus === 'expired' || abbStatus === 'expired') return 0;
                                             if (certStatus === 'warning' || abbStatus === 'warning') return 1;
@@ -201,10 +201,8 @@ const IscrittilCorsoModal = ({ isOpen, onClose, corso, societaId }) => {
                                         // Cert medico
                                         const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
 
-                                        // Abbonamento: cerca il pagamento più recente con product_id = corso.abbonamentoId
-                                        const abbPay = payments
-                                            .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                            .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
+                                        // Abbonamento: la scadenza più recente tra gli abbonamenti che includono il corso
+                                        const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
 
                                         const rowBg = (certStatus === 'expired' || abbStatus === 'expired')

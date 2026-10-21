@@ -7,6 +7,7 @@ import RicercaSocioModal from './RicercaSocioModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari, computeOraFine } from '../utils/corsoUtils';
 import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
+import { ultimoAbbonamento, abbonamentiDelCorso, giorniAvvisoCorso } from '../utils/listino';
 import './CorsoModal.css';
 
 const GIORNI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
@@ -60,7 +61,7 @@ const defaultForm = {
     strutturaId: '',
     areaId: '',
     staffId: '',
-    abbonamentoId: '',
+    abbonamentoIds: [],
     orari: [{ giorno: '0', oraInizio: '08:00', durataMinuti: 50 }],
     maxSoci: 10,
     note: '',
@@ -125,7 +126,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                 strutturaId: corso?.strutturaId || '',
                 areaId: corso?.areaId || '',
                 staffId: corso?.staffId || '',
-                abbonamentoId: corso?.abbonamentoId || '',
+                abbonamentoIds: abbonamentiDelCorso(corso),
                 orari: toFormOrari(corso),
                 maxSoci: corso?.maxSoci ?? 10,
                 note: corso?.note || '',
@@ -167,10 +168,6 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
             setFormError('Indicare l\'ora di inizio per ogni giorno.');
             return;
         }
-        if (!form.abbonamentoId) {
-            setFormError('Selezionare un abbonamento obbligatorio.');
-            return;
-        }
         const chiavi = form.orari.map(o => `${o.giorno}-${o.oraInizio}`);
         if (new Set(chiavi).size !== chiavi.length) {
             setFormError('Sono presenti due righe con lo stesso giorno e la stessa ora di inizio.');
@@ -190,7 +187,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
             strutturaId: form.strutturaId || null,
             areaId: form.areaId || null,
             staffId: form.staffId || null,
-            abbonamentoId: parseInt(form.abbonamentoId, 10),
+            abbonamentoIds: form.abbonamentoIds,
         };
         if (corso?.id) payload.id = corso.id;
         onSave(payload);
@@ -200,7 +197,6 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
     const [iscrizioni, setIscrizioni] = useState([]);
     const [sociMap, setSociMap] = useState({});
     const [paymentsMap, setPaymentsMap] = useState({});
-    const [abbonamentoProd, setAbbonamentoProd] = useState(null);
     const [loadingIscritti, setLoadingIscritti] = useState(false);
     const [showRicerca, setShowRicerca] = useState(false);
 
@@ -243,14 +239,6 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
             setLoadingIscritti(false);
         }
     }, [corso?.id, societaId]);
-
-    useEffect(() => {
-        if (!corso?.abbonamentoId) return;
-        fetch(`/products/api/${corso.abbonamentoId}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(p => setAbbonamentoProd(p))
-            .catch(() => {});
-    }, [corso?.abbonamentoId]);
 
     useEffect(() => {
         if (isOpen && (activeTab === 'iscritti' || activeTab === 'presenze')) fetchIscritti();
@@ -384,9 +372,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                 const socio = sociMap[i.socioId];
                 const payments = paymentsMap[i.socioId] || [];
                 const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                const abbPay = payments
-                    .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                    .sort((x, y) => new Date(y.data_scadenza_abbonamento) - new Date(x.data_scadenza_abbonamento))[0];
+                const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                 const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                 if (certStatus === 'expired' || abbStatus === 'expired') return 0;
                 if (certStatus === 'warning' || abbStatus === 'warning') return 1;
@@ -422,9 +408,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                 const payments = paymentsMap[i.socioId] || [];
                 const certScad = computeScadenzaCertificatoStr(socio?.scadenza_certificato);
                 const certStr = certScad ? formatDateIT(certScad) : '—';
-                const abbPay = payments
-                    .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                    .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
+                const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                 const abbStr = abbPay?.data_scadenza_abbonamento
                     ? formatDateIT(abbPay.data_scadenza_abbonamento) : '—';
                 const birthYear = socio?.data_nascita ? new Date(socio.data_nascita).getFullYear() : '';
@@ -509,7 +493,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
     // ─────────────────────────────────────────────────────────────
     if (!isOpen) return null;
 
-    const giorniAvviso = abbonamentoProd?.giorniAvvisoScadenza ?? 30;
+    const giorniAvviso = giorniAvvisoCorso(corso, abbonamenti);
     const isExisting = !!corso?.id;
 
     return (
@@ -666,7 +650,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                             <button type="button" className="cm-orario-add-btn" onClick={addOrario}>
                                 <Plus size={14} /> Aggiungi giorno
                             </button>
-                            {formError && form.abbonamentoId && (
+                            {formError && (
                                 <span className="cm-error-text">{formError}</span>
                             )}
                         </div>
@@ -686,20 +670,26 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
 
                         <div className="cm-form-row">
                             <div className="cm-form-field cm-col-2">
-                                <label>Abbonamento <span className="required">*</span></label>
-                                <select
-                                    className={`md-select${formError && !form.abbonamentoId ? ' cm-select-error' : ''}`}
-                                    value={form.abbonamentoId}
-                                    onChange={e => { setFormError(''); set('abbonamentoId', e.target.value); }}
-                                >
-                                    <option value="">Seleziona abbonamento...</option>
-                                    {abbonamenti.map(a => (
-                                        <option key={a.id} value={a.id}>{a.description}</option>
-                                    ))}
-                                </select>
-                                {formError && !form.abbonamentoId && (
-                                    <span className="cm-error-text">{formError}</span>
+                                <label>Abbonamenti che includono il corso</label>
+                                {abbonamenti.filter(a => !a.passepartout).length === 0 ? (
+                                    <span className="cm-hint">Nessun abbonamento definito: crealo in Prodotti.</span>
+                                ) : (
+                                    <div className="cm-abbonamenti" data-testid="abbonamenti-corso">
+                                        {abbonamenti.filter(a => !a.passepartout).map(a => (
+                                            <label key={a.id} className="cm-abbonamento">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.abbonamentoIds.includes(a.id)}
+                                                    onChange={() => set('abbonamentoIds', form.abbonamentoIds.includes(a.id)
+                                                        ? form.abbonamentoIds.filter(id => id !== a.id)
+                                                        : [...form.abbonamentoIds, a.id])}
+                                                />
+                                                <span>{a.description}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 )}
+                                <span className="cm-hint">Gli abbonamenti passepartout danno sempre accesso a tutti i corsi.</span>
                             </div>
                         </div>
 
@@ -757,9 +747,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                             const socio = sociMap[i.socioId];
                                             const payments = paymentsMap[i.socioId] || [];
                                             const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                                            const abbPay = payments
-                                                .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                                .sort((x, y) => new Date(y.data_scadenza_abbonamento) - new Date(x.data_scadenza_abbonamento))[0];
+                                            const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                             const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                             if (certStatus === 'expired' || abbStatus === 'expired') return 0;
                                             if (certStatus === 'warning' || abbStatus === 'warning') return 1;
@@ -774,9 +762,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                         const socio = sociMap[i.socioId];
                                         const payments = paymentsMap[i.socioId] || [];
                                         const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                                        const abbPay = payments
-                                            .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                            .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
+                                        const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                         const rowClass = (certStatus === 'expired' || abbStatus === 'expired')
                                             ? 'row-expired'
@@ -915,9 +901,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                             const socio = sociMap[i.socioId];
                                                             const payments = paymentsMap[i.socioId] || [];
                                                             const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                                                            const abbPay = payments
-                                                                .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                                                .sort((x, y) => new Date(y.data_scadenza_abbonamento) - new Date(x.data_scadenza_abbonamento))[0];
+                                                            const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                                             const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                                             if (certStatus === 'expired' || abbStatus === 'expired') return 0;
                                                             if (certStatus === 'warning' || abbStatus === 'warning') return 1;
@@ -932,9 +916,7 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
                                                         const socio = sociMap[i.socioId];
                                                         const payments = paymentsMap[i.socioId] || [];
                                                         const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                                                        const abbPay = payments
-                                                            .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                                                            .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
+                                                        const abbPay = ultimoAbbonamento(payments, abbonamentiDelCorso(corso));
                                                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                                                         const isExpired = certStatus === 'expired' || abbStatus === 'expired';
                                                         const isWarning = !isExpired && (certStatus === 'warning' || abbStatus === 'warning');
@@ -1044,8 +1026,8 @@ const CorsoModal = ({ isOpen, onClose, onSave, corso, attivita, strutture, staff
             onClose={() => setShowRicerca(false)}
             onSelect={handleAddSocio}
             societaId={societaId}
-            abbonamentoId={corso?.abbonamentoId}
-            abbonamentoNome={abbonamenti.find(a => a.id === corso?.abbonamentoId)?.description || ''}
+            abbonamentoIds={abbonamentiDelCorso(corso)}
+            abbonamentoNome={abbonamenti.filter(a => abbonamentiDelCorso(corso).includes(a.id)).map(a => a.description).join(', ')}
             enrolledIds={iscrizioni.map(i => i.socioId)}
         />
         </>

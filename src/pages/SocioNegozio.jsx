@@ -9,6 +9,7 @@ import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     formatImporto, sendComunicazioneEmail,
 } from '../utils/comunicazioniRicevute';
+import { listinoDi, trovaFormula, etichettaFormula } from '../utils/listino';
 
 // Negozio dell'area soci: catalogo dei prodotti vendibili online della società,
 // carrello e checkout con pagamento tramite bonifico.
@@ -42,6 +43,8 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
     const [loading, setLoading] = useState(true);
 
     const [carrello, setCarrello] = useState({});  // { [productId]: qty }
+    // Abbonamenti: formula del listino scelta per prodotto { [productId]: listinoId }
+    const [formule, setFormule] = useState({});
     // Piano della licenza senza ordini online dei prodotti generici
     const genericiBloccati = usePianoLicenza().bloccata('ordini_prodotti_generici');
     const [contoId, setContoId] = useState('');
@@ -72,16 +75,19 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
         return () => { annullato = true; };
     }, []);
 
+    const formulaDi = (prodotto) => trovaFormula(prodotto, formule[prodotto.id]) || listinoDi(prodotto)[0] || null;
+
     const righeCarrello = useMemo(
         () => Object.entries(carrello)
             .map(([id, qty]) => {
                 const prodotto = catalogo.find(p => String(p.id) === String(id));
                 if (!prodotto) return null;
-                const prezzo = parseFloat(prodotto.basePrice || 0);
-                return { prodotto, qty, totale: Math.round(prezzo * qty * 100) / 100 };
+                const formula = prodotto.type === 'subscription' ? formulaDi(prodotto) : null;
+                const prezzo = parseFloat(formula ? formula.prezzo : (prodotto.basePrice || 0));
+                return { prodotto, formula, qty, prezzo, totale: Math.round(prezzo * qty * 100) / 100 };
             })
             .filter(Boolean),
-        [carrello, catalogo]
+        [carrello, catalogo, formule] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     const totale = useMemo(
@@ -113,7 +119,11 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    items: righeCarrello.map(r => ({ product_id: r.prodotto.id, qty: r.qty })),
+                    items: righeCarrello.map(r => ({
+                        product_id: r.prodotto.id,
+                        qty: r.qty,
+                        ...(r.formula?.id ? { listino_id: r.formula.id } : {}),
+                    })),
                     conto_id: parseInt(contoId, 10),
                     note: note.trim() || undefined,
                 }),
@@ -254,7 +264,22 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
                                     <div key={p.id} className="sd-prodotto-card">
                                         <div className="sd-prodotto-tipo">{TIPO_LABELS[p.type] || 'Prodotto'}</div>
                                         <div className="sd-prodotto-nome">{p.description}</div>
-                                        <div className="sd-prodotto-prezzo">{euro(p.basePrice)}</div>
+                                        {p.type === 'subscription' && listinoDi(p).length > 1 && (
+                                            <select
+                                                className="sd-select"
+                                                aria-label={`Formula ${p.description}`}
+                                                value={formulaDi(p)?.id || ''}
+                                                onChange={(e) => setFormule(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                            >
+                                                {listinoDi(p).map(f => (
+                                                    <option key={f.id} value={f.id}>{etichettaFormula(f)} — {euro(f.prezzo)}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                        {p.type === 'subscription' && listinoDi(p).length === 1 && (
+                                            <div className="sd-list-item-meta">{etichettaFormula(listinoDi(p)[0])}</div>
+                                        )}
+                                        <div className="sd-prodotto-prezzo">{euro(p.type === 'subscription' ? formulaDi(p)?.prezzo : p.basePrice)}</div>
                                         {genericiBloccati && p.type === 'generic' ? (
                                             <button className="sd-btn sd-btn-primary sd-btn-block" disabled title="Questo prodotto non è ordinabile online: contatta l'associazione">
                                                 Non ordinabile online
@@ -308,7 +333,7 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
                                         <div className="sd-list-item-main">
                                             <div className="sd-list-item-title">{r.prodotto.description}</div>
                                             <div className="sd-list-item-meta">
-                                                {euro(r.prodotto.basePrice)} × {r.qty}
+                                                {r.formula && <>{etichettaFormula(r.formula)} · </>}{euro(r.prezzo)} × {r.qty}
                                             </div>
                                         </div>
                                         <div className="sd-list-item-right">

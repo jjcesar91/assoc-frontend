@@ -10,6 +10,8 @@ import AbbonamentoDateModal from './AbbonamentoDateModal';
 import DettaglioRicevutaModal from './DettaglioRicevutaModal';
 import IscrizioneCorsoDopoModal from './IscrizioneCorsoDopoModal';
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
+import SceltaFormulaModal from '../components/SceltaFormulaModal';
+import { listinoDi, etichettaFormula, abbonamentiDelCorso } from '../utils/listino';
 import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     sendComunicazioneEmail, formatImporto,
@@ -288,6 +290,8 @@ const NuovaRicevuta = () => {
 
     // Cart
     const [cart, setCart] = useState([]);
+    // Abbonamento con più formule in attesa della scelta della formula
+    const [prodottoFormula, setProdottoFormula] = useState(null);
 
     useEffect(() => {
         const prev = prevSocietaId.current;
@@ -398,8 +402,8 @@ const NuovaRicevuta = () => {
                         ? data.find(p => p.id === prefilledProductId) ?? data.find(p => p.type === prefilledQuoteType)
                         : data.find(p => p.type === prefilledQuoteType);
                     if (match) {
-                        const initPrice = parseFloat(match.basePrice || 0).toFixed(2).replace('.', ',');
-                        setCart([{ ...match, qty: 1, qtyStr: '1', unitPriceStr: initPrice }]);
+                        const formula = match.type === 'subscription' ? listinoDi(match)[0] : null;
+                        setCart([voceCarrello(match, formula)]);
                     }
                 }
             }
@@ -470,7 +474,19 @@ const NuovaRicevuta = () => {
     const cartHasIscrizione = () =>
         cart.some(item => item.type === 'quota_associativa' || item.type === 'tesseramento');
 
-    const addToCart = (product) => {
+    // Voce del carrello; per gli abbonamenti prezzo e durata arrivano dalla formula scelta
+    const voceCarrello = (product, formula) => {
+        const prezzo = formula ? formula.prezzo : product.basePrice;
+        return {
+            ...product,
+            ...(formula ? { listino_id: formula.id, formula, duration: formula.durata } : {}),
+            qty: 1,
+            qtyStr: '1',
+            unitPriceStr: parseFloat(prezzo || 0).toFixed(2).replace('.', ','),
+        };
+    };
+
+    const addToCart = (product, formula = null) => {
         if (product.type === 'quota_associativa' && quotaGiaPagata) {
             showSnackbar(`Quota associativa già pagata per l'anno ${selectedAnno}`, 'error');
             return;
@@ -490,10 +506,14 @@ const NuovaRicevuta = () => {
         }
         if (existing) {
             setCart(cart.map(item => item.id === product.id ? {...item, qty: item.qty + 1} : item));
-        } else {
-            const initPrice = parseFloat(product.basePrice || 0).toFixed(2).replace('.', ',');
-            setCart([...cart, { ...product, qty: 1, qtyStr: '1', unitPriceStr: initPrice }]);
+            return;
         }
+        if (product.type === 'subscription' && !formula) {
+            const listino = listinoDi(product);
+            if (listino.length > 1) { setProdottoFormula(product); return; }
+            formula = listino[0] || null;
+        }
+        setCart([...cart, voceCarrello(product, formula)]);
     };
 
     const updateCartQty = (productId, val) => {
@@ -592,7 +612,7 @@ const NuovaRicevuta = () => {
                         if (corsiRes.ok) {
                             const allCorsi = await corsiRes.json();
                             const abbonamentoIds = new Set(subscriptionItems.map(i => i.id));
-                            const matching = allCorsi.filter(c => abbonamentoIds.has(c.abbonamentoId));
+                            const matching = allCorsi.filter(c => abbonamentiDelCorso(c).some(id => abbonamentoIds.has(id)));
                             if (matching.length > 0) {
                                 setCorsiPerAbbonamento(matching);
                                 setIsCorsoIscrizioneModalOpen(true);
@@ -659,6 +679,12 @@ const NuovaRicevuta = () => {
             />
 
             {/* MODAL AVVISO ABBONAMENTO NON ISCRITTO */}
+            <SceltaFormulaModal
+                product={prodottoFormula}
+                onClose={() => setProdottoFormula(null)}
+                onSelect={(formula) => { const p = prodottoFormula; setProdottoFormula(null); addToCart(p, formula); }}
+            />
+
             {showAbbWarningModal && (
                 <div style={{
                     position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
@@ -835,7 +861,7 @@ const NuovaRicevuta = () => {
                                             <td style={{ fontSize: '15px' }}>{p.description || p.name}</td>
                                             <td style={{ textAlign: 'right' }}>
                                                 <span className="np-badge-price">
-                                                    {parseFloat(p.basePrice || 0).toFixed(2).replace('.', ',')}
+                                                    {p.type === 'subscription' && listinoDi(p).length > 1 ? 'da ' : ''}{parseFloat(p.basePrice || 0).toFixed(2).replace('.', ',')}
                                                 </span>
                                             </td>
                                         </tr>
@@ -929,6 +955,9 @@ const NuovaRicevuta = () => {
                                                 <tr key={i}>
                                                     <td style={{ fontWeight: 500, fontSize: '14px', color: '#333', borderRight: '1px solid var(--surface-1)' }}>
                                                         {item.description || item.name}
+                                                        {item.formula && (
+                                                            <div style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-secondary)' }}>{etichettaFormula(item.formula)}</div>
+                                                        )}
                                                         <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', float: 'right' }}>
                                                             <X size={16}/>
                                                         </button>

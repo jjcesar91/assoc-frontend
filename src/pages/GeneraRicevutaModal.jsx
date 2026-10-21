@@ -5,6 +5,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 import { formatDateIT } from '../utils/dateUtils';
+import { etichettaFormula } from '../utils/listino';
 
 // Elenco storico, usato come ripiego quando il conto selezionato non ha
 // modalità configurate in anagrafica (Configurazione → Conti).
@@ -271,14 +272,19 @@ const GeneraRicevutaModal = ({
                 if (scad) suffix = ` (Scadenza ${scad})`;
             }
             const effectivePrice = parseFloat((i.unitPriceStr || '0').replace(',', '.')) || parseFloat(i.basePrice || 0);
+            const nome = i.formula ? `${i.description || i.name} (${etichettaFormula(i.formula)})` : (i.description || i.name);
             return {
                 product_id: i.id,
                 importo: effectivePrice * i.qty,
-                quote: `${i.description || i.name} (x${i.qty}) €${(effectivePrice * i.qty).toFixed(2).replace('.', ',')}${suffix}`,
+                quote: `${nome} (x${i.qty}) €${(effectivePrice * i.qty).toFixed(2).replace('.', ',')}${suffix}`,
                 quote_types: i.type || '',
                 periodicity_tesseramento: i.type === 'tesseramento' ? (i.periodicity || null) : null,
                 data_inizio_abbonamento: i.type === 'subscription' ? (subscriptionDates?.dataInizio || null) : null,
                 data_scadenza_abbonamento: i.type === 'subscription' ? (subscriptionDates?.dataFine || null) : null,
+                ...(i.type === 'subscription' && i.formula ? {
+                    listino_id: i.listino_id || null,
+                    formula: { durata: i.formula.durata, illimitato: i.formula.illimitato, ingressi: i.formula.ingressi, descrizione: etichettaFormula(i.formula) },
+                } : {}),
             };
         });
 

@@ -17,6 +17,7 @@ import { getOrari, formatOrari } from '../utils/corsoUtils';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { formatDateIT as formatDateITShared } from '../utils/dateUtils';
 import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
+import { ultimoAbbonamento, abbonamentiDelCorso } from '../utils/listino';
 import './SocioModal.css';
 import './NuovoPagamento.css';
 
@@ -1885,17 +1886,8 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     };
 
     // ── Attività helpers ──────────────────────────────────────────────────────
-    const getScadenzaAbbonamentoPerCorso = (abbonamentoId) => {
-        if (!abbonamentoId) return null;
-        const payments = socioPagamenti.filter(p => {
-            const hasProduct = p.product_id === abbonamentoId ||
-                (Array.isArray(p.payment_items) && p.payment_items.some(i => i.product_id === abbonamentoId));
-            return hasProduct && p.data_scadenza_abbonamento;
-        });
-        if (payments.length === 0) return null;
-        payments.sort((a, b) => new Date(b.data_pagamento) - new Date(a.data_pagamento));
-        return payments[0].data_scadenza_abbonamento;
-    };
+    // Scadenza più recente tra gli abbonamenti che includono il corso
+    const getScadenzaAbbonamentoPerCorso = (corso) => ultimoAbbonamento(socioPagamenti, abbonamentiDelCorso(corso))?.data_scadenza_abbonamento || null;
 
     const passepartoutScadenza = useMemo(() => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -2043,16 +2035,13 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         }
     };
 
-    const isCorsoAccessibile = (abbonamentoId) => {
+    // Accessibile con un passepartout valido o con uno degli abbonamenti del corso non scaduto
+    const isCorsoAccessibile = (corso) => {
         if (passepartoutScadenza) return true;
-        if (!abbonamentoId) return false;
+        const scadenza = getScadenzaAbbonamentoPerCorso(corso);
+        if (!scadenza) return false;
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        return socioPagamenti.some(p => {
-            const hasProduct = p.product_id === abbonamentoId ||
-                (Array.isArray(p.payment_items) && p.payment_items.some(i => i.product_id === abbonamentoId));
-            if (!hasProduct || !p.data_scadenza_abbonamento) return false;
-            return new Date(p.data_scadenza_abbonamento) >= today;
-        });
+        return new Date(scadenza) >= today;
     };
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -3334,7 +3323,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     {socioCorsi.map(iscrizione => {
                                         const corso = iscrizione.corso;
                                         if (!corso) return null;
-                                        const scadenzaStr = getScadenzaAbbonamentoPerCorso(corso.abbonamentoId);
+                                        const scadenzaStr = getScadenzaAbbonamentoPerCorso(corso);
                                         const scadDate = scadenzaStr ? new Date(scadenzaStr + 'T00:00:00') : null;
                                         const stato = computeStatoPagamentoScadenza(scadDate);
                                         const colore = corso.attivita?.colore;
@@ -4220,13 +4209,13 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                 <div style={{fontSize:'0.75rem', fontWeight:600, color:'var(--success)', textTransform:'uppercase', marginBottom:'4px'}}>Scadenza abbonamento (socio)</div>
                                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                     <span style={{color:'var(--text-secondary)'}}>
-                                        {getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId)
-                                            ? formatDateIT(getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId))
+                                        {getScadenzaAbbonamentoPerCorso(corsoDettaglio)
+                                            ? formatDateIT(getScadenzaAbbonamentoPerCorso(corsoDettaglio))
                                             : 'Nessun pagamento trovato'}
                                     </span>
                                     <ScadenzaBadge stato={computeStatoPagamentoScadenza(
-                                        getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId)
-                                            ? new Date(getScadenzaAbbonamentoPerCorso(corsoDettaglio.abbonamentoId) + 'T00:00:00')
+                                        getScadenzaAbbonamentoPerCorso(corsoDettaglio)
+                                            ? new Date(getScadenzaAbbonamentoPerCorso(corsoDettaglio) + 'T00:00:00')
                                             : null
                                     )}/>
                                 </div>
@@ -4283,7 +4272,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                                     );
                                 }
                                 return disponibili.map(corso => {
-                                    const accessibile = isCorsoAccessibile(corso.abbonamentoId);
+                                    const accessibile = isCorsoAccessibile(corso);
                                     const colore = corso.attivita?.colore;
                                     const coloriBg = {
                                         'ROSSO':'var(--danger)','VERDE':'var(--success)','BLU':'var(--primary)','VERDE CHIARO':'var(--success)',

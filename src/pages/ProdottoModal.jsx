@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2 } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import './ProdottoModal.css';
 import RateScadenzarioModal from './RateScadenzarioModal';
+import { DURATE, durataGiorni, listinoDi, abbonamentiDelCorso, corsoLabel } from '../utils/listino';
 
-const getDurationDays = (duration) => {
-    const map = {
-        '1_mese': 30,
-        '2_mesi': 60,
-        '3_mesi': 90,
-        '4_mesi': 120,
-        '6_mesi': 180,
-        '12_mesi': 365,
-    };
-    return map[duration] || 30;
-};
+// Riga del listino in modifica: prezzo come stringa con la virgola
+const rigaListino = (f) => ({
+    id: f?.id || null,
+    durata: f?.durata || '1_mese',
+    illimitato: !!f?.illimitato,
+    ingressi: f?.ingressi ? String(f.ingressi) : '',
+    prezzo: f?.prezzo !== undefined && f?.prezzo !== null ? String(f.prezzo).replace('.', ',') : '',
+});
+
+// Il preavviso di scadenza deve stare dentro la formula più breve
+const durataMinimaGiorni = (listino) => Math.min(...(listino.length ? listino : [{ durata: '1_mese' }]).map(f => durataGiorni(f.durata)));
 
 const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
     const { selectedSocietaId } = useSocieta();
     const [showRateModal, setShowRateModal] = useState(false);
     const [formErrors, setFormErrors] = useState({});
     const [sottogruppi, setSottogruppi] = useState([]);
+    // Abbonamenti: formule del listino e corsi inclusi
+    const [listino, setListino] = useState([rigaListino()]);
+    const [corsi, setCorsi] = useState([]);
+    const [corsoIds, setCorsoIds] = useState([]);
     // Initial state based on `product` if editing
     const [formData, setFormData] = useState({
         type: 'generic', // Default
@@ -44,6 +49,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
     });
 
     useEffect(() => {
+        setFormErrors({});
+        setListino(product?.type === 'subscription' ? listinoDi(product).map(rigaListino) : [rigaListino()]);
         if (product) {
             setFormData({
                 ...product
@@ -82,6 +89,30 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
             .catch(() => setSottogruppi([]));
     }, [isOpen, selectedSocietaId]);
 
+    // Corsi della società, per scegliere quelli inclusi nell'abbonamento
+    useEffect(() => {
+        if (!isOpen || !selectedSocietaId) { setCorsi([]); setCorsoIds([]); return; }
+        fetch(`/activities/api/corsi?societaId=${selectedSocietaId}`)
+            .then(r => (r.ok ? r.json() : []))
+            .then(data => {
+                const list = Array.isArray(data) ? data : [];
+                setCorsi(list);
+                setCorsoIds(product?.id ? list.filter(c => abbonamentiDelCorso(c).includes(product.id)).map(c => c.id) : []);
+            })
+            .catch(() => setCorsi([]));
+    }, [isOpen, selectedSocietaId, product]);
+
+    const aggiornaRiga = (idx, campo, valore) => {
+        setListino(prev => prev.map((r, i) => (i !== idx ? r : {
+            ...r,
+            [campo]: valore,
+            ...(campo === 'illimitato' && valore ? { ingressi: '' } : {}),
+        })));
+        setFormErrors(prev => ({ ...prev, listino: undefined, [`listino_${idx}`]: undefined }));
+    };
+
+    const toggleCorso = (id) => setCorsoIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         // Validate basePrice: only digits and comma
@@ -96,16 +127,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
             const updated = {
                 ...prev,
                 [name]: type === 'checkbox' ? checked : finalValue,
-                ...(name === 'unlimitedEntries' && finalValue === true ? { numEntries: '' } : {}),
                 ...(name === 'type' && finalValue !== 'generic' ? { gruppoId: '' } : {})
             };
-            if (name === 'duration') {
-                const maxDays = getDurationDays(finalValue);
-                const current = parseInt(updated.giorniAvvisoScadenza, 10);
-                if (!isNaN(current) && current >= maxDays) {
-                    updated.giorniAvvisoScadenza = Math.max(2, maxDays - 1);
-                }
-            }
             return updated;
         });
     };
@@ -119,29 +142,32 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         }
 
         const priceStr = String(formData.basePrice).replace(',', '.');
-        if (formData.basePrice === '' || formData.basePrice === null || isNaN(parseFloat(priceStr)) || parseFloat(priceStr) < 0) {
+        if (formData.type !== 'subscription' && (formData.basePrice === '' || formData.basePrice === null || isNaN(parseFloat(priceStr)) || parseFloat(priceStr) < 0)) {
             errors.basePrice = 'Inserire un prezzo valido (≥ 0).';
         }
 
         if (formData.type === 'subscription') {
-            if (!formData.duration) {
-                errors.duration = 'Selezionare la durata.';
-            }
-            if (formData.unlimitedEntries === '' || formData.unlimitedEntries === null || formData.unlimitedEntries === undefined) {
-                errors.unlimitedEntries = 'Specificare se l\'abbonamento è open.';
-            }
-            if (formData.unlimitedEntries === false || formData.unlimitedEntries === 'false') {
-                const n = parseInt(formData.numEntries, 10);
-                if (!formData.numEntries || isNaN(n) || n <= 0) {
-                    errors.numEntries = 'Inserire un numero di ingressi valido (> 0).';
+            if (listino.length === 0) errors.listino = 'Aggiungi almeno una formula al listino.';
+            const chiavi = new Set();
+            listino.forEach((r, idx) => {
+                const n = parseInt(r.ingressi, 10);
+                const prezzo = parseFloat(String(r.prezzo).replace(',', '.'));
+                const chiave = `${r.durata}|${r.illimitato ? 'open' : n}`;
+                if (!r.illimitato && (!r.ingressi || isNaN(n) || n <= 0)) {
+                    errors[`listino_${idx}`] = 'Indica il numero di ingressi o scegli "illimitati".';
+                } else if (r.prezzo === '' || isNaN(prezzo) || prezzo < 0) {
+                    errors[`listino_${idx}`] = 'Inserire un prezzo valido (≥ 0).';
+                } else if (chiavi.has(chiave)) {
+                    errors[`listino_${idx}`] = 'Formula già presente con la stessa durata e gli stessi ingressi.';
                 }
-            }
+                chiavi.add(chiave);
+            });
             const avviso = parseInt(formData.giorniAvvisoScadenza, 10);
-            const maxDays = getDurationDays(formData.duration);
+            const maxDays = durataMinimaGiorni(listino);
             if (isNaN(avviso) || avviso <= 1) {
                 errors.giorniAvvisoScadenza = 'Il valore deve essere un intero > 1.';
             } else if (avviso >= maxDays) {
-                errors.giorniAvvisoScadenza = `Il valore deve essere inferiore alla durata (${maxDays} giorni).`;
+                errors.giorniAvvisoScadenza = `Il valore deve essere inferiore alla durata più breve del listino (${maxDays} giorni).`;
             }
         }
 
@@ -163,6 +189,20 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         }
 
         setFormErrors({});
+        if (formData.type === 'subscription') {
+            onSave({
+                ...formData,
+                listino: listino.map(r => ({
+                    ...(r.id ? { id: r.id } : {}),
+                    durata: r.durata,
+                    illimitato: r.illimitato,
+                    ingressi: r.illimitato ? null : parseInt(r.ingressi, 10),
+                    prezzo: parseFloat(String(r.prezzo).replace(',', '.')),
+                })),
+                corsoIds: formData.passepartout ? [] : corsoIds,
+            });
+            return;
+        }
         onSave(formData);
     };
 
@@ -179,49 +219,78 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
             case 'subscription':
                 return (
                     <>
-                    <div className="prodotto-form-row">
-                        <div className="prodotto-form-col">
-                             <div className="prodotto-form-group">
-                                <label>Durata</label>
-                                <select name="duration" value={formData.duration} onChange={handleChange} className={`prodotto-form-control${formErrors.duration ? ' prodotto-form-control-error' : ''}`}>
-                                    <option value="">Seleziona...</option>
-                                    <option value="1_mese">1 mese</option>
-                                    <option value="2_mesi">2 mesi</option>
-                                    <option value="3_mesi">3 mesi</option>
-                                    <option value="4_mesi">4 mesi</option>
-                                    <option value="6_mesi">6 mesi</option>
-                                    <option value="12_mesi">12 mesi</option>
-                                </select>
-                                {formErrors.duration && <span className="prodotto-form-error">{formErrors.duration}</span>}
+                    <div className="prodotto-form-group">
+                        <label>Listino</label>
+                        <div className="prodotto-listino">
+                            <div className="prodotto-listino-head">
+                                <span>Durata</span><span>Ingressi</span><span>Prezzo</span><span />
                             </div>
+                            {listino.map((r, idx) => (
+                                <div key={idx} className="prodotto-listino-riga-wrap">
+                                    <div className="prodotto-listino-riga" data-testid="riga-listino">
+                                        <select aria-label="Durata" value={r.durata} onChange={e => aggiornaRiga(idx, 'durata', e.target.value)} className="prodotto-form-control">
+                                            {DURATE.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                                        </select>
+                                        <div className="prodotto-listino-ingressi">
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                aria-label="Numero ingressi"
+                                                value={r.ingressi}
+                                                onChange={e => { if (/^\d*$/.test(e.target.value)) aggiornaRiga(idx, 'ingressi', e.target.value); }}
+                                                disabled={r.illimitato}
+                                                placeholder={r.illimitato ? '∞' : 'es. 10'}
+                                                className={`prodotto-form-control${formErrors[`listino_${idx}`] && !r.illimitato ? ' prodotto-form-control-error' : ''}`}
+                                            />
+                                            <label className="prodotto-listino-open">
+                                                <input type="checkbox" checked={r.illimitato} onChange={e => aggiornaRiga(idx, 'illimitato', e.target.checked)} />
+                                                Illimitati
+                                            </label>
+                                        </div>
+                                        <div className="prodotto-input-euro-wrapper">
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                aria-label="Prezzo"
+                                                value={r.prezzo}
+                                                onChange={e => { if (/^\d*,?\d{0,2}$/.test(e.target.value)) aggiornaRiga(idx, 'prezzo', e.target.value); }}
+                                                className={`prodotto-form-control prodotto-input-euro${formErrors[`listino_${idx}`] ? ' prodotto-form-control-error' : ''}`}
+                                            />
+                                            <span className="prodotto-euro-symbol">€</span>
+                                        </div>
+                                        <button type="button" className="btn-icon-small" title="Rimuovi formula" disabled={listino.length === 1}
+                                            onClick={() => setListino(prev => prev.filter((_, i) => i !== idx))}
+                                            style={{ color: 'var(--danger-color)', opacity: listino.length === 1 ? 0.4 : 1 }}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                    {formErrors[`listino_${idx}`] && <span className="prodotto-form-error">{formErrors[`listino_${idx}`]}</span>}
+                                </div>
+                            ))}
+                            <button type="button" className="btn-outlined prodotto-listino-add"
+                                onClick={() => setListino(prev => [...prev, rigaListino({ durata: prev[prev.length - 1]?.durata })])}>
+                                <Plus size={16} /> Aggiungi formula
+                            </button>
                         </div>
-                        <div className="prodotto-form-col">
-                             <div className="prodotto-form-group">
-                                <label>Open (ingressi illimitati)</label>
-                                <select name="unlimitedEntries" value={formData.unlimitedEntries} onChange={handleChange} className={`prodotto-form-control${formErrors.unlimitedEntries ? ' prodotto-form-control-error' : ''}`}>
-                                    <option value="">Seleziona...</option>
-                                    <option value={true}>Si</option>
-                                    <option value={false}>No</option>
-                                </select>
-                                {formErrors.unlimitedEntries && <span className="prodotto-form-error">{formErrors.unlimitedEntries}</span>}
+                        {formErrors.listino && <span className="prodotto-form-error">{formErrors.listino}</span>}
+                        <span className="prodotto-form-hint">Al momento della vendita si sceglie la formula: prezzo, durata e ingressi arrivano dal listino.</span>
+                    </div>
+                    <div className="prodotto-form-group">
+                        <label>Corsi inclusi</label>
+                        {formData.passepartout ? (
+                            <span className="prodotto-form-hint">Passepartout: l'abbonamento dà accesso a tutti i corsi.</span>
+                        ) : corsi.length === 0 ? (
+                            <span className="prodotto-form-hint">Nessun corso definito per la società.</span>
+                        ) : (
+                            <div className="prodotto-corsi" data-testid="corsi-inclusi">
+                                {corsi.map(c => (
+                                    <label key={c.id} className="prodotto-corso">
+                                        <input type="checkbox" checked={corsoIds.includes(c.id)} onChange={() => toggleCorso(c.id)} />
+                                        <span>{corsoLabel(c)}</span>
+                                    </label>
+                                ))}
                             </div>
-                        </div>
-                         <div className="prodotto-form-col">
-                             <div className="prodotto-form-group">
-                                <label>Numero ingressi</label>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    name="numEntries"
-                                    value={formData.numEntries}
-                                    onChange={(e) => { if (/^\d*$/.test(e.target.value)) handleChange(e); }}
-                                    className={`prodotto-form-control${formErrors.numEntries ? ' prodotto-form-control-error' : ''}`}
-                                    disabled={formData.unlimitedEntries === true}
-                                    placeholder="es. 10"
-                                />
-                                {formErrors.numEntries && <span className="prodotto-form-error">{formErrors.numEntries}</span>}
-                            </div>
-                        </div>
+                        )}
                     </div>
                     <div className="prodotto-form-row">
                         <div className="prodotto-form-col">
@@ -253,7 +322,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     }}
                                     onBlur={(e) => {
                                         const val = parseInt(e.target.value, 10);
-                                        const maxDays = getDurationDays(formData.duration);
+                                        const maxDays = durataMinimaGiorni(listino);
                                         if (isNaN(val) || val <= 1) {
                                             setFormData(prev => ({ ...prev, giorniAvvisoScadenza: 2 }));
                                         } else if (val >= maxDays) {
@@ -369,6 +438,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                         </div>
 
                         <div className="prodotto-form-row">
+                            {formData.type !== 'subscription' && (
                              <div className="prodotto-form-col">
                                 <div className="prodotto-form-group">
                                     <label>Prezzo base</label>
@@ -379,6 +449,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                     {formErrors.basePrice && <span className="prodotto-form-error">{formErrors.basePrice}</span>}
                                 </div>
                             </div>
+                            )}
                             <div className="prodotto-form-col">
                                 <div className="prodotto-form-group">
                                     <label>Visibile</label>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, ShoppingCart } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
+import { useAlert } from '../components/AlertModal';
+import { listinoDi } from '../utils/listino';
 import ProdottoModal from './ProdottoModal';
 import RateScadenzarioModal from './RateScadenzarioModal';
 import './Prodotti.css';
@@ -9,6 +11,7 @@ import './Prodotti.css';
 const Prodotti = () => {
     const { selectedSocietaId } = useSocieta();
     const confirm = useConfirm();
+    const showAlert = useAlert();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,8 +60,10 @@ const Prodotti = () => {
             const url = productData.id ? `/products/api/${productData.id}` : '/products/api';
             const method = productData.id ? 'PUT' : 'POST';
             
+            // I corsi inclusi negli abbonamenti si salvano nel servizio activities
+            const { corsoIds, ...productFields } = productData;
             // Add societaId for new products
-            const dataToSave = productData.id ? productData : { ...productData, societaId: selectedSocietaId };
+            const dataToSave = productFields.id ? productFields : { ...productFields, societaId: selectedSocietaId };
 
             // Normalize basePrice: convert comma-decimal string to float (e.g. "10,50" -> 10.50)
             if (dataToSave.basePrice !== undefined && dataToSave.basePrice !== '') {
@@ -75,12 +80,28 @@ const Prodotti = () => {
                 body: JSON.stringify(dataToSave)
             });
 
-            if (response.ok) {
-                fetchProducts();
-                setIsModalOpen(false);
+            const saved = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                showAlert(saved.error || 'Errore nel salvataggio del prodotto', 'Errore');
+                return;
             }
+            const productId = productFields.id || saved.id;
+            if (Array.isArray(corsoIds) && productId) {
+                const res = await fetch(`/activities/api/corsi/abbonamenti/${productId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ societaId: selectedSocietaId, corsoIds }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showAlert(err.error || 'Prodotto salvato, ma non è stato possibile aggiornare i corsi inclusi', 'Attenzione');
+                }
+            }
+            fetchProducts();
+            setIsModalOpen(false);
         } catch (error) {
             console.error("Error saving product", error);
+            showAlert('Errore di rete nel salvataggio del prodotto', 'Errore');
         }
     };
 
@@ -202,7 +223,12 @@ const Prodotti = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={{fontWeight: 500}}>€ {parseFloat(product.basePrice).toFixed(2)}</td>
+                                        <td style={{fontWeight: 500}}>
+                                            {product.type === 'subscription' && listinoDi(product).length > 1 ? 'da ' : ''}€ {parseFloat(product.basePrice).toFixed(2)}
+                                            {product.type === 'subscription' && listinoDi(product).length > 1 && (
+                                                <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400}}>{listinoDi(product).length} formule</div>
+                                            )}
+                                        </td>
                                         <td>
                                             <div className={`status-toggle ${product.visible ? 'active' : ''}`}></div>
                                         </td>

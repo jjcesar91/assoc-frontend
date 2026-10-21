@@ -9,7 +9,10 @@ const getNomeSocio = (s) => s.tipo_socio === 'associazione'
     ? (s.ragione_sociale || '-')
     : `${s.cognome || ''} ${s.nome || ''}`.trim() || '-';
 
-const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId, abbonamentoNome, enrolledIds = [] }) => {
+const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoIds = [], abbonamentoNome, enrolledIds = [] }) => {
+    // Modalità abbonamento: soci che hanno pagato uno degli abbonamenti del corso
+    const abbonamentoKey = abbonamentoIds.join(',');
+    const abbonamentoId = abbonamentoKey || null;
     const { selectedAnno } = useAnno();
 
     // Stato di iscrizione, coerente con la vista Soci (senza dati pagamenti: usa libro soci e iscrizioni)
@@ -41,11 +44,12 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
                 const sociData = sociRes.ok ? await sociRes.json() : [];
 
                 if (abbonamentoId) {
-                    // Fetch payments for this specific product
-                    const payRes = await fetch(
-                        `/payments/api?societa_id=${societaId}&product_id=${abbonamentoId}`
-                    );
-                    const payments = payRes.ok ? await payRes.json() : [];
+                    // Pagamenti di ciascun abbonamento del corso
+                    const payments = (await Promise.all(abbonamentoKey.split(',').map(id =>
+                        fetch(`/payments/api?societa_id=${societaId}&product_id=${id}`)
+                            .then(r => (r.ok ? r.json() : []))
+                            .catch(() => [])
+                    ))).flat();
 
                     // Build map socioId -> most recent data_pagamento
                     const map = {};
@@ -115,7 +119,7 @@ const RicercaSocioModal = ({ isOpen, onClose, onSelect, societaId, abbonamentoId
         };
 
         fetchData();
-    }, [societaId, isOpen, abbonamentoId]);
+    }, [societaId, isOpen, abbonamentoKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         let result = soci;

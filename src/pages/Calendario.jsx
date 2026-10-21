@@ -5,6 +5,7 @@ import { useSocieta } from '../data/SocietaContext';
 import CorsoModal from './CorsoModal';
 import { computeScadenzaCertificatoStr } from '../utils/certificatoUtils';
 import { getOrari } from '../utils/corsoUtils';
+import { ultimoAbbonamento, abbonamentiDelCorso, giorniAvvisoCorso } from '../utils/listino';
 import './Calendario.css';
 
 const GIORNI = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
@@ -172,21 +173,15 @@ const Calendario = () => {
                     iscrizioniByCorso[i.corsoId].push(i.socioId);
                 });
 
-                // map abbonamentoId → giorniAvvisoScadenza
-                const giorniAvvisoMap = {};
-                abbonamentiData.forEach(a => { giorniAvvisoMap[a.id] = a.giorniAvvisoScadenza ?? 30; });
-
                 const enriched = corsiData.map(corso => {
                     const socioIds = iscrizioniByCorso[corso.id] || [];
-                    const giorniAvviso = giorniAvvisoMap[corso.abbonamentoId] ?? 30;
+                    const giorniAvviso = giorniAvvisoCorso(corso, abbonamentiData);
                     let warningCount = 0;
                     let expiredCount = 0;
                     socioIds.forEach(socioId => {
                         const socio = sociById[socioId];
                         const certStatus = getStatus(computeScadenzaCertificatoStr(socio?.scadenza_certificato), giorniAvviso);
-                        const abbPay = (paymentsBySocio[socioId] || [])
-                            .filter(p => p.product_id === corso.abbonamentoId && p.data_scadenza_abbonamento)
-                            .sort((a, b) => new Date(b.data_scadenza_abbonamento) - new Date(a.data_scadenza_abbonamento))[0];
+                        const abbPay = ultimoAbbonamento((paymentsBySocio[socioId] || []), abbonamentiDelCorso(corso));
                         const abbStatus = getStatus(abbPay?.data_scadenza_abbonamento, giorniAvviso);
                         const worst = (certStatus === 'expired' || abbStatus === 'expired') ? 'expired'
                             : (certStatus === 'warning' || abbStatus === 'warning') ? 'warning' : 'ok';
