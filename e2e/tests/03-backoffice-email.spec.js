@@ -1,20 +1,21 @@
-// Backoffice → Email (superuser): le tre email configurabili e l'anteprima
+// Backoffice → Comunicazioni (superuser): le tre email configurabili, CCN e anteprima
 const { test, expect } = require('@playwright/test');
 const { login } = require('../helpers/pagine');
 
-test.describe('Backoffice → Email', () => {
+test.describe('Backoffice → Comunicazioni', () => {
     test.beforeEach(async ({ page }) => {
         await login(page, process.env.E2E_SUPERUSER_EMAIL, process.env.E2E_SUPERUSER_PASSWORD);
         await expect(page).not.toHaveURL(/\/login/);
         await page.goto('/backoffice/email');
     });
 
-    test('mostra destinatari CCN e le tre email', async ({ page }) => {
-        await expect(page.getByText('Amministratori in copia nascosta (CCN)')).toBeVisible();
+    test('tre comunicazioni, ognuna con i propri destinatari CCN', async ({ page }) => {
         for (const nome of ['Registrazione ricevuta', 'Attivazione licenza', 'Benvenuto e primi passi']) {
-            await expect(page.getByRole('heading', { name: nome })).toBeVisible();
+            const scheda = page.locator('.table-card', { has: page.getByRole('heading', { name: nome }) });
+            await expect(scheda.getByText('Amministratori in copia nascosta (CCN)')).toBeVisible();
+            await expect(scheda.locator('textarea')).toHaveCount(1);
         }
-        await expect(page.locator('textarea')).toHaveCount(3);
+        await expect(page.getByRole('button', { name: 'Salva destinatari' })).toHaveCount(0);
     });
 
     test('anteprima dell\'attivazione con i dati d\'esempio e il pulsante password', async ({ page }) => {
@@ -27,11 +28,10 @@ test.describe('Backoffice → Email', () => {
     });
 
     test('destinatario CCN non valido segnalato senza salvare', async ({ page }) => {
-        const area = page.locator('textarea').first();
-        const prima = await area.inputValue();
+        const scheda = page.locator('.table-card', { has: page.getByRole('heading', { name: 'Benvenuto e primi passi' }) });
+        const area = scheda.locator('textarea');
         await area.fill('non-una-email');
-        await page.getByRole('button', { name: 'Salva destinatari' }).click();
-        await expect(page.getByText('Indirizzi non validi: non-una-email')).toBeVisible();
-        await area.fill(prima); // nessuna modifica salvata
+        await scheda.getByRole('button', { name: 'Salva' }).click();
+        await expect(scheda.getByText('Indirizzi non validi: non-una-email')).toBeVisible();
     });
 });

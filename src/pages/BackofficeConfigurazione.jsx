@@ -89,7 +89,7 @@ const AssetField = ({ label, hint, path, previewStyle, onUpload, onRemove, busy 
 
 const pickText = (b) => Object.fromEntries(TEXT_KEYS.map(k => [k, b?.[k] ?? null]));
 
-// Backoffice → Configurazione: personalizzazione dell'ambiente (solo superuser).
+// Backoffice → Aspetto: personalizzazione dell'ambiente (solo superuser).
 const BackofficeConfigurazione = () => {
     const { branding, setBranding, preview } = useBranding();
     const showAlert = useAlert();

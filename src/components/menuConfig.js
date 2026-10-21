@@ -142,8 +142,8 @@ export const MENU_STRUCTURE = [
         superuserOnly: true,
         children: [
             { id: 'backoffice-iscrizioni', label: 'Licenze', path: '/backoffice/iscrizioni' },
-            { id: 'backoffice-configurazione', label: 'Configurazione', path: '/backoffice/configurazione' },
-            { id: 'backoffice-email', label: 'Email', path: '/backoffice/email' },
+            { id: 'backoffice-configurazione', label: 'Aspetto', path: '/backoffice/configurazione' },
+            { id: 'backoffice-email', label: 'Comunicazioni', path: '/backoffice/email' },
         ],
     },
 ];

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-// Personalizzazione ("skin") dell'ambiente, configurata in Backoffice → Configurazione
+// Personalizzazione ("skin") dell'ambiente, configurata in Backoffice → Aspetto
 // e letta da /users/api/public/piattaforma. Campi null = aspetto di default.
 
 export const DEFAULT_TITLE = 'Gestionale';

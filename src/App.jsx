@@ -336,12 +336,12 @@ function App() {
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/email" element={isAuthenticated && userRole === 'superuser' ? (
-            <Layout onLogout={handleLogout} title="Backoffice - Email">
+            <Layout onLogout={handleLogout} title="Backoffice - Comunicazioni">
               <BackofficeEmail />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/configurazione" element={isAuthenticated && userRole === 'superuser' ? (
-            <Layout onLogout={handleLogout} title="Backoffice - Configurazione">
+            <Layout onLogout={handleLogout} title="Backoffice - Aspetto">
               <BackofficeConfigurazione />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />

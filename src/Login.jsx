@@ -53,7 +53,7 @@ function Login({ onLoginSuccess }) {
 
   return (
     <div className="login-page">
-      {/* Pannello branding (personalizzabile in Backoffice → Configurazione) */}
+      {/* Pannello branding (personalizzabile in Backoffice → Aspetto) */}
       <LoginBrandPanel branding={branding} />
 
       {/* Pannello form */}
