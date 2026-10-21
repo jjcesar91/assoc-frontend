@@ -54,8 +54,9 @@ function mailpitApi(pathAndQuery) {
 }
 
 // Attende l'email più recente per il destinatario con l'oggetto indicato
-async function attendiEmail(destinatario, oggettoContiene, { timeoutMs = 30000 } = {}) {
-    const query = encodeURIComponent(`to:"${destinatario}" subject:"${oggettoContiene}"`);
+// (campo: 'to' o 'bcc' per gli avvisi inviati in copia nascosta)
+async function attendiEmail(destinatario, oggettoContiene, { timeoutMs = 30000, campo = 'to' } = {}) {
+    const query = encodeURIComponent(`${campo}:"${destinatario}" subject:"${oggettoContiene}"`);
     const fine = Date.now() + timeoutMs;
     while (Date.now() < fine) {
         const r = mailpitApi(`search?query=${query}&limit=1`);
