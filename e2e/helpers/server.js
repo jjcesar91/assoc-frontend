@@ -46,4 +46,30 @@ function cancellaSocieta(...denominazioni) {
     ssh(`docker exec users_ms node scripts/delete-societa.js ${args} --execute --confirm="${esistenti.join(',')}"`);
 }
 
-module.exports = { ssh, psql, licenzaIdDiSocieta, licenza, linkImpostaPassword, cancellaSocieta };
+// --- Mailpit (catcher delle email di dev, porta 8025 dell'host) ---------------
+function mailpitApi(pathAndQuery) {
+    const auth = process.env.E2E_MAILPIT_AUTH;
+    if (!auth) throw new Error('E2E_MAILPIT_AUTH non configurato: vedi e2e/.env.example');
+    return JSON.parse(ssh(`curl -s -u '${auth.replace(/'/g, '')}' 'http://localhost:8025/api/v1/${pathAndQuery}'`));
+}
+
+// Attende l'email più recente per il destinatario con l'oggetto indicato
+async function attendiEmail(destinatario, oggettoContiene, { timeoutMs = 30000 } = {}) {
+    const query = encodeURIComponent(`to:"${destinatario}" subject:"${oggettoContiene}"`);
+    const fine = Date.now() + timeoutMs;
+    while (Date.now() < fine) {
+        const r = mailpitApi(`search?query=${query}&limit=1`);
+        if (r.messages?.length) return mailpitApi(`message/${r.messages[0].ID}`);
+        await new Promise(res => setTimeout(res, 2000));
+    }
+    throw new Error(`Nessuna email "${oggettoContiene}" per ${destinatario} entro ${timeoutMs / 1000}s`);
+}
+
+// Link "imposta password" contenuto nell'email di attivazione
+function linkDaEmail(email) {
+    const m = String(email.Text || '').match(/https?:\/\/\S+\/reset-password#t=[^\s]+/);
+    if (!m) throw new Error('Link per impostare la password non trovato nell\'email');
+    return m[0];
+}
+
+module.exports = { ssh, psql, licenzaIdDiSocieta, licenza, linkImpostaPassword, cancellaSocieta, attendiEmail, linkDaEmail };

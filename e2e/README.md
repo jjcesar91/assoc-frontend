@@ -32,6 +32,9 @@ npm run report              # report HTML dell'ultima esecuzione
   login) → primo accesso con i limiti del piano Free.
 - `03-backoffice-email`: destinatari CCN, le tre email, anteprima.
 
-Il link "imposta password" arriva per email: i test ne generano uno con
-l'endpoint interno di auth tramite SSH (`helpers/server.js`), che usano anche
-per cancellare i dati di prova alla fine (`delete-societa.js`).
+Su dev le email non partono davvero: le intercetta **Mailpit** (pagina
+`http://<host-dev>:8025`, credenziali in `E2E_MAILPIT_AUTH`). I test leggono da lì
+le tre email (registrazione ricevuta, attivazione, benvenuto) e usano il link
+"imposta password" contenuto nell'email di attivazione. `helpers/server.js` usa
+SSH per interrogare Mailpit e per cancellare i dati di prova alla fine
+(`delete-societa.js`).

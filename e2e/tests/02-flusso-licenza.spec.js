@@ -11,6 +11,7 @@ const PASSWORD = `E2e-Flusso-${ID}-2026!`;
 // auth tiene in cache lo stato delle licenze per 15 secondi
 const CACHE_LICENZE_MS = 16 * 1000;
 let attivataAlle = 0;
+let linkAttivazione = null;
 
 test.describe.serial('Licenza: dalla registrazione al primo accesso', () => {
     test.afterAll(() => server.cancellaSocieta(ASSOCIAZIONE));
@@ -24,6 +25,11 @@ test.describe.serial('Licenza: dalla registrazione al primo accesso', () => {
         const licenzaId = server.licenzaIdDiSocieta(ASSOCIAZIONE);
         expect(licenzaId, 'licenza creata').toBeTruthy();
         expect(server.licenza(licenzaId)).toEqual({ piano: 'free', stato: 'in_attesa' });
+
+        // Email "Registrazione ricevuta" (letta dal catcher Mailpit di dev)
+        const email = await server.attendiEmail(EMAIL, 'Abbiamo ricevuto la registrazione');
+        expect(email.Text).toContain(ASSOCIAZIONE);
+        expect(email.Text).not.toMatch(/reset-password/);
     });
 
     test('2. prima dell\'attivazione l\'accesso è bloccato', async ({ page }) => {
@@ -47,11 +53,16 @@ test.describe.serial('Licenza: dalla registrazione al primo accesso', () => {
         attivataAlle = Date.now();
 
         expect(server.licenza(server.licenzaIdDiSocieta(ASSOCIAZIONE)).stato).toBe('attiva');
+
+        // Email di attivazione con piano e link personale
+        const email = await server.attendiEmail(EMAIL, 'è attiva: imposta la tua password');
+        expect(email.Text).toContain('piano Free');
+        linkAttivazione = server.linkDaEmail(email);
     });
 
-    test('4. imposta password dal link: controlli e ritorno al login', async ({ page }) => {
-        const link = server.linkImpostaPassword(server.licenzaIdDiSocieta(ASSOCIAZIONE), test.info().project.use.baseURL);
-        await page.goto(link);
+    test('4. imposta password dal link dell\'email: controlli e ritorno al login', async ({ page }) => {
+        expect(linkAttivazione, 'link ricevuto nell\'email di attivazione').toBeTruthy();
+        await page.goto(linkAttivazione);
         await expect(page.getByText(`Account: ${EMAIL}`)).toBeVisible();
         // il token non resta nella barra degli indirizzi
         expect(page.url()).not.toContain('#t=');
@@ -71,6 +82,10 @@ test.describe.serial('Licenza: dalla registrazione al primo accesso', () => {
         await page.getByRole('button', { name: 'Imposta password' }).click();
         await expect(page.getByRole('heading', { name: 'Password impostata' })).toBeVisible();
         await page.waitForURL(/\/login$/, { timeout: 10 * 1000 });
+
+        // Email "Benvenuto e primi passi" dopo la prima password
+        const benvenuto = await server.attendiEmail(EMAIL, 'Benvenuto su GNP');
+        expect(benvenuto.Text).toContain('Configurazione → Anno contabile');
     });
 
     test('5. primo accesso dell\'amministratore con i limiti Free', async ({ page }) => {
