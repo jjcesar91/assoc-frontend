@@ -32,6 +32,8 @@ import BackofficeLicenze from './pages/BackofficeLicenze';
 import Registrazione from './pages/Registrazione';
 import BackofficeConfigurazione from './pages/BackofficeConfigurazione';
 import BackofficeEmail from './pages/BackofficeEmail';
+import BackofficeTicket from './pages/BackofficeTicket';
+import Assistenza from './pages/Assistenza';
 import ResetPassword from './pages/ResetPassword';
 import SocioDashboard from './pages/SocioDashboard';
 import CaricaQuietanza from './pages/CaricaQuietanza'
@@ -229,6 +231,13 @@ function App() {
               <TemplateStampa />
             </Layout>
           ) : <Navigate to="/login" />} />
+          <Route path="/assistenza" element={isAuthenticated && !isSocio ? (
+            userRole === 'superuser' ? <Navigate to="/backoffice/ticket" replace /> : (
+              <Layout onLogout={handleLogout} title="Assistenza">
+                <Assistenza />
+              </Layout>
+            )
+          ) : isAuthenticated ? <Navigate to="/area-soci" /> : <Navigate to="/login" />} />
           <Route path="/faq" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="FAQ / Guida">
               <Faq />
@@ -338,6 +347,11 @@ function App() {
           <Route path="/backoffice/email" element={isAuthenticated && userRole === 'superuser' ? (
             <Layout onLogout={handleLogout} title="Backoffice - Comunicazioni">
               <BackofficeEmail />
+            </Layout>
+          ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
+          <Route path="/backoffice/ticket" element={isAuthenticated && userRole === 'superuser' ? (
+            <Layout onLogout={handleLogout} title="Backoffice - Ticket">
+              <BackofficeTicket />
             </Layout>
           ) : isAuthenticated ? <Navigate to="/soci" /> : <Navigate to="/login" />} />
           <Route path="/backoffice/configurazione" element={isAuthenticated && userRole === 'superuser' ? (

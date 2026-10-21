@@ -1,13 +1,17 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronDown } from 'lucide-react';
+import { X, ChevronDown, Lock } from 'lucide-react';
 import { getVisibleMenu } from './menuConfig';
+import { useSocieta } from '../data/SocietaContext';
+import { usePianoLicenza, MESSAGGIO_PIANO } from '../data/pianoLicenza';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose, bannerHeight = 0 }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [openGroups, setOpenGroups] = React.useState({});
+    const { selectedSocietaId } = useSocieta();
+    const piano = usePianoLicenza(selectedSocietaId);
 
     const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -50,6 +54,13 @@ const Sidebar = ({ isOpen, onClose, bannerHeight = 0 }) => {
                                         </div>
                                     )}
                                 </>
+                            ) : item.feature && piano.bloccata(item.feature) ? (
+                                // Funzionalità non inclusa nel piano: visibile ma non selezionabile
+                                <div className="sidebar-item sidebar-item--disabled" title={MESSAGGIO_PIANO(piano.info)} aria-disabled="true">
+                                    <item.Icon size={20} />
+                                    <span>{item.label}</span>
+                                    <Lock size={14} style={{ marginLeft: 'auto' }} />
+                                </div>
                             ) : (
                                 <div
                                     className={`sidebar-item ${location.pathname === item.path ? 'active' : ''} ${item.superuserOnly ? 'sidebar-item--reserved' : ''}`}

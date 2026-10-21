@@ -1,4 +1,4 @@
-import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle, Send, Briefcase } from 'lucide-react';
+import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileText, Activity, ShieldCheck, HelpCircle, Send, Briefcase, LifeBuoy } from 'lucide-react';
 
 /**
  * Unica sorgente di verità per la struttura del menu laterale.
@@ -11,6 +11,10 @@ import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileT
  *   path      – (solo voci senza children) percorso di navigazione
  *   children  – (opzionale) array di sottovoci { id, label, path }
  *   superuserOnly – (opzionale, su voce o sottovoce) visibile solo ai superuser
+ *   staffOnly     – (opzionale) solo utenti delle società, non i superuser
+ *   sempreVisibile – (opzionale) non soggetta alle funzionalità abilitate per utente
+ *   feature       – (opzionale) funzionalità del piano di licenza: se esclusa la voce
+ *                   resta visibile ma disabilitata (vedi Sidebar)
  */
 /** Restituisce le voci di menu visibili per l'utente corrente */
 export const getVisibleMenu = () => {
@@ -18,7 +22,7 @@ export const getVisibleMenu = () => {
     let featuresRaw;
     try { featuresRaw = JSON.parse(localStorage.getItem('user_features')); } catch { featuresRaw = null; }
     // superuser e admin vedono tutto inclusa l'amministrazione
-    if (role === 'superuser') return MENU_STRUCTURE.map(item => ({
+    if (role === 'superuser') return MENU_STRUCTURE.filter(item => !item.staffOnly).map(item => ({
         ...item,
         children: item.children, // superuser vede tutti i children
     }));
@@ -29,7 +33,7 @@ export const getVisibleMenu = () => {
     // null = nessuna restrizione, array = solo quelle abilitate
     return MENU_STRUCTURE.filter(item => {
         if (item.id === 'amministrazione' || item.superuserOnly) return false;
-        if (featuresRaw === null || featuresRaw === undefined) return true;
+        if (featuresRaw === null || featuresRaw === undefined || item.sempreVisibile) return true;
         return featuresRaw.includes(item.id);
     }).map(item => ({
         ...item,
@@ -135,6 +139,7 @@ export const MENU_STRUCTURE = [
         ],
     },
     { id: 'faq',           label: 'FAQ / Guida',    Icon: HelpCircle,    path: '/faq' },
+    { id: 'assistenza',    label: 'Assistenza',     Icon: LifeBuoy,      path: '/assistenza', feature: 'assistenza', staffOnly: true, sempreVisibile: true },
     {
         id: 'backoffice',
         label: 'Backoffice',
@@ -144,6 +149,7 @@ export const MENU_STRUCTURE = [
             { id: 'backoffice-iscrizioni', label: 'Licenze', path: '/backoffice/iscrizioni' },
             { id: 'backoffice-configurazione', label: 'Aspetto', path: '/backoffice/configurazione' },
             { id: 'backoffice-email', label: 'Comunicazioni', path: '/backoffice/email' },
+            { id: 'backoffice-ticket', label: 'Ticket', path: '/backoffice/ticket' },
         ],
     },
 ];

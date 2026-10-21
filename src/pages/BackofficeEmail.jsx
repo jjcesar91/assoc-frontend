@@ -65,7 +65,7 @@ const EmailCard = ({ template, onSaved, onAnteprima }) => {
                     <Mail size={18} style={{ color: 'var(--primary)' }} />
                     <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{template.nome}</h3>
                     <span className={`badge ${template.personalizzato ? 'badge-primary' : 'badge-info'}`}>{template.personalizzato ? 'Personalizzato' : 'Predefinito'}</span>
-                    {template.ccn.length > 0 && <span className="badge badge-info">CCN: {template.ccn.length}</span>}
+                    {template.ccn.length > 0 && <span className="badge badge-info">{template.ccn_label ? 'Destinatari' : 'CCN'}: {template.ccn.length}</span>}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>{template.quando}</div>
             </div>
@@ -81,7 +81,7 @@ const EmailCard = ({ template, onSaved, onAnteprima }) => {
             </div>
 
             <div style={{ marginTop: '16px' }}>
-                <label style={label}>Amministratori in copia nascosta (CCN)</label>
+                <label style={label}>{template.ccn_label || 'Amministratori in copia nascosta (CCN)'}</label>
                 <textarea
                     className="md-input"
                     rows={3}
@@ -91,7 +91,9 @@ const EmailCard = ({ template, onSaved, onAnteprima }) => {
                     style={{ width: '100%', resize: 'vertical', fontFamily: 'monospace', fontSize: '0.82rem', ...(ccnError ? { borderColor: 'var(--danger)', backgroundColor: 'var(--danger-container)' } : {}) }}
                 />
                 <div style={{ ...hint, color: ccnError ? 'var(--danger)' : hint.color }}>
-                    {ccnError || `Un indirizzo per riga, massimo 20 (${ccnList.length} indicati). Ricevono una copia con l'indicazione del destinatario${template.chiave === 'attivazione' ? ', senza il link per impostare la password (personale)' : ''}.`}
+                    {ccnError || (template.ccn_hint
+                        ? `${template.ccn_hint} (${ccnList.length} indicati)`
+                        : `Un indirizzo per riga, massimo 20 (${ccnList.length} indicati). Ricevono una copia con l'indicazione del destinatario${template.chiave === 'attivazione' ? ', senza il link per impostare la password (personale)' : ''}.`)}
                 </div>
             </div>
 

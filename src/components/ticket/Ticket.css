@@ -1,0 +1,124 @@
+/* Ticket di assistenza: lista e thread (Assistenza e Backoffice → Ticket) */
+.ticket-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    max-height: 55vh;
+    overflow-y: auto;
+    background: var(--surface-1, #f5f6f8);
+    border-radius: 8px;
+}
+
+.ticket-msg {
+    max-width: 80%;
+    align-self: flex-start;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.ticket-msg--mio {
+    align-self: flex-end;
+    background: var(--primary-container);
+    border-color: transparent;
+}
+
+.ticket-msg--nota {
+    background: var(--warning-container);
+    border: 1px dashed var(--warning);
+}
+
+.ticket-msg-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.ticket-msg-autore { font-weight: 600; color: var(--text-primary); }
+
+.ticket-msg-nota-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: var(--on-warning-container);
+}
+
+/* Testo semplice: a capo e spazi come scritti, mai HTML */
+.ticket-msg-testo {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.ticket-msg-stato {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.ticket-row-nonletto td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+
+.ticket-nuovo {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.ticket-dettaglio-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.ticket-risposta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.ticket-risposta textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 90px;
+    font-family: inherit;
+}
+
+.ticket-risposta-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.ticket-contatore { font-size: 0.75rem; color: var(--text-tertiary); margin-right: auto; }
+
+.ticket-paginazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+    .ticket-msg { max-width: 100%; }
+}

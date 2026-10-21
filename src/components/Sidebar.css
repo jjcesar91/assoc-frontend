@@ -113,3 +113,13 @@
     color: var(--on-primary-container);
     font-weight: var(--fw-semibold);
 }
+
+/* Voce non inclusa nel piano di licenza */
+.sidebar-item--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sidebar-item--disabled:hover {
+    background: transparent;
+}
