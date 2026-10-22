@@ -234,7 +234,9 @@
     padding: 16px 18px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    background: var(--surface-1, #f8f9fb);
+    /* Scheda chiara: i campi (sfondo surface-1) restano ben distinti */
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .prodotto-formula--errore {
@@ -325,7 +327,7 @@
     padding: 0 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background: var(--surface);
+    background: var(--surface-1);
     font-size: 0.82rem;
     white-space: nowrap;
     cursor: pointer;
