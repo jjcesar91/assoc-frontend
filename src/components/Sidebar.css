@@ -1,20 +1,28 @@
+/* Menu laterale: pannello a scomparsa sopra la barra superiore.
+   Su mobile è più largo, con voci più alte (bersagli da 48px) e in cima
+   società, anno e preferiti, tolti dalla barra superiore (Layout.css). */
 .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 264px;
+    width: 280px;
     background-color: var(--surface);
     box-shadow: var(--shadow-3);
-    z-index: var(--z-sidebar);
+    /* Sopra la barra superiore (z-index 1100), così intestazione e chiusura restano visibili */
+    z-index: 1300;
     transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1);
+    visibility: hidden;
+    transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 0.28s;
     display: flex;
     flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .sidebar.open {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1), visibility 0s;
 }
 
 .sidebar-overlay {
@@ -22,34 +30,60 @@
     inset: 0;
     background-color: rgba(16, 24, 40, 0.45);
     backdrop-filter: blur(2px);
-    z-index: calc(var(--z-sidebar) - 1);
+    z-index: 1250;
 }
 
 .sidebar-header {
+    flex-shrink: 0;
     height: var(--appbar-height);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--space-4);
+    padding: 0 var(--space-3) 0 var(--space-5);
     border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header h2 {
+    margin: 0;
     font-size: var(--text-lg);
     font-weight: var(--fw-semibold);
     color: var(--text-primary);
 }
 
+.sidebar-chiudi {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
 .sidebar-content {
-    padding: var(--space-3) var(--space-2);
+    flex: 1;
+    padding: var(--space-3) var(--space-2) var(--space-6);
     overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Voci: pulsanti a tutta larghezza, senza lo stile predefinito dei button */
+.sidebar-item,
+.sidebar-sub-item {
+    appearance: none;
+    border: none;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    width: calc(100% - 2 * var(--space-1));
+    box-sizing: border-box;
 }
 
 .sidebar-item {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
     margin: 2px var(--space-1);
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -59,8 +93,19 @@
     transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
+.sidebar-item > span {
+    flex: 1;
+    min-width: 0;
+}
+
 .sidebar-item:hover {
     background-color: var(--surface-2);
+}
+
+.sidebar-item:focus-visible,
+.sidebar-sub-item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
 }
 
 .sidebar-item.active {
@@ -68,11 +113,22 @@
     color: var(--on-primary-container);
 }
 
+/* Gruppo chiuso che contiene la pagina corrente */
+.sidebar-item--gruppo-attivo {
+    color: var(--primary);
+}
+
 .sidebar-item svg {
     flex-shrink: 0;
     color: var(--text-secondary);
 }
-.sidebar-item.active svg { color: var(--on-primary-container); }
+.sidebar-item.active svg,
+.sidebar-item--gruppo-attivo svg { color: currentColor; }
+
+.sidebar-chevron {
+    transition: transform 0.2s;
+}
+.sidebar-chevron--aperto { transform: rotate(180deg); }
 
 /* Sezioni riservate ai superuser (es. Backoffice): riga col colore primario
    dell'header e testo bianco, per distinguerle dal resto del menu. */
@@ -89,12 +145,18 @@
 .sidebar-item--reserved svg,
 .sidebar-item--reserved.active svg { color: #fff; }
 
+/* Sottovoci: rientrate, con una guida verticale che le lega al gruppo */
 .sidebar-sub-menu {
-    margin: 2px 0 var(--space-2);
+    margin: 2px 0 var(--space-2) calc(var(--space-4) + 10px);
+    padding-left: var(--space-3);
+    border-left: 2px solid var(--border-color);
 }
 
 .sidebar-sub-item {
-    padding: var(--space-2) var(--space-4) var(--space-2) calc(var(--space-10) + var(--space-2));
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: var(--space-2) var(--space-3);
     margin: 1px var(--space-1);
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -122,4 +184,108 @@
 
 .sidebar-item--disabled:hover {
     background: transparent;
+}
+
+/* --- Solo mobile: società, anno e preferiti in cima al menu --------------- */
+.sidebar-solo-mobile {
+    display: none;
+}
+
+.sidebar-contesto {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-4);
+    margin-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sidebar-campo > span {
+    font-size: 0.75rem;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.sidebar-campo select {
+    width: 100%;
+    min-height: 44px;
+}
+
+.sidebar-societa {
+    font-size: var(--text-base);
+    color: var(--text-primary);
+}
+
+.sidebar-campo--avviso select {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+
+.sidebar-campo small {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #b45309;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.sidebar-preferiti {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 var(--space-3) var(--space-4);
+    margin-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-preferito {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.sidebar-preferito svg { color: var(--primary); }
+
+.sidebar-preferito--gestisci {
+    border-style: dashed;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: min(88vw, 360px);
+        border-radius: 0 16px 16px 0;
+    }
+
+    .sidebar-solo-mobile {
+        display: block;
+    }
+
+    .sidebar-item {
+        min-height: 48px;
+        font-size: 1rem;
+    }
+
+    .sidebar-sub-item {
+        min-height: 44px;
+        font-size: 0.95rem;
+    }
 }

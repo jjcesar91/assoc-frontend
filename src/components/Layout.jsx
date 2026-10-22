@@ -6,6 +6,7 @@ import { useSocieta } from '../data/SocietaContext';
 import { useAnno } from '../data/AnnoContext';
 import EditProfileModal from '../pages/EditProfileModal'; // Assuming we can reuse this, or move it to components
 import FavoritesModal, { MENU_STRUCTURE } from './FavoritesModal';
+import './Layout.css';
 
 const favBtnStyle = {
     background: 'rgba(255,255,255,0.15)',
@@ -149,9 +150,114 @@ const Layout = ({ children, onLogout, title }) => {
         fetchMe();
     }, [onLogout, navigate]);
 
+    // Società e anno: nella barra su desktop, dentro il menu su mobile (vedi Layout.css)
+    const contestoSelettori = (
+        <div className="app-bar-contesto" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+            {(currentUser?.role === 'superuser' || (Array.isArray(currentUser?.societaIds) && currentUser.societaIds.length > 1)) ? (
+                <select
+                    className="md-select"
+                    style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                    value={selectedSocietaId}
+                    onChange={(e) => (currentUser?.role === 'superuser' ? setSelectedSocietaId(e.target.value) : selectSocieta(e.target.value))}
+                >
+                    {[...societaList].sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' })).map(s => (
+                        <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
+                    ))}
+                </select>
+            ) : (
+                <span style={{
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    minWidth: '220px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                }}>
+                    {societaList.find(s => s.id == selectedSocietaId)?.denominazione || ''}
+                </span>
+            )}
+            <div
+                title={annoDiverso ? `Attenzione: stai operando su un anno associativo diverso da quello corrente (${formatAnnoLabel(currentRefYear)})` : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', ...(annoDiverso ? { padding: '2px 6px 2px 8px', borderRadius: '6px', backgroundColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.4)' } : {}) }}
+            >
+                {annoDiverso && <AlertTriangle size={16} color="#7c2d12" strokeWidth={2.5} />}
+                <select
+                    className="md-select"
+                    style={{ padding: '8px', paddingRight: '28px', minWidth: '130px', width: 'auto', borderRadius: '4px', border: 'none', backgroundColor: annoDiverso ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.2)', color: annoDiverso ? '#7c2d12' : 'white', fontWeight: annoDiverso ? 700 : 'normal' }}
+                    value={selectedAnno ?? ''}
+                    onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
+                >
+                    {annoOptions.map(anno => (
+                        <option key={anno} value={anno} style={{color: 'black'}}>{formatAnnoLabel(anno)}</option>
+                    ))}
+                </select>
+            </div>
+        </div>
+    );
+
+    const puoCambiareSocieta = currentUser?.role === 'superuser' || (Array.isArray(currentUser?.societaIds) && currentUser.societaIds.length > 1);
+    const societaOrdinate = [...societaList].sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' }));
+
+    // Versione per il menu su mobile: etichette, campi a tutta larghezza, sfondo chiaro
+    const contestoMenu = (
+        <div className="sidebar-contesto">
+            <label className="sidebar-campo">
+                <span>Società</span>
+                {puoCambiareSocieta ? (
+                    <select
+                        className="md-select"
+                        value={selectedSocietaId}
+                        onChange={(e) => (currentUser?.role === 'superuser' ? setSelectedSocietaId(e.target.value) : selectSocieta(e.target.value))}
+                    >
+                        {societaOrdinate.map(s => <option key={s.id} value={s.id}>{s.denominazione}</option>)}
+                    </select>
+                ) : (
+                    <strong className="sidebar-societa">{societaList.find(s => s.id == selectedSocietaId)?.denominazione || ''}</strong>
+                )}
+            </label>
+            <label className={`sidebar-campo${annoDiverso ? ' sidebar-campo--avviso' : ''}`}>
+                <span>Anno associativo</span>
+                <select className="md-select" value={selectedAnno ?? ''} onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}>
+                    {annoOptions.map(anno => <option key={anno} value={anno}>{formatAnnoLabel(anno)}</option>)}
+                </select>
+                {annoDiverso && (
+                    <small><AlertTriangle size={13} strokeWidth={2.5} /> Non è l'anno corrente ({formatAnnoLabel(currentRefYear)})</small>
+                )}
+            </label>
+        </div>
+    );
+
+    // Preferiti dentro il menu su mobile: etichette sempre visibili, senza effetto hover
+    const preferitiMobile = (
+        <div className="sidebar-preferiti">
+            {Object.entries(favorites).map(([id, fav]) => {
+                const Icon = MENU_STRUCTURE.find(m => m.id === fav.parentId)?.Icon;
+                if (!Icon) return null;
+                return (
+                    <button key={id} type="button" className="sidebar-preferito" onClick={() => { setSidebarOpen(false); navigate(fav.path); }}>
+                        <Icon size={16} /> {fav.label}
+                    </button>
+                );
+            })}
+            <button type="button" className="sidebar-preferito sidebar-preferito--gestisci" onClick={() => { setSidebarOpen(false); setShowFavoritesModal(true); }}>
+                <Star size={16} /> {Object.keys(favorites).length ? 'Gestisci' : 'Aggiungi preferiti'}
+            </button>
+        </div>
+    );
+
     return (
         <div className="layout-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} bannerHeight={isImpersonating ? 40 : 0} />
+            <Sidebar
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                bannerHeight={isImpersonating ? 40 : 0}
+                contesto={contestoMenu}
+                preferiti={preferitiMobile}
+            />
 
             {/* Banner impersonazione */}
             {isImpersonating && (
@@ -207,20 +313,28 @@ const Layout = ({ children, onLogout, title }) => {
                 padding: '0 16px',
                 flexShrink: 0
             }}>
-                <div style={{display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
-                    <button className="icon-btn profile-btn" onClick={() => setSidebarOpen(prev => !prev)} style={{ color: 'white' }}>
+                <div className="app-bar-sinistra" style={{display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
+                    <button className="icon-btn profile-btn" onClick={() => setSidebarOpen(prev => !prev)} style={{ color: 'white' }} aria-label="Apri il menu" aria-expanded={sidebarOpen}>
                         <Menu size={24}/>
                     </button>
-                    <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'white' }}>{title}</h1>
+                    <h1 className="app-bar-titolo" style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'white' }}>{title}</h1>
+                    {annoDiverso && (
+                        // Solo mobile: l'avviso dell'anno diverso resta visibile anche con i selettori nel menu
+                        <button type="button" className="app-bar-avviso-anno" onClick={() => setSidebarOpen(true)}
+                            title={`Stai operando su ${formatAnnoLabel(selectedAnno)}, non sull'anno corrente`}>
+                            <AlertTriangle size={14} strokeWidth={2.5} /> {formatAnnoLabel(selectedAnno)}
+                        </button>
+                    )}
                     {Object.entries(favorites).map(([id, fav]) => {
                         const parentItem = MENU_STRUCTURE.find(m => m.id === fav.parentId);
                         const Icon = parentItem?.Icon;
                         if (!Icon) return null;
                         return (
-                            <FavShortcutBtn key={id} fav={fav} Icon={Icon} onClick={() => navigate(fav.path)} />
+                            <span key={id} className="app-bar-preferiti"><FavShortcutBtn fav={fav} Icon={Icon} onClick={() => navigate(fav.path)} /></span>
                         );
                     })}
                     <button
+                        className="app-bar-preferiti"
                         onClick={() => setShowFavoritesModal(true)}
                         title="Gestisci preferiti"
                         style={{
@@ -239,51 +353,7 @@ const Layout = ({ children, onLogout, title }) => {
                     </button>
                 </div>
                 <div className="app-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
-                        {(currentUser?.role === 'superuser' || (Array.isArray(currentUser?.societaIds) && currentUser.societaIds.length > 1)) ? (
-                            <select
-                                className="md-select"
-                                style={{ padding: '8px', borderRadius: '4px', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
-                                value={selectedSocietaId}
-                                onChange={(e) => (currentUser?.role === 'superuser' ? setSelectedSocietaId(e.target.value) : selectSocieta(e.target.value))}
-                            >
-                                {[...societaList].sort((a, b) => (a.denominazione || '').localeCompare(b.denominazione || '', 'it', { sensitivity: 'base' })).map(s => (
-                                    <option key={s.id} value={s.id} style={{color: 'black'}}>{s.denominazione}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <span style={{
-                                padding: '8px 16px',
-                                borderRadius: '4px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                fontWeight: 500,
-                                whiteSpace: 'nowrap',
-                                minWidth: '220px',
-                                display: 'inline-block',
-                                textAlign: 'center',
-                            }}>
-                                {societaList.find(s => s.id == selectedSocietaId)?.denominazione || ''}
-                            </span>
-                        )}
-                        <div
-                            title={annoDiverso ? `Attenzione: stai operando su un anno associativo diverso da quello corrente (${formatAnnoLabel(currentRefYear)})` : undefined}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', ...(annoDiverso ? { padding: '2px 6px 2px 8px', borderRadius: '6px', backgroundColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.4)' } : {}) }}
-                        >
-                            {annoDiverso && <AlertTriangle size={16} color="#7c2d12" strokeWidth={2.5} />}
-                            <select
-                                className="md-select"
-                                style={{ padding: '8px', paddingRight: '28px', minWidth: '130px', width: 'auto', borderRadius: '4px', border: 'none', backgroundColor: annoDiverso ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.2)', color: annoDiverso ? '#7c2d12' : 'white', fontWeight: annoDiverso ? 700 : 'normal' }}
-                                value={selectedAnno ?? ''}
-                                onChange={(e) => setSelectedAnno(parseInt(e.target.value, 10))}
-                            >
-                                {annoOptions.map(anno => (
-                                    <option key={anno} value={anno} style={{color: 'black'}}>{formatAnnoLabel(anno)}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    {contestoSelettori}
                     <div style={{position:'relative'}}>
                         <button className="icon-btn profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ color: 'white' }}>
                             <User size={24}/>
