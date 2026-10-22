@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { listinoDi, etichettaFormula, formatEuro } from '../utils/listino';
+import { listinoDi, dettagliFormula, formatEuro } from '../utils/listino';
 
 // Scelta della formula del listino quando si aggiunge un abbonamento al carrello
 const SceltaFormulaModal = ({ product, onSelect, onClose }) => {
@@ -28,7 +28,10 @@ const SceltaFormulaModal = ({ product, onSelect, onClose }) => {
                             onClick={() => onSelect(f)}
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '10px 14px', textAlign: 'left' }}
                         >
-                            <span>{etichettaFormula(f)}</span>
+                            <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {f.descrizione && <strong style={{ fontWeight: 600 }}>{f.descrizione}</strong>}
+                                <span style={f.descrizione ? { fontSize: '0.82rem', color: 'var(--text-secondary)' } : undefined}>{dettagliFormula(f)}</span>
+                            </span>
                             <strong>{formatEuro(f.prezzo)}</strong>
                         </button>
                     ))}

@@ -172,79 +172,268 @@
     margin-top: 4px;
 }
 
-/* Abbonamenti: listino e corsi inclusi */
+/* Abbonamenti: listino a schede, accesso ai corsi, avviso di scadenza */
+.prodotto-modal--ampio {
+    width: 760px;
+}
+
 .prodotto-form-hint {
     display: block;
     font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-top: 6px;
+}
+
+.prodotto-sezione {
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+    margin-top: 8px;
+    margin-bottom: 20px;
+}
+
+.prodotto-sezione-head {
+    margin-bottom: 14px;
+}
+
+.prodotto-sezione-head h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.prodotto-sezione-head p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+.prodotto-sezione-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
 }
 
 .prodotto-listino {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
 }
 
-.prodotto-listino-head,
-.prodotto-listino-riga {
-    display: grid;
-    grid-template-columns: minmax(110px, 1fr) minmax(170px, 1.4fr) minmax(100px, 1fr) 32px;
-    gap: 8px;
+.prodotto-formula {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface-1, #f8f9fb);
+}
+
+.prodotto-formula--errore {
+    border-color: var(--danger);
+}
+
+.prodotto-formula-top {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
 }
 
-.prodotto-listino-head span {
+.prodotto-formula-num {
     font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--text-secondary);
 }
 
-.prodotto-listino-ingressi {
-    display: flex;
+.prodotto-formula-elimina {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-}
-
-.prodotto-listino-ingressi input[type="text"] {
-    min-width: 0;
-}
-
-.prodotto-listino-open {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.82rem;
-    white-space: nowrap;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--danger);
     cursor: pointer;
 }
 
-.prodotto-listino-add {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.prodotto-formula-elimina:hover:not(:disabled) {
+    background: var(--danger-container);
 }
 
-.prodotto-corsi {
+.prodotto-formula-elimina:disabled {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.prodotto-formula-campi {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 14px;
+}
+
+.prodotto-campo {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 200px;
-    overflow-y: auto;
+    min-width: 0;
+}
+
+.prodotto-campo > label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.prodotto-campo--stretto {
+    max-width: 220px;
+}
+
+.prodotto-facoltativo {
+    font-weight: 400;
+    color: var(--text-tertiary);
+}
+
+.prodotto-ingressi {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.prodotto-ingressi input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Interruttore "Illimitati" a pillola, accanto al numero di ingressi */
+.prodotto-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.prodotto-open input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.prodotto-open--attivo {
+    border-color: var(--primary);
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-weight: 500;
+}
+
+.prodotto-open:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+.prodotto-formula-aggiungi {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--primary);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.prodotto-formula-aggiungi:hover {
+    border-color: var(--primary);
+    background: var(--primary-container);
+}
+
+.prodotto-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+.prodotto-switch input {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.prodotto-switch span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.prodotto-switch small {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.prodotto-corsi {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
 }
 
 .prodotto-corso {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.88rem;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.86rem;
+    line-height: 1.35;
     cursor: pointer;
 }
 
-@media (max-width: 560px) {
-    .prodotto-listino-head { display: none; }
-    .prodotto-listino-riga { grid-template-columns: 1fr 1fr; }
+.prodotto-corso:hover {
+    border-color: var(--primary);
+}
+
+.prodotto-corso--attivo {
+    border-color: var(--primary);
+    background: var(--primary-container);
+}
+
+.prodotto-corso input {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 640px) {
+    .prodotto-formula-campi { grid-template-columns: 1fr; }
+    .prodotto-corsi { grid-template-columns: 1fr; }
+    .prodotto-campo--stretto { max-width: none; }
 }

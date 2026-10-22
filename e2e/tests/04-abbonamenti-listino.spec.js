@@ -39,6 +39,7 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         await expect(modale.getByText('Prezzo base')).toHaveCount(0);
 
         const righe = modale.getByTestId('riga-listino');
+        await righe.nth(0).getByLabel('Descrizione formula').fill('Mensile 8 ingressi');
         await righe.nth(0).getByLabel('Durata').selectOption('1_mese');
         await righe.nth(0).getByLabel('Numero ingressi').fill('8');
         await righe.nth(0).getByLabel('Prezzo').fill('40');
@@ -59,14 +60,14 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
 
         const id = prodottoId();
         const listino = JSON.parse(psql('products', `select listino::text from "Products" where id = ${id}`));
-        expect(listino.map(f => [f.durata, f.illimitato, f.ingressi, f.prezzo])).toEqual([
-            ['1_mese', false, 8, 40],
-            ['3_mesi', true, null, 120.5],
+        expect(listino.map(f => [f.descrizione ?? null, f.durata, f.illimitato, f.ingressi, f.prezzo])).toEqual([
+            ['Mensile 8 ingressi', '1_mese', false, 8, 40],
+            [null, '3_mesi', true, null, 120.5],
         ]);
         expect(corsiCollegati(id)).toHaveLength(2);
     });
 
-    test('formula doppia segnalata senza salvare', async ({ page }) => {
+    test('formula doppia segnalata; con descrizione diversa è ammessa', async ({ page }) => {
         await page.locator('tr', { hasText: NOME }).getByTitle('Modifica').click();
         const modale = page.locator('.prodotto-modal');
         const righe = modale.getByTestId('riga-listino');
@@ -76,8 +77,20 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         await righe.nth(1).getByLabel('Durata').selectOption('1_mese');
         await righe.nth(1).getByText('Illimitati').click();
         await righe.nth(1).getByLabel('Numero ingressi').fill('8');
+        await righe.nth(1).getByLabel('Descrizione formula').fill('mensile 8 ingressi');
         await modale.getByRole('button', { name: 'Salva' }).click();
-        await expect(modale.getByText('Formula già presente con la stessa durata e gli stessi ingressi.')).toBeVisible();
+        await expect(modale.getByText('Formula già presente con la stessa durata, gli stessi ingressi e la stessa descrizione.')).toBeVisible();
+
+        // Stessa durata e ingressi ma descrizione diversa (es. tariffa ridotta): ammessa
+        await righe.nth(1).getByLabel('Descrizione formula').fill('Under 18');
+        await righe.nth(1).getByLabel('Prezzo').fill('30');
+        await modale.getByRole('button', { name: 'Salva' }).click();
+        await expect(modale).toHaveCount(0);
+        const listino = JSON.parse(psql('products', `select listino::text from "Products" where id = ${prodottoId()}`));
+        expect(listino.map(f => [f.descrizione, f.ingressi, f.prezzo])).toEqual([
+            ['Mensile 8 ingressi', 8, 40],
+            ['Under 18', 8, 30],
+        ]);
     });
 
     test('togliendo un corso dalla scheda prodotto si rimuove il collegamento', async ({ page }) => {

@@ -1,4 +1,4 @@
-// Listino degli abbonamenti: formule { id, durata, illimitato, ingressi, prezzo }
+// Listino degli abbonamenti: formule { id, descrizione?, durata, illimitato, ingressi, prezzo }
 // (validate e salvate dal servizio products, vedi services/products/utils/listino.js)
 
 export const DURATE = [
@@ -13,11 +13,18 @@ export const DURATE = [
 export const durataLabel = (durata) => DURATE.find(d => d.value === durata)?.label || durata || '';
 export const durataGiorni = (durata) => DURATE.find(d => d.value === durata)?.giorni || 30;
 
+export const MAX_DESCRIZIONE_FORMULA = 120;
+
 export const formatEuro = (v) => `€ ${(parseFloat(v) || 0).toFixed(2).replace('.', ',')}`;
 
 // "3 mesi · 10 ingressi" / "12 mesi · ingressi illimitati"
-export const etichettaFormula = (f) => (f
+export const dettagliFormula = (f) => (f
     ? `${durataLabel(f.durata)} · ${f.illimitato ? 'ingressi illimitati' : `${f.ingressi} ingressi`}`
+    : '');
+
+// Con la descrizione davanti, se presente: "Under 18 · 1 mese · 8 ingressi"
+export const etichettaFormula = (f) => (f
+    ? (f.descrizione ? `${f.descrizione} · ${dettagliFormula(f)}` : dettagliFormula(f))
     : '');
 
 // Formule di un abbonamento; per i prodotti salvati prima dei listini ne ricava una dai campi legacy
