@@ -148,7 +148,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
         }
 
         if (formData.type === 'subscription') {
-            if (listino.length === 0) errors.listino = 'Aggiungi almeno una formula al listino.';
+            if (listino.length === 0) errors.listino = 'Aggiungi almeno una tariffa al listino.';
             const chiavi = new Set();
             listino.forEach((r, idx) => {
                 const n = parseInt(r.ingressi, 10);
@@ -159,7 +159,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                 } else if (r.prezzo === '' || isNaN(prezzo) || prezzo < 0) {
                     errors[`listino_${idx}`] = 'Inserire un prezzo valido (≥ 0).';
                 } else if (chiavi.has(chiave)) {
-                    errors[`listino_${idx}`] = 'Formula già presente con la stessa durata, gli stessi ingressi e la stessa descrizione.';
+                    errors[`listino_${idx}`] = 'Tariffa già presente con la stessa durata, gli stessi ingressi e la stessa descrizione.';
                 }
                 chiavi.add(chiave);
             });
@@ -223,8 +223,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                     <>
                     <section className="prodotto-sezione">
                         <div className="prodotto-sezione-head">
-                            <h3>Listino <span className="prodotto-sezione-badge">{listino.length} {listino.length === 1 ? 'formula' : 'formule'}</span></h3>
-                            <p>Al momento della vendita si sceglie una formula: prezzo, durata e ingressi arrivano da qui.</p>
+                            <h3>Listino <span className="prodotto-sezione-badge">{listino.length} {listino.length === 1 ? 'tariffa' : 'tariffe'}</span></h3>
+                            <p>Al momento della vendita si sceglie una tariffa: prezzo, durata e ingressi arrivano da qui.</p>
                         </div>
                         <div className="prodotto-listino">
                             {listino.map((r, idx) => {
@@ -232,8 +232,8 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                 return (
                                     <div key={idx} className={`prodotto-formula${errore ? ' prodotto-formula--errore' : ''}`} data-testid="riga-listino">
                                         <div className="prodotto-formula-top">
-                                            <span className="prodotto-formula-num">Formula {idx + 1}</span>
-                                            <button type="button" className="prodotto-formula-elimina" title="Rimuovi formula" aria-label="Rimuovi formula"
+                                            <span className="prodotto-formula-num">Tariffa {idx + 1}</span>
+                                            <button type="button" className="prodotto-formula-elimina" title="Rimuovi tariffa" aria-label="Rimuovi tariffa"
                                                 disabled={listino.length === 1}
                                                 onClick={() => setListino(prev => prev.filter((_, i) => i !== idx))}>
                                                 <Trash2 size={16} />
@@ -244,7 +244,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                                             <input
                                                 id={`formula-descrizione-${idx}`}
                                                 type="text"
-                                                aria-label="Descrizione formula"
+                                                aria-label="Descrizione tariffa"
                                                 maxLength={MAX_DESCRIZIONE_FORMULA}
                                                 value={r.descrizione}
                                                 onChange={e => aggiornaRiga(idx, 'descrizione', e.target.value)}
@@ -302,7 +302,7 @@ const ProdottoModal = ({ isOpen, onClose, onSave, product }) => {
                             })}
                             <button type="button" className="prodotto-formula-aggiungi"
                                 onClick={() => setListino(prev => [...prev, rigaListino({ durata: prev[prev.length - 1]?.durata })])}>
-                                <Plus size={16} /> Aggiungi formula
+                                <Plus size={16} /> Aggiungi tariffa
                             </button>
                         </div>
                         {formErrors.listino && <span className="prodotto-form-error">{formErrors.listino}</span>}

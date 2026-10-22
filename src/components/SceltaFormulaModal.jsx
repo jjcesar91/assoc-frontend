@@ -2,7 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { listinoDi, dettagliFormula, formatEuro } from '../utils/listino';
 
-// Scelta della formula del listino quando si aggiunge un abbonamento al carrello
+// Scelta della tariffa del listino quando si aggiunge un abbonamento al carrello
 const SceltaFormulaModal = ({ product, onSelect, onClose }) => {
     if (!product) return null;
     const listino = listinoDi(product);
@@ -11,7 +11,7 @@ const SceltaFormulaModal = ({ product, onSelect, onClose }) => {
             <div className="modal-card" style={{ width: '440px', maxWidth: '92%', padding: 0 }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid var(--border-color)' }}>
                     <div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Scegli la formula</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Scegli la tariffa</div>
                         <div style={{ fontWeight: 600 }}>{product.description}</div>
                     </div>
                     <button type="button" onClick={onClose} title="Chiudi" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}>

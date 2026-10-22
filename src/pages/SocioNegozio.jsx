@@ -267,7 +267,7 @@ export default function SocioNegozio({ socio, societa, onRicevutaCreata }) {
                                         {p.type === 'subscription' && listinoDi(p).length > 1 && (
                                             <select
                                                 className="sd-select"
-                                                aria-label={`Formula ${p.description}`}
+                                                aria-label={`Tariffa ${p.description}`}
                                                 value={formulaDi(p)?.id || ''}
                                                 onChange={(e) => setFormule(prev => ({ ...prev, [p.id]: e.target.value }))}
                                             >

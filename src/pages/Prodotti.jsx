@@ -226,7 +226,7 @@ const Prodotti = () => {
                                         <td style={{fontWeight: 500}}>
                                             {product.type === 'subscription' && listinoDi(product).length > 1 ? 'da ' : ''}€ {parseFloat(product.basePrice).toFixed(2)}
                                             {product.type === 'subscription' && listinoDi(product).length > 1 && (
-                                                <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400}}>{listinoDi(product).length} formule</div>
+                                                <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400}}>{listinoDi(product).length} tariffe</div>
                                             )}
                                         </td>
                                         <td>

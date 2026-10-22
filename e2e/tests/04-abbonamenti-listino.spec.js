@@ -31,7 +31,7 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         }
     });
 
-    test('crea l\'abbonamento con due formule e due corsi', async ({ page }) => {
+    test('crea l\'abbonamento con due tariffe e due corsi', async ({ page }) => {
         await page.getByRole('button', { name: 'Nuovo prodotto' }).click();
         const modale = page.locator('.prodotto-modal');
         await modale.locator('select[name="type"]').selectOption('subscription');
@@ -39,11 +39,11 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         await expect(modale.getByText('Prezzo base')).toHaveCount(0);
 
         const righe = modale.getByTestId('riga-listino');
-        await righe.nth(0).getByLabel('Descrizione formula').fill('Mensile 8 ingressi');
+        await righe.nth(0).getByLabel('Descrizione tariffa').fill('Mensile 8 ingressi');
         await righe.nth(0).getByLabel('Durata').selectOption('1_mese');
         await righe.nth(0).getByLabel('Numero ingressi').fill('8');
         await righe.nth(0).getByLabel('Prezzo').fill('40');
-        await modale.getByRole('button', { name: 'Aggiungi formula' }).click();
+        await modale.getByRole('button', { name: 'Aggiungi tariffa' }).click();
         await righe.nth(1).getByLabel('Durata').selectOption('3_mesi');
         await righe.nth(1).getByText('Illimitati').click();
         await righe.nth(1).getByLabel('Prezzo').fill('120,50');
@@ -56,7 +56,7 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
 
         const riga = page.locator('tr', { hasText: NOME });
         await expect(riga).toContainText('da € 40.00');
-        await expect(riga).toContainText('2 formule');
+        await expect(riga).toContainText('2 tariffe');
 
         const id = prodottoId();
         const listino = JSON.parse(psql('products', `select listino::text from "Products" where id = ${id}`));
@@ -67,7 +67,7 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         expect(corsiCollegati(id)).toHaveLength(2);
     });
 
-    test('formula doppia segnalata; con descrizione diversa è ammessa', async ({ page }) => {
+    test('tariffa doppia segnalata; con descrizione diversa è ammessa', async ({ page }) => {
         await page.locator('tr', { hasText: NOME }).getByTitle('Modifica').click();
         const modale = page.locator('.prodotto-modal');
         const righe = modale.getByTestId('riga-listino');
@@ -77,12 +77,12 @@ test.describe.serial('Abbonamento con listino e corsi inclusi', () => {
         await righe.nth(1).getByLabel('Durata').selectOption('1_mese');
         await righe.nth(1).getByText('Illimitati').click();
         await righe.nth(1).getByLabel('Numero ingressi').fill('8');
-        await righe.nth(1).getByLabel('Descrizione formula').fill('mensile 8 ingressi');
+        await righe.nth(1).getByLabel('Descrizione tariffa').fill('mensile 8 ingressi');
         await modale.getByRole('button', { name: 'Salva' }).click();
-        await expect(modale.getByText('Formula già presente con la stessa durata, gli stessi ingressi e la stessa descrizione.')).toBeVisible();
+        await expect(modale.getByText('Tariffa già presente con la stessa durata, gli stessi ingressi e la stessa descrizione.')).toBeVisible();
 
         // Stessa durata e ingressi ma descrizione diversa (es. tariffa ridotta): ammessa
-        await righe.nth(1).getByLabel('Descrizione formula').fill('Under 18');
+        await righe.nth(1).getByLabel('Descrizione tariffa').fill('Under 18');
         await righe.nth(1).getByLabel('Prezzo').fill('30');
         await modale.getByRole('button', { name: 'Salva' }).click();
         await expect(modale).toHaveCount(0);
