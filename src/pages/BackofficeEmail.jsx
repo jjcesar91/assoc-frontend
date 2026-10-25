@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Save, RotateCcw, Eye, X } from 'lucide-react';
 import SimpleEditor from '../components/SimpleEditor';
+import BackofficeTabs, { BackofficeTabPanel } from '../components/BackofficeTabs';
+import { useSchedaAttiva } from '../components/useSchedaAttiva';
 import { useAlert } from '../components/AlertModal';
 import { useConfirm } from '../components/ConfirmModal';
 import './Prodotti.css';
@@ -14,7 +16,7 @@ const hint = { fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: '4
 
 // Comunicazione: oggetto e testo con segnaposto, destinatari in copia nascosta,
 // anteprima e ripristino del testo predefinito
-const EmailCard = ({ template, onSaved, onAnteprima }) => {
+const EmailCard = ({ template, onSaved, onAnteprima, onDirtyChange }) => {
     const showAlert = useAlert();
     const confirm = useConfirm();
     const [oggetto, setOggetto] = useState(template.oggetto);
@@ -24,6 +26,9 @@ const EmailCard = ({ template, onSaved, onAnteprima }) => {
     const [saving, setSaving] = useState(false);
     const ccnList = parseList(ccn);
     const dirty = oggetto !== template.oggetto || corpo !== template.corpo_html || ccnList.join(',') !== template.ccn.join(',');
+
+    // La scheda segnala le modifiche non salvate
+    useEffect(() => { onDirtyChange?.(template.chiave, dirty); }, [dirty, template.chiave, onDirtyChange]);
 
     const salva = async () => {
         const invalidi = ccnList.filter(v => !EMAIL.test(v));
@@ -120,6 +125,14 @@ const BackofficeEmail = () => {
     const showAlert = useAlert();
     const [templates, setTemplates] = useState(null);
     const [anteprima, setAnteprima] = useState(null); // { nome, subject, html }
+    const [modificate, setModificate] = useState({}); // chiave → modifiche non salvate
+    const onDirtyChange = useCallback((chiave, dirty) => setModificate(m => (m[chiave] === dirty ? m : { ...m, [chiave]: dirty })), []);
+    const tabs = (templates || []).map(t => ({
+        id: t.chiave,
+        label: t.nome,
+        badge: modificate[t.chiave] ? 'modificato' : (t.personalizzato ? 'personalizzato' : null),
+    }));
+    const [attiva, seleziona] = useSchedaAttiva(tabs);
 
     const load = useCallback(() => fetch('/users/api/email-template')
         .then(r => (r.ok ? r.json() : []))
@@ -150,8 +163,11 @@ const BackofficeEmail = () => {
     return (
         <div className="prodotti-full-container">
             <div className="main-content" style={{ maxWidth: '1000px' }}>
+                <BackofficeTabs tabs={tabs} attiva={attiva} onSeleziona={seleziona} label="Comunicazioni" />
                 {templates.map(t => (
-                    <EmailCard key={`${t.chiave}-${t.personalizzato}-${t.oggetto}-${t.ccn.join(',')}`} template={t} onSaved={aggiorna} onAnteprima={apriAnteprima} />
+                    <BackofficeTabPanel key={t.chiave} id={t.chiave} attiva={attiva}>
+                        <EmailCard key={`${t.chiave}-${t.personalizzato}-${t.oggetto}-${t.ccn.join(',')}`} template={t} onSaved={aggiorna} onAnteprima={apriAnteprima} onDirtyChange={onDirtyChange} />
+                    </BackofficeTabPanel>
                 ))}
             </div>
 

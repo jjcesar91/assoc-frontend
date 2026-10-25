@@ -1,0 +1,46 @@
+/* Schede del Backoffice: sottolineatura del colore primario sulla scheda attiva */
+.bo-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 4px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+}
+
+/* Smartphone: una riga che scorre in orizzontale */
+@media (max-width: 640px) {
+    .bo-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .bo-tabs::-webkit-scrollbar { display: none; }
+}
+
+.bo-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-bottom: -1px;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.bo-tab:hover { color: var(--text-primary); }
+.bo-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: 4px; }
+.bo-tab--attiva {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom-color: var(--primary);
+}
+
+.bo-tab-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+.bo-tab-dot--modificato { background: var(--warning, #f59e0b); }

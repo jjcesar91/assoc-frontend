@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, Upload, Trash2, Palette, Globe, LogIn } from 'lucide-react';
 import SimpleEditor from '../components/SimpleEditor';
 import LoginBrandPanel from '../components/LoginBrandPanel';
+import BackofficeTabs, { BackofficeTabPanel } from '../components/BackofficeTabs';
+import { useSchedaAttiva } from '../components/useSchedaAttiva';
 import { useAlert } from '../components/AlertModal';
 import { useConfirm } from '../components/ConfirmModal';
 import { useBranding, assetUrl, writeCachedBranding, EMPTY_BRANDING, DEFAULT_TITLE, DEFAULT_SUBTITLE } from '../data/branding';
@@ -10,6 +12,13 @@ import './Prodotti.css';
 const DEFAULT_PRIMARY = '#0d9488'; // teal del design system
 
 const TEXT_KEYS = ['nome_ambiente', 'titolo', 'sottotitolo', 'descrizione_html', 'colore_primario', 'colore_header'];
+
+// Schede della pagina: campi di testo e immagini di ciascuna (per i pallini sulle schede)
+const SCHEDE = [
+    { id: 'ambiente', label: 'Ambiente', icon: Globe, campi: ['nome_ambiente'], immagini: ['favicon_path'] },
+    { id: 'colori', label: 'Palette colori', icon: Palette, campi: ['colore_primario', 'colore_header'], immagini: [] },
+    { id: 'login', label: 'Pagina di login', icon: LogIn, campi: ['titolo', 'sottotitolo', 'descrizione_html'], immagini: ['logo_path'] },
+];
 
 const Section = ({ icon, title, children }) => {
     const SectionIcon = icon;
@@ -101,6 +110,13 @@ const BackofficeConfigurazione = () => {
     // Bozza = testi/colori in modifica + file già caricati (salvati subito)
     const merged = { ...branding, ...draft };
     const dirty = TEXT_KEYS.some(k => (draft[k] || null) !== (branding[k] || null));
+    const tabs = SCHEDE.map(s => ({
+        ...s,
+        badge: s.campi.some(k => (draft[k] || null) !== (branding[k] || null))
+            ? 'modificato'
+            : ([...s.campi, ...s.immagini].some(k => branding[k]) ? 'personalizzato' : null),
+    }));
+    const [attiva, seleziona] = useSchedaAttiva(tabs);
 
     // Anteprima dal vivo su tutta l'app; uscendo dalla pagina torna al salvato
     useEffect(() => { preview(merged); });
@@ -181,57 +197,65 @@ const BackofficeConfigurazione = () => {
         <div className="prodotti-full-container">
             <div className="main-content" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 420px)', gap: '16px', alignItems: 'start' }}>
                 <div>
-                    <Section icon={Globe} title="Ambiente">
-                        <Field label="Nome ambiente" hint="Titolo della pagina nel tab del browser.">
-                            <input className="md-input" maxLength={80} placeholder={DEFAULT_TITLE} value={draft.nome_ambiente || ''} onChange={e => set('nome_ambiente')(e.target.value)} style={{ width: '100%' }} />
-                        </Field>
-                        <AssetField
-                            label="Favicon"
-                            hint="Icona nel tab del browser. PNG o ICO quadrato (es. 64×64), massimo 1 MB. Si salva subito."
-                            path={branding.favicon_path}
-                            previewStyle={{ width: '32px', height: '32px' }}
-                            busy={uploading === 'favicon'}
-                            onUpload={handleUpload('favicon')}
-                            onRemove={handleRemove('favicon')}
-                        />
-                    </Section>
+                    <BackofficeTabs tabs={tabs} attiva={attiva} onSeleziona={seleziona} label="Aspetto" />
 
-                    <Section icon={Palette} title="Palette colori">
-                        <ColorField
-                            label="Colore primario"
-                            hint="Pulsanti, link, elementi attivi e sfondo della pagina di login. Le varianti (hover, chiaro) sono calcolate in automatico."
-                            value={draft.colore_primario}
-                            placeholderColor={DEFAULT_PRIMARY}
-                            onChange={set('colore_primario')}
-                        />
-                        <ColorField
-                            label="Colore header"
-                            hint="Barra in alto e voce Backoffice del menu. Default: colore primario."
-                            value={draft.colore_header}
-                            placeholderColor={draft.colore_primario || DEFAULT_PRIMARY}
-                            onChange={set('colore_header')}
-                        />
-                    </Section>
+                    <BackofficeTabPanel id="ambiente" attiva={attiva}>
+                        <Section icon={Globe} title="Ambiente">
+                            <Field label="Nome ambiente" hint="Titolo della pagina nel tab del browser.">
+                                <input className="md-input" maxLength={80} placeholder={DEFAULT_TITLE} value={draft.nome_ambiente || ''} onChange={e => set('nome_ambiente')(e.target.value)} style={{ width: '100%' }} />
+                            </Field>
+                            <AssetField
+                                label="Favicon"
+                                hint="Icona nel tab del browser. PNG o ICO quadrato (es. 64×64), massimo 1 MB. Si salva subito."
+                                path={branding.favicon_path}
+                                previewStyle={{ width: '32px', height: '32px' }}
+                                busy={uploading === 'favicon'}
+                                onUpload={handleUpload('favicon')}
+                                onRemove={handleRemove('favicon')}
+                            />
+                        </Section>
+                    </BackofficeTabPanel>
 
-                    <Section icon={LogIn} title="Pagina di login">
-                        <AssetField
-                            label="Logo"
-                            hint="Sostituisce l'icona sopra il titolo. PNG, JPG o WEBP, meglio con sfondo trasparente, massimo 1 MB. Si salva subito."
-                            path={branding.logo_path}
-                            busy={uploading === 'logo'}
-                            onUpload={handleUpload('logo')}
-                            onRemove={handleRemove('logo')}
-                        />
-                        <Field label="Titolo">
-                            <input className="md-input" maxLength={120} placeholder={DEFAULT_TITLE} value={draft.titolo || ''} onChange={e => set('titolo')(e.target.value)} style={{ width: '100%' }} />
-                        </Field>
-                        <Field label="Sottotitolo">
-                            <input className="md-input" maxLength={255} placeholder={DEFAULT_SUBTITLE} value={draft.sottotitolo || ''} onChange={e => set('sottotitolo')(e.target.value)} style={{ width: '100%' }} />
-                        </Field>
-                        <Field label="Descrizione" hint="Se vuota viene mostrato l'elenco di default (Gestione soci e iscrizioni, …). Non visibile su smartphone.">
-                            <SimpleEditor value={draft.descrizione_html || ''} onChange={e => set('descrizione_html')(e.target.value)} />
-                        </Field>
-                    </Section>
+                    <BackofficeTabPanel id="colori" attiva={attiva}>
+                        <Section icon={Palette} title="Palette colori">
+                            <ColorField
+                                label="Colore primario"
+                                hint="Pulsanti, link, elementi attivi e sfondo della pagina di login. Le varianti (hover, chiaro) sono calcolate in automatico."
+                                value={draft.colore_primario}
+                                placeholderColor={DEFAULT_PRIMARY}
+                                onChange={set('colore_primario')}
+                            />
+                            <ColorField
+                                label="Colore header"
+                                hint="Barra in alto e voce Backoffice del menu. Default: colore primario."
+                                value={draft.colore_header}
+                                placeholderColor={draft.colore_primario || DEFAULT_PRIMARY}
+                                onChange={set('colore_header')}
+                            />
+                        </Section>
+                    </BackofficeTabPanel>
+
+                    <BackofficeTabPanel id="login" attiva={attiva}>
+                        <Section icon={LogIn} title="Pagina di login">
+                            <AssetField
+                                label="Logo"
+                                hint="Sostituisce l'icona sopra il titolo. PNG, JPG o WEBP, meglio con sfondo trasparente, massimo 1 MB. Si salva subito."
+                                path={branding.logo_path}
+                                busy={uploading === 'logo'}
+                                onUpload={handleUpload('logo')}
+                                onRemove={handleRemove('logo')}
+                            />
+                            <Field label="Titolo">
+                                <input className="md-input" maxLength={120} placeholder={DEFAULT_TITLE} value={draft.titolo || ''} onChange={e => set('titolo')(e.target.value)} style={{ width: '100%' }} />
+                            </Field>
+                            <Field label="Sottotitolo">
+                                <input className="md-input" maxLength={255} placeholder={DEFAULT_SUBTITLE} value={draft.sottotitolo || ''} onChange={e => set('sottotitolo')(e.target.value)} style={{ width: '100%' }} />
+                            </Field>
+                            <Field label="Descrizione" hint="Se vuota viene mostrato l'elenco di default (Gestione soci e iscrizioni, …). Non visibile su smartphone.">
+                                <SimpleEditor value={draft.descrizione_html || ''} onChange={e => set('descrizione_html')(e.target.value)} />
+                            </Field>
+                        </Section>
+                    </BackofficeTabPanel>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '24px' }}>
                         <button type="button" className="btn-outlined" onClick={handleReset} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
