@@ -7,50 +7,74 @@ import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 import './DettaglioRicevutaModal.css';
 
-// Calcola la data di scadenza per i pagamenti di tipo tesseramento
-function computeScadenzaTesseramento(p, societa) {
-    if (!p.data_pagamento) return null;
-    const periodicity = p.periodicity_tesseramento;
-    if (!periodicity) return null;
+// Date come stringhe 'AAAA-MM-GG' (niente fuso orario: new Date('AAAA-MM-GG') è
+// mezzanotte UTC e i conti con i metodi locali potevano spostare il giorno).
+const pad2 = (n) => String(n).padStart(2, '0');
+const oggiISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+const dataISO = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
+const aggiungiGiorniISO = (iso, giorni) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return dataISO(y, m, d + giorni);
+};
+const isoDaDate = (date) => date.toISOString().slice(0, 10); // per le date di getAnnoDateRange (mezzanotte UTC)
 
-    const d = new Date(p.data_pagamento);
-
-    if (periodicity === 'anno_solare') {
-        const scad = new Date(d);
-        scad.setFullYear(scad.getFullYear() + 1);
-        scad.setDate(scad.getDate() - 1);
-        return scad;
-    }
-
-    if (periodicity === 'anno_associativo') {
-        const tipo = societa?.tipo_anno_associativo || 'solare';
-        let anno = d.getFullYear();
-        const m = d.getMonth() + 1;
-        const day = d.getDate();
-        if (tipo === 'associativo') {
-            if (m < 9) anno = d.getFullYear() - 1;
-        } else if (tipo === 'personalizzato' && societa?.data_inizio_anno_associativo) {
-            const parts = societa.data_inizio_anno_associativo.split('-');
-            const cDay = parseInt(parts[0], 10);
-            const cMonth = parseInt(parts[1], 10);
-            if (m < cMonth || (m === cMonth && day < cDay)) anno = d.getFullYear() - 1;
-        }
-        const { end } = getAnnoDateRange(anno, societa);
-        return end;
-    }
-
-    return null;
+// Tessera "365 giorni" (periodicità anno_solare): scade il giorno prima dell'anniversario del pagamento
+function scadenzaTessera365(dataPagamento) {
+    if (!dataPagamento) return null;
+    const [y, m, d] = String(dataPagamento).slice(0, 10).split('-').map(Number);
+    return dataISO(y + 1, m, d - 1);
 }
 
-function computeStato(scadenzaDate) {
-    if (!scadenzaDate) return 'N/D';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const limit = new Date(today);
-    limit.setDate(limit.getDate() + 30);
-    if (scadenzaDate < today) return 'SCADUTO';
-    if (scadenzaDate <= limit) return 'IN SCADENZA';
+function computeStato(scadenzaStr) {
+    if (!scadenzaStr) return 'N/D';
+    const oggi = oggiISO();
+    if (scadenzaStr < oggi) return 'SCADUTO';
+    if (scadenzaStr <= aggiungiGiorniISO(oggi, 30)) return 'IN SCADENZA';
     return 'VALIDO';
+}
+
+const vociDi = (p) => {
+    let items = p.payment_items;
+    if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = null; } }
+    return Array.isArray(items) ? items : [];
+};
+
+/**
+ * Scadenze generate da un pagamento: una per ogni voce di tipo abbonamento (con data di
+ * scadenza) o tessera 365 giorni. Un pagamento con più prodotti è un solo record con
+ * quote_types "a,b,c" e le singole voci in payment_items: vanno lette voce per voce.
+ */
+function scadenzeDelPagamento(p) {
+    const out = [];
+    const voci = vociDi(p);
+    if (voci.length > 0) {
+        const nAbbonamenti = voci.filter(v => (v.quote_types || '').trim().toLowerCase() === 'subscription').length;
+        voci.forEach((v, idx) => {
+            const tipo = (v.quote_types || '').trim().toLowerCase();
+            if (tipo === 'subscription') {
+                // Le voci salvate prima dell'introduzione delle date per voce: data del record
+                const scad = v.data_scadenza_abbonamento || (nAbbonamenti === 1 ? p.data_scadenza_abbonamento : null);
+                if (scad) out.push({ idx, tipoKey: 'subscription', tipo: 'Abbonamento', productId: v.product_id ?? null, importo: v.importo, scadenzaStr: String(scad).slice(0, 10) });
+            } else if (tipo === 'tesseramento' && (v.periodicity_tesseramento || p.periodicity_tesseramento) === 'anno_solare') {
+                const scad = scadenzaTessera365(p.data_pagamento);
+                if (scad) out.push({ idx, tipoKey: 'tesseramento', tipo: 'Tessera 365 giorni', productId: v.product_id ?? null, importo: v.importo, scadenzaStr: scad });
+            }
+        });
+        return out;
+    }
+    // Pagamenti senza voci (vecchio formato): campi del record
+    const tipi = (p.quote_types || '').split(',').map(t => t.trim().toLowerCase());
+    if (tipi.includes('subscription') && p.data_scadenza_abbonamento) {
+        out.push({ idx: 0, tipoKey: 'subscription', tipo: 'Abbonamento', productId: p.product_id ?? null, importo: p.importo, scadenzaStr: String(p.data_scadenza_abbonamento).slice(0, 10) });
+    }
+    if (tipi.includes('tesseramento') && p.periodicity_tesseramento === 'anno_solare') {
+        const scad = scadenzaTessera365(p.data_pagamento);
+        if (scad) out.push({ idx: 1, tipoKey: 'tesseramento', tipo: 'Tessera 365 giorni', productId: tipi.length === 1 ? (p.product_id ?? null) : null, importo: tipi.length === 1 ? p.importo : null, scadenzaStr: scad });
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +83,7 @@ function computeStato(scadenzaDate) {
 const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
     if (!row) return null;
     const p = row.pagamento;
-    const stato = computeStato(row.scadenzaDate);
+    const stato = computeStato(row.scadenzaStr);
 
     const formatDate = (s) => {
         if (!s) return '—';
@@ -482,65 +506,47 @@ const Scadenziario = () => {
         if (selectedSocietaId) fetchPayments();
     }, [selectedAnno]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Costruisce le righe scadenze dai pagamenti nella stagione selezionata
+    // Righe dello scadenziario. Regole:
+    //  - contano solo i pagamenti effettivi: niente annullati ("3. …") né proforma (non ancora pagati);
+    //  - per ogni intestatario e prodotto vale l'ultima scadenza tra tutti i pagamenti (un rinnovo
+    //    sostituisce la scadenza precedente, anche se pagato in un'altra stagione);
+    //  - la riga compare nella stagione selezionata se il pagamento o la scadenza cadono nella stagione
+    //    (così una tessera pagata l'anno scorso che scade quest'anno resta visibile).
     const scadenze = useMemo(() => {
         if (!selectedAnno || !societa) return [];
         const { start, end } = getAnnoDateRange(selectedAnno, societa);
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        const startStr = isoDaDate(start);
+        const endStr = isoDaDate(end);
+        const nellaStagione = (d) => !!d && d >= startStr && d <= endStr;
 
-        const rows = [];
-
-        // Per ogni (utente, product_id), tieni solo l'ultimo pagamento in ordine cronologico
-        const latestByKey = new Map();
+        const ultime = new Map();
         for (const p of payments) {
             if (p.stato_pagamento?.startsWith('3.')) continue;
-            if (!p.data_pagamento) continue;
-            if (p.data_pagamento < startStr || p.data_pagamento > endStr) continue;
-            const userKey = p.socio_id != null ? `s:${p.socio_id}` : `i:${p.intestatario || ''}`;
-            const groupKey = p.product_id != null ? `${userKey}|p:${p.product_id}` : `${userKey}|id:${p.id}`;
-            const existing = latestByKey.get(groupKey);
-            if (!existing || p.data_pagamento > existing.data_pagamento) {
-                latestByKey.set(groupKey, p);
-            }
-        }
-        const deduplicatedPayments = Array.from(latestByKey.values());
-
-        for (const p of deduplicatedPayments) {
-            const type = (p.quote_types || '').trim().toLowerCase();
-
-            // Tesseramento 365 giorni (anno_solare) → scade un anno dopo il pagamento
-            if (type === 'tesseramento' && p.periodicity_tesseramento === 'anno_solare') {
-                const scad = computeScadenzaTesseramento(p, societa);
-                if (scad) {
-                    rows.push({
-                        key: `${p.id}`,
-                        pagamento: p,
-                        tipo: 'Tessera 365 giorni',
-                        tipoKey: 'tesseramento',
-                        scadenzaDate: scad,
-                        scadenzaStr: scad.toISOString().split('T')[0],
-                    });
-                }
-            }
-
-            // Abbonamento → scade a data_scadenza_abbonamento
-            if (type === 'subscription') {
-                if (p.data_scadenza_abbonamento) {
-                    const scad = new Date(p.data_scadenza_abbonamento);
-                    rows.push({
-                        key: `${p.id}`,
-                        pagamento: p,
-                        tipo: 'Abbonamento',
-                        tipoKey: 'subscription',
-                        scadenzaDate: scad,
-                        scadenzaStr: p.data_scadenza_abbonamento,
-                    });
+            if (p.tipo_documento === 'proforma') continue;
+            const dataPag = p.data_pagamento ? String(p.data_pagamento).slice(0, 10) : null;
+            const userKey = p.socio_id != null ? `s:${p.socio_id}` : `i:${(p.intestatario || '').trim().toLowerCase()}`;
+            for (const v of scadenzeDelPagamento(p)) {
+                const groupKey = `${userKey}|${v.tipoKey}|${v.productId != null ? `p:${v.productId}` : `id:${p.id}:${v.idx}`}`;
+                const esistente = ultime.get(groupKey);
+                if (!esistente
+                    || v.scadenzaStr > esistente.scadenzaStr
+                    || (v.scadenzaStr === esistente.scadenzaStr && (dataPag || '') > (esistente.dataPag || ''))) {
+                    ultime.set(groupKey, { ...v, pagamento: p, dataPag });
                 }
             }
         }
 
-        return rows;
+        return Array.from(ultime.values())
+            .filter(v => nellaStagione(v.dataPag) || nellaStagione(v.scadenzaStr))
+            .map(v => ({
+                key: `${v.pagamento.id}-${v.tipoKey}-${v.idx}`,
+                pagamento: v.pagamento,
+                tipo: v.tipo,
+                tipoKey: v.tipoKey,
+                productId: v.productId,
+                importo: v.importo,
+                scadenzaStr: v.scadenzaStr,
+            }));
     }, [payments, selectedAnno, societa]);
 
     const handleFilterChange = (field, value) => {
@@ -558,7 +564,7 @@ const Scadenziario = () => {
 
     const filteredRows = useMemo(() => {
         return scadenze.filter(row => {
-            const stato = computeStato(row.scadenzaDate);
+            const stato = computeStato(row.scadenzaStr);
             if (filters.intestatario && !row.pagamento.intestatario?.toLowerCase().includes(filters.intestatario.toLowerCase())) return false;
             if (filters.stato !== 'TUTTI' && stato !== filters.stato) return false;
             if (filters.dataDa && row.scadenzaStr < filters.dataDa) return false;
@@ -686,7 +692,7 @@ const Scadenziario = () => {
                                     </tr>
                                 ) : filteredRows.map(row => {
                                     const p = row.pagamento;
-                                    const stato = computeStato(row.scadenzaDate);
+                                    const stato = computeStato(row.scadenzaStr);
                                     const isScaduto = stato === 'SCADUTO';
                                     const isInScadenza = stato === 'IN SCADENZA';
                                     const rowBg = isScaduto ? 'var(--danger-container)' : (isInScadenza ? 'var(--warning-container)' : '#fff');
@@ -710,7 +716,10 @@ const Scadenziario = () => {
                                             </td>
                                             <td style={{ padding: '12px' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    {(p.quote || '').split(', ').filter(Boolean).map((q, i) => (
+                                                    {(products.find(pr => row.productId != null && Number(pr.id) === Number(row.productId))?.description
+                                                        ? [products.find(pr => Number(pr.id) === Number(row.productId)).description]
+                                                        : (p.quote || '').split(/, | \+ /).filter(Boolean)
+                                                    ).map((q, i) => (
                                                         <span key={i} style={{
                                                             border: '1px solid #ccc', borderRadius: '12px', padding: '3px 10px',
                                                             fontSize: '0.8rem', background: '#fff', display: 'inline-block'
@@ -728,7 +737,7 @@ const Scadenziario = () => {
                                                     backgroundColor: 'var(--success)', color: 'white',
                                                     padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem'
                                                 }}>
-                                                    {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}
+                                                    {Math.abs(parseFloat(row.importo ?? p.importo ?? 0)).toFixed(2).replace('.', ',')}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '12px' }}>
@@ -754,7 +763,7 @@ const Scadenziario = () => {
                                                                     codice_fiscale: p.codice_fiscale || '',
                                                                 },
                                                                 prefilledQuoteType: row.tipoKey,
-                                                                prefilledProductId: p.product_id || null,
+                                                                prefilledProductId: row.productId || p.product_id || null,
                                                             }
                                                         })}
                                                     >
