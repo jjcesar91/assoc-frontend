@@ -654,7 +654,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                         </select>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '200px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 240px', minWidth: '200px', maxWidth: '420px' }}>
                         <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Gruppo / Sottogruppo</label>
                         <select
                             className="md-select"
