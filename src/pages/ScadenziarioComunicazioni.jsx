@@ -25,6 +25,8 @@ const QUANDO = {
     per_abbonamento: 'Inviata al socio per ogni abbonamento in scadenza (le stesse scadenze dello Scadenziario).',
 };
 
+const ETICHETTA = { fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' };
+
 const testoDi = (r) => ({ oggetto: r.oggetto_email || r.oggetto_default || '', testo: r.testo_email || r.testo_default || '' });
 
 const ScadenziarioComunicazioni = () => {
@@ -154,22 +156,46 @@ const ScadenziarioComunicazioni = () => {
                                             <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{QUANDO[r.destinatario] || ''}</p>
                                         </div>
 
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-end' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                                                <input type="checkbox" checked={!!b.attiva} onChange={(e) => aggiorna(r.tipo, { attiva: e.target.checked })} style={{ width: 16, height: 16 }} />
-                                                Invio attivo
-                                            </label>
-                                            {!b.attiva && (
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--warning)', alignSelf: 'center' }}>
-                                                    Invio disattivato: puoi preparare il testo, ma l&apos;email non parte finché non attivi l&apos;invio.
-                                                </span>
-                                            )}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Giorni di anticipo</label>
-                                                <input className="md-input" type="number" min="0" style={{ width: 120, padding: '6px 12px' }}
-                                                    value={b.giorni_anticipo ?? ''} onChange={(e) => aggiorna(r.tipo, { giorni_anticipo: e.target.value })} />
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 32px', alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                <span style={ETICHETTA}>Invio</span>
+                                                <div role="radiogroup" aria-label="Invio dell'email" style={{ display: 'inline-flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                                    {[[false, 'Disattivato'], [true, 'Attivo']].map(([valore, etichetta], i) => (
+                                                        <button
+                                                            key={etichetta}
+                                                            type="button"
+                                                            role="radio"
+                                                            aria-checked={!!b.attiva === valore}
+                                                            onClick={() => aggiorna(r.tipo, { attiva: valore })}
+                                                            style={{
+                                                                background: !!b.attiva === valore ? 'var(--primary)' : 'white',
+                                                                color: !!b.attiva === valore ? 'white' : 'var(--text-secondary)',
+                                                                border: 'none',
+                                                                borderLeft: i > 0 ? '1px solid var(--border-color)' : 'none',
+                                                                padding: '0 18px', height: 38, fontWeight: 500, cursor: 'pointer', fontSize: '0.9rem',
+                                                            }}
+                                                        >
+                                                            {etichetta}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                <label htmlFor={`anticipo-${r.tipo}`} style={ETICHETTA}>Preavviso</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <input id={`anticipo-${r.tipo}`} className="md-input" type="number" min="0" style={{ width: 90, height: 38, padding: '0 12px', boxSizing: 'border-box' }}
+                                                        value={b.giorni_anticipo ?? ''} onChange={(e) => aggiorna(r.tipo, { giorni_anticipo: e.target.value })} />
+                                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>giorni prima della scadenza</span>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {!b.attiva && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 6, background: 'var(--warning-container)', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                                                <Info size={16} style={{ flexShrink: 0, color: 'var(--warning)' }} />
+                                                Invio disattivato: puoi preparare il testo, ma l&apos;email non parte finché non selezioni &quot;Attivo&quot; e salvi.
+                                            </div>
+                                        )}
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Oggetto email</label>
