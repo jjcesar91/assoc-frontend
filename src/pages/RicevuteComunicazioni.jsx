@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSocieta } from '../data/SocietaContext';
 import { Save, RotateCcw, Mail, FileText, CheckCircle, Info } from 'lucide-react';
 import SimpleEditor from '../components/SimpleEditor';
+import BackofficeTabs, { BackofficeTabPanel } from '../components/BackofficeTabs';
+import { useSchedaAttiva } from '../components/useSchedaAttiva';
 import {
     STATI_COMUNICAZIONE,
     STATO_LABELS,
@@ -41,7 +43,7 @@ const StatoSelector = ({ value, onChange }) => (
 const ComunicazioneCard = ({ titolo, icon, descrizione, tipo, config, setConfig, insertFields, subjectFields, societaEmail }) => {
     const disabled = config.stato === 'NON_ATTIVA';
     return (
-        <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'stretch', marginBottom: 24 }}>
+        <div className="toolbar-card" style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'stretch', marginBottom: 16 }}>
             <div style={{ borderBottom: '1px solid #eee', paddingBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {icon} {titolo}
@@ -119,6 +121,11 @@ const RicevuteComunicazioni = () => {
     const societaEmail = societaList.find(s => s.id == selectedSocietaId)?.email || '';
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
+    const tabs = [
+        { id: 'proforma', label: 'Richiesta di pagamento', icon: FileText },
+        { id: 'pagamento', label: 'Quietanza di pagamento', icon: Mail },
+    ];
+    const [schedaAttiva, selezionaScheda] = useSchedaAttiva(tabs);
 
     useEffect(() => {
         if (selectedSocietaId && societaList.length > 0) {
@@ -177,7 +184,7 @@ const RicevuteComunicazioni = () => {
 
     return (
         <div className="soci-full-container">
-            <div className="main-content">
+            <div className="main-content" style={{ maxWidth: '1000px' }}>
                 {message && (
                     <div style={{
                         backgroundColor: message.type === 'success' ? 'var(--success-container)' : 'var(--danger-container)',
@@ -193,29 +200,33 @@ const RicevuteComunicazioni = () => {
                     Configura le email automatiche inviate al socio nei momenti chiave del ciclo di una ricevuta.
                 </p>
 
-                <ComunicazioneCard
-                    titolo="Invio Richiesta di Pagamento"
-                    icon={<FileText size={18} />}
-                    descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione della ricevuta e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
-                    tipo="proforma"
-                    config={proforma}
-                    setConfig={setProforma}
-                    insertFields={SHORTCODE_FIELDS_PROFORMA}
-                    subjectFields={SUBJECT_FIELDS_PROFORMA}
-                    societaEmail={societaEmail}
-                />
-
-                <ComunicazioneCard
-                    titolo="Quietanza di pagamento ricevuta"
-                    icon={<Mail size={18} />}
-                    descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma la ricevuta, comunica la registrazione del pagamento e allega la ricevuta in PDF."
-                    tipo="pagamento"
-                    config={pagamento}
-                    setConfig={setPagamento}
-                    insertFields={SHORTCODE_FIELDS_COMUNI}
-                    subjectFields={SUBJECT_FIELDS_PAGAMENTO}
-                    societaEmail={societaEmail}
-                />
+                <BackofficeTabs tabs={tabs} attiva={schedaAttiva} onSeleziona={selezionaScheda} label="Comunicazioni ricevute" />
+                <BackofficeTabPanel id="proforma" attiva={schedaAttiva}>
+                    <ComunicazioneCard
+                        titolo="Invio Richiesta di Pagamento"
+                        icon={<FileText size={18} />}
+                        descrizione="Inviata al socio quando viene creata una proforma. Informa della creazione della ricevuta e, per i conti di tipo Bonifico, include le istruzioni di pagamento."
+                        tipo="proforma"
+                        config={proforma}
+                        setConfig={setProforma}
+                        insertFields={SHORTCODE_FIELDS_PROFORMA}
+                        subjectFields={SUBJECT_FIELDS_PROFORMA}
+                        societaEmail={societaEmail}
+                    />
+                </BackofficeTabPanel>
+                <BackofficeTabPanel id="pagamento" attiva={schedaAttiva}>
+                    <ComunicazioneCard
+                        titolo="Quietanza di pagamento ricevuta"
+                        icon={<Mail size={18} />}
+                        descrizione="Inviata quando una proforma viene convertita in pagamento. Conferma la ricevuta, comunica la registrazione del pagamento e allega la ricevuta in PDF."
+                        tipo="pagamento"
+                        config={pagamento}
+                        setConfig={setPagamento}
+                        insertFields={SHORTCODE_FIELDS_COMUNI}
+                        subjectFields={SUBJECT_FIELDS_PAGAMENTO}
+                        societaEmail={societaEmail}
+                    />
+                </BackofficeTabPanel>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button className="btn-contained" onClick={handleSave} disabled={saving} style={{ height: 44, display: 'flex', alignItems: 'center', gap: 8 }}>

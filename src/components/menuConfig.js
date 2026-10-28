@@ -74,7 +74,15 @@ export const MENU_STRUCTURE = [
             { id: 'ricevute-template', label: 'Footer',         path: '/ricevute/template' },
         ],
     },
-    { id: 'scadenziario', label: 'Scadenziario',   Icon: CalendarClock, path: '/scadenziario' },
+    {
+        id: 'scadenziario',
+        label: 'Scadenziario',
+        Icon: CalendarClock,
+        children: [
+            { id: 'scadenziario-scadenze',      label: 'Scadenze',      path: '/scadenziario' },
+            { id: 'scadenziario-comunicazioni', label: 'Comunicazioni', path: '/scadenziario/comunicazioni' },
+        ],
+    },
     {
         id: 'attivita',
         label: 'Attività',

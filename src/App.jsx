@@ -17,6 +17,7 @@ import Ricevute from './pages/Ricevute';
 import NuovaRicevuta from './pages/NuovaRicevuta';
 import Conti from './pages/Conti';
 import RicevuteComunicazioni from './pages/RicevuteComunicazioni';
+import ScadenziarioComunicazioni from './pages/ScadenziarioComunicazioni';
 import Scadenziario from './pages/Scadenziario';
 import Automazioni from './pages/Automazioni';
 import Contabilita from './pages/Contabilita';
@@ -286,6 +287,11 @@ function App() {
           <Route path="/scadenziario" element={isAuthenticated && !isSocio ? (
             <Layout onLogout={handleLogout} title="Scadenziario">
               <Scadenziario />
+            </Layout>
+          ) : <Navigate to="/login" />} />
+          <Route path="/scadenziario/comunicazioni" element={isAuthenticated && !isSocio ? (
+            <Layout onLogout={handleLogout} title="Scadenziario - Comunicazioni">
+              <ScadenziarioComunicazioni />
             </Layout>
           ) : <Navigate to="/login" />} />
           <Route path="/comunicazioni/automazioni" element={isAuthenticated && !isSocio ? (
