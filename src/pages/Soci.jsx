@@ -5,6 +5,8 @@ import SocioModal from './SocioModal';
 import EditProfileModal from './EditProfileModal';
 import ComunicazioneModal from '../components/ComunicazioneModal';
 import AdvancedSearchSidebar from '../components/AdvancedSearchSidebar';
+import { FILTRI_AVANZATI_VUOTI, contaFiltriAvanzati, creaFiltroAvanzato, indiciPagamenti } from '../utils/ricercaAvanzata';
+import { corsoLabel } from '../utils/listino';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno } from '../data/AnnoContext';
 import { computeScadenzaCertificatoStr, computeDataCertificatoDaScadenzaStr } from '../utils/certificatoUtils';
@@ -71,6 +73,10 @@ const Soci = ({ onLogout }) => {
     const [selectedSocio, setSelectedSocio] = useState(null);
     const [comunicazioneSocioId, setComunicazioneSocioId] = useState(null);
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    // Ricerca avanzata: filtri applicati, corsi e iscrizioni ai corsi della società
+    const [filtriAvanzati, setFiltriAvanzati] = useState(FILTRI_AVANZATI_VUOTI);
+    const [corsi, setCorsi] = useState([]);
+    const [iscrizioniCorsi, setIscrizioniCorsi] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -135,6 +141,19 @@ const Soci = ({ onLogout }) => {
             .then(r => r.ok ? r.json() : [])
             .then(data => setProducts(Array.isArray(data) ? data : []))
             .catch(() => setProducts([]));
+    }, [selectedSocietaId]);
+
+    // Corsi e iscrizioni ai corsi (filtri "Corsi" della ricerca avanzata)
+    useEffect(() => {
+        if (!selectedSocietaId) { setCorsi([]); setIscrizioniCorsi([]); return; }
+        fetch(`/activities/api/corsi?societaId=${selectedSocietaId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setCorsi(Array.isArray(data) ? data : []))
+            .catch(() => setCorsi([]));
+        fetch(`/activities/api/corsi/iscrizioni?societaId=${selectedSocietaId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setIscrizioniCorsi(Array.isArray(data) ? data : []))
+            .catch(() => setIscrizioniCorsi([]));
     }, [selectedSocietaId]);
 
     const productsById = useMemo(() => {
@@ -373,7 +392,37 @@ const Soci = ({ onLogout }) => {
         setShowActionsMenu(false);
     };
 
+    // Ricerca avanzata (utils/ricercaAvanzata.js): indici calcolati una volta sui dati già caricati
+    const indiciRicerca = useMemo(() => indiciPagamenti(payments, currentSocieta, selectedAnno), [payments, currentSocieta, selectedAnno]);
+    const corsiById = useMemo(() => new Map(corsi.map(c => [c.id, c])), [corsi]);
+    const corsiPerSocio = useMemo(() => {
+        const m = new Map();
+        for (const i of iscrizioniCorsi) {
+            if (!m.has(i.socioId)) m.set(i.socioId, new Set());
+            m.get(i.socioId).add(i.corsoId);
+        }
+        return m;
+    }, [iscrizioniCorsi]);
+    const nFiltriAvanzati = contaFiltriAvanzati(filtriAvanzati);
+    const filtroAvanzato = creaFiltroAvanzato(filtriAvanzati, {
+        indici: indiciRicerca, corsiPerSocio, corsiById, currentRefYear,
+        getIscrizioneStatus, getTesseramentoStatus, getCertStatus,
+    });
+    const opzioniRicerca = useMemo(() => {
+        const attivitaMap = new Map();
+        for (const c of corsi) if (c.attivita?.id != null) attivitaMap.set(c.attivita.id, c.attivita);
+        return {
+            livelli: [...new Set(['ND', ...soci.map(s => s.livello).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'it')),
+            etichette: etichetteOptions,
+            attivita: [...attivitaMap.values()].sort((a, b) => (a.descrizione || '').localeCompare(b.descrizione || '', 'it')),
+            corsi: corsi.map(c => ({ id: c.id, attivitaId: c.attivita?.id ?? c.attivitaId, label: corsoLabel(c) }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'it')),
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [corsi, soci]);
+
     const filteredSoci = soci.filter(socio => {
+        if (!filtroAvanzato(socio)) return false;
         if (filters.cognome) {
             const searchVal = filters.cognome.toLowerCase();
             const matchCognome = (socio.cognome || '').toLowerCase().includes(searchVal);
@@ -449,6 +498,7 @@ const Soci = ({ onLogout }) => {
     useEffect(() => {
         // Reset UI state e ricarica dati al cambio società
         setFilters({ cognome: '', nome: '', iscritto: '', iscrizione: '', tesseramento: '', certMedico: '', pagamenti: '', etichetta: '' });
+        setFiltriAvanzati(FILTRI_AVANZATI_VUOTI);
         setShowModal(false);
         setShowEditProfileModal(false);
         setShowComunicazioneModal(false);
@@ -1278,6 +1328,9 @@ const Soci = ({ onLogout }) => {
                             onClick={() => setShowAdvancedSearch(true)}
                          >
                             <Search size={14}/> Ricerca avanzata
+                            {nFiltriAvanzati > 0 && (
+                                <span style={{ background: 'white', color: 'var(--primary)', borderRadius: 999, padding: '0 7px', fontSize: '0.75rem', fontWeight: 700, lineHeight: '18px' }}>{nFiltriAvanzati}</span>
+                            )}
                         </button>
 
                          {/* Altre azioni Dropdown */}
@@ -1457,6 +1510,14 @@ const Soci = ({ onLogout }) => {
                     {filteredSoci.length !== soci.length && (
                         <span> (su {soci.length} complessivi)</span>
                     )}
+                    {nFiltriAvanzati > 0 && (
+                        <span style={{ marginLeft: 10 }}>
+                            · Ricerca avanzata: <strong>{nFiltriAvanzati} {nFiltriAvanzati === 1 ? 'filtro' : 'filtri'}</strong>{' '}
+                            <button type="button" onClick={() => setShowAdvancedSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>modifica</button>
+                            {' · '}
+                            <button type="button" onClick={() => setFiltriAvanzati(FILTRI_AVANZATI_VUOTI)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>rimuovi</button>
+                        </span>
+                    )}
                     <ContatorePiano usati={sociLicenza} massimo={maxSoci} etichetta="Soci della licenza" pianoNome={piano.info?.piano_nome} style={{ marginLeft: '10px' }} />
                 </div>
 
@@ -1603,9 +1664,12 @@ const Soci = ({ onLogout }) => {
                 />
             )}
 
-            <AdvancedSearchSidebar 
-                isOpen={showAdvancedSearch} 
-                onClose={() => setShowAdvancedSearch(false)} 
+            <AdvancedSearchSidebar
+                isOpen={showAdvancedSearch}
+                onClose={() => setShowAdvancedSearch(false)}
+                valore={filtriAvanzati}
+                onApplica={setFiltriAvanzati}
+                opzioni={opzioniRicerca}
             />
             
             <EditProfileModal 

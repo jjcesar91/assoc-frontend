@@ -1,323 +1,205 @@
 import React, { useState } from 'react';
-import { X, Search } from 'lucide-react';
+import { X, Search, RotateCcw } from 'lucide-react';
 import CityAutocomplete from './CityAutocomplete';
 import MultiSelect from './MultiSelect';
+import { FILTRI_AVANZATI_VUOTI, contaFiltriAvanzati } from '../utils/ricercaAvanzata';
 
-const AdvancedSearchSidebar = ({ isOpen, onClose }) => {
-    const [listAtLeastOne, setListAtLeastOne] = useState([]);
-    const [listAll, setListAll] = useState([]);
-    const [notInList, setNotInList] = useState([]);
+// Pannello "Ricerca avanzata" della pagina Soci. Lavora su una bozza: i filtri si applicano
+// con "Avvia ricerca" (la logica è in utils/ricercaAvanzata.js). Le opzioni di livello,
+// etichette, attività e corsi arrivano dai dati della società.
 
-    const listOptions = [
-        { value: "4614", label: "Aerobica" },
-        { value: "4356", label: "THAI BOXE" },
-        { value: "4257", label: "U13" }
-    ];
+const SI_NO = [['', 'TUTTI'], ['1', 'SI'], ['0', 'NO']];
+const ETA = Array.from({ length: 101 }, (_, i) => i);
+
+const Sezione = ({ titolo, children }) => (
+    <fieldset className="adv-sezione">
+        <legend>{titolo}</legend>
+        {children}
+    </fieldset>
+);
+
+const Griglia = ({ colonne = 2, children }) => (
+    <div className="adv-griglia" style={{ gridTemplateColumns: `repeat(${colonne}, minmax(0, 1fr))` }}>{children}</div>
+);
+
+const Select = ({ label, value, onChange, opzioni }) => (
+    <label className="adv-field">
+        <span>{label}</span>
+        <select className="md-select" value={value} onChange={(e) => onChange(e.target.value)}>
+            {opzioni.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+    </label>
+);
+
+const Data = ({ label, value, onChange }) => (
+    <label className="adv-field">
+        <span>{label}</span>
+        <input type="date" className="md-input" value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+);
+
+const AdvancedSearchSidebar = ({ isOpen, onClose, valore, onApplica, opzioni = {} }) => {
+    const [bozza, setBozza] = useState(valore || FILTRI_AVANZATI_VUOTI);
+    // All'apertura la bozza riparte dai filtri applicati (aggiornamento durante il render,
+    // al passaggio chiuso → aperto: niente effetto e niente render in più)
+    const [eraAperto, setEraAperto] = useState(isOpen);
+    if (isOpen !== eraAperto) {
+        setEraAperto(isOpen);
+        if (isOpen) setBozza(valore || FILTRI_AVANZATI_VUOTI);
+    }
+
+    const set = (campo) => (v) => setBozza(b => ({ ...b, [campo]: v }));
+    const { livelli = [], etichette = [], attivita = [], corsi = [] } = opzioni;
+    const etichetteOpzioni = etichette.map(e => ({ value: e, label: e }));
+    const corsiVisibili = bozza.attivitaId ? corsi.filter(c => String(c.attivitaId) === String(bozza.attivitaId)) : corsi;
+    const nAttivi = contaFiltriAvanzati(bozza);
+
+    const applica = (e) => {
+        e?.preventDefault();
+        onApplica(bozza);
+        onClose();
+    };
 
     return (
         <>
-            {/* Overlay */}
-            <div 
+            <div
                 style={{
-                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', 
+                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
                     zIndex: 1200, opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none',
                     transition: 'opacity 0.3s'
-                }} 
+                }}
                 onClick={onClose}
             />
-            {/* Sidebar */}
-            <div 
+            <aside
+                aria-label="Ricerca avanzata"
+                aria-hidden={!isOpen}
                 style={{
-                    position: 'fixed', top: 0, right: 0, bottom: 0, width: '500px', maxWidth: '90vw',
-                    backgroundColor: 'var(--surface-color)', zIndex: 1201, boxShadow: '-5px 0 15px rgba(0,0,0,0.2)',
+                    position: 'fixed', top: 0, right: 0, bottom: 0, width: '520px', maxWidth: '100vw',
+                    backgroundColor: 'var(--surface-color, #fff)', zIndex: 1201, boxShadow: '-5px 0 15px rgba(0,0,0,0.2)',
                     transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
                     transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex', flexDirection: 'column'
+                    display: 'flex', flexDirection: 'column', visibility: isOpen ? 'visible' : 'hidden',
                 }}
             >
-                {/* Header */}
                 <div style={{
-                    padding: '16px 20px', backgroundColor: 'var(--primary-color)', color: 'white',
+                    padding: '14px 20px', backgroundColor: 'var(--primary)', color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}>
-                    <div style={{display:'flex', alignItems:'center', gap:'10px', fontSize:'1.3rem', fontWeight: 500}}>
-                        <Search size={24} /> Ricerca avanzata
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.2rem', fontWeight: 500 }}>
+                        <Search size={22} /> Ricerca avanzata
                     </div>
-                    <button onClick={onClose} style={{background:'none', border:'none', color:'white', cursor:'pointer', display: 'flex', padding: 0}}>
-                        <X size={28} />
+                    <button type="button" onClick={onClose} aria-label="Chiudi" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', padding: 0 }}>
+                        <X size={26} />
                     </button>
                 </div>
-                
-                {/* Content */}
-                <div style={{flex: 1, overflowY: 'auto', padding: '20px'}}>
-                    <form onSubmit={(e) => e.preventDefault()} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                        
-                        {/* Row 1: Età min/max, Sesso, Iscritto */}
-                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Età min</label>
-                                <select className="md-select">
-                                    {[...Array(101).keys()].map(i => <option key={i} value={i}>{i}</option>)}
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Età max</label>
-                                <select className="md-select">
-                                    {[...Array(101).keys()].map(i => <option key={i} value={i}>{i}</option>)}
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Sesso</label>
-                                <select className="md-select">
-                                    <option value="0">TUTTI</option>
-                                    <option value="1">MASCHIO</option>
-                                    <option value="2">FEMMINA</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Iscritto</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        {/* Row 2: Iscrizione DA - A */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Iscrizione DA</label>
-                                <input type="date" className="md-input"/>
-                            </div>
-                            <div className="adv-field">
-                                <label>Iscrizione A</label>
-                                <input type="date" className="md-input"/>
-                            </div>
-                        </div>
-
-                        {/* Row 3: Stagioni precedenti */}
+                <form id="ricerca-avanzata" onSubmit={applica} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <Sezione titolo="Anagrafica">
+                        <Griglia colonne={4}>
+                            <Select label="Età min" value={bozza.etaMin} onChange={set('etaMin')} opzioni={[['', '—'], ...ETA.map(i => [String(i), String(i)])]} />
+                            <Select label="Età max" value={bozza.etaMax} onChange={set('etaMax')} opzioni={[['', '—'], ...ETA.map(i => [String(i), String(i)])]} />
+                            <Select label="Sesso" value={bozza.sesso} onChange={set('sesso')} opzioni={[['', 'TUTTI'], ['M', 'MASCHIO'], ['F', 'FEMMINA']]} />
+                            <Select label="Tipo socio" value={bozza.tipoSocio} onChange={set('tipoSocio')} opzioni={[['', 'TUTTI'], ['persona', 'PERSONA'], ['associazione', 'ASSOCIAZIONE']]} />
+                        </Griglia>
+                        <Griglia colonne={2}>
+                            <Data label="Nato dal" value={bozza.nascitaDa} onChange={set('nascitaDa')} />
+                            <Data label="Nato al" value={bozza.nascitaA} onChange={set('nascitaA')} />
+                        </Griglia>
                         <div className="adv-field">
-                            <label>Iscritto stagioni precedenti</label>
-                            <select className="md-select">
-                                <option value="-1">TUTTI</option>
-                                <option value="1">SI - STAGIONE PRECEDENTE</option>
-                                <option value="2">SI - STAGIONE PREC. QUALSIASI</option>
-                                <option value="0">NO - STAGIONE PRECEDENTE</option>
-                                <option value="3">NO - STAGIONE PREC. QUALSIASI</option>
-                            </select>
+                            <CityAutocomplete label="Luogo di nascita" value={bozza.luogoNascita} onChange={(e) => set('luogoNascita')(e.target.value)} />
                         </div>
+                        <Griglia colonne={2}>
+                            <div className="adv-field">
+                                <CityAutocomplete label="Comune di residenza" value={bozza.comune} onChange={(e) => set('comune')(e.target.value)} />
+                            </div>
+                            <label className="adv-field">
+                                <span>Indirizzo contiene</span>
+                                <input className="md-input" value={bozza.indirizzo} onChange={(e) => set('indirizzo')(e.target.value)} />
+                            </label>
+                        </Griglia>
+                        <Griglia colonne={4}>
+                            <Select label="Ha email" value={bozza.haEmail} onChange={set('haEmail')} opzioni={SI_NO} />
+                            <Select label="Ha telefono" value={bozza.haTelefono} onChange={set('haTelefono')} opzioni={SI_NO} />
+                            <Select label="Ha cod. fiscale" value={bozza.haCodiceFiscale} onChange={set('haCodiceFiscale')} opzioni={SI_NO} />
+                            <Select label="Livello" value={bozza.livello} onChange={set('livello')} opzioni={[['', 'Qualsiasi'], ...livelli.map(l => [l, l])]} />
+                        </Griglia>
+                    </Sezione>
 
-                         {/* Row 4: Livello, Valutazione, Ha email, Cert */}
-                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px'}}>
-                             <div className="adv-field">
-                                <label>Livello</label>
-                                <select className="md-select">
-                                    <option value="-1">Qualsiasi</option>
-                                    <option value="1">ND</option>
-                                    <option value="4098">Socio</option>
-                                    <option value="4099">Tesserato</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Valutazione</label>
-                                <select className="md-select">
-                                    <option value="-1">Qualsiasi</option>
-                                    <option value="0">N.D.</option>
-                                    <option value="1">A</option>
-                                    <option value="2">B</option>
-                                    <option value="3">C</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Ha email</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Cert. medico</label>
-                                <select className="md-select">
-                                    <option value="">TUTTI</option>
-                                    <option value="2">VALIDO</option>
-                                    <option value="1">IN SCADENZA</option>
-                                    <option value="0">SCADUTO</option>
-                                </select>
-                            </div>
-                        </div>
+                    <Sezione titolo="Iscrizione e tesseramento">
+                        <Griglia colonne={2}>
+                            <Select label="Iscritto (stagione in corso)" value={bozza.iscritto} onChange={set('iscritto')} opzioni={SI_NO} />
+                            <Select label="Iscritto stagioni precedenti" value={bozza.stagioniPrecedenti} onChange={set('stagioniPrecedenti')} opzioni={[
+                                ['', 'TUTTI'], ['si_prec', 'SI - STAGIONE PRECEDENTE'], ['si_qualsiasi', 'SI - QUALSIASI PRECEDENTE'],
+                                ['no_prec', 'NO - STAGIONE PRECEDENTE'], ['no_qualsiasi', 'NO - NESSUNA PRECEDENTE'],
+                            ]} />
+                        </Griglia>
+                        <Griglia colonne={2}>
+                            <Data label="Iscritto dal" value={bozza.iscrizioneDa} onChange={set('iscrizioneDa')} />
+                            <Data label="Iscritto al" value={bozza.iscrizioneA} onChange={set('iscrizioneA')} />
+                        </Griglia>
+                        <Griglia colonne={2}>
+                            <Select label="Stato tesseramento" value={bozza.statoTesseramento} onChange={set('statoTesseramento')} opzioni={[['', 'TUTTI'], ['REGOLARE', 'REGOLARE'], ['IN SCADENZA', 'IN SCADENZA'], ['SCADUTO', 'SCADUTO'], ['NO', 'NON TESSERATO']]} />
+                            <Select label="Certificato medico" value={bozza.certMedico} onChange={set('certMedico')} opzioni={[['', 'TUTTI'], ['2', 'VALIDO'], ['1', 'IN SCADENZA'], ['0', 'SCADUTO'], ['MISSING', 'ASSENTE']]} />
+                        </Griglia>
+                    </Sezione>
 
-                        {/* Row 5: Pagamenti, Scadenzario, CF */}
-                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Stato pagamenti</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="0">REGOLARI</option>
-                                    <option value="1">NON REGOLARI</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Ha scadenzario</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Ha codice fiscale</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                        </div>
+                    <Sezione titolo="Pagamenti e scadenze">
+                        <Griglia colonne={2}>
+                            <Select label="Stato pagamenti" value={bozza.statoPagamenti} onChange={set('statoPagamenti')} opzioni={[['', 'TUTTI'], ['regolari', 'REGOLARI'], ['non_regolari', 'NON REGOLARI']]} />
+                            <Select label="Ha un abbonamento attivo" value={bozza.haAbbonamento} onChange={set('haAbbonamento')} opzioni={SI_NO} />
+                            <Select label="Ha scadenze (abbonamenti/tessere)" value={bozza.haScadenzario} onChange={set('haScadenzario')} opzioni={SI_NO} />
+                            <Select label="Ha pagato nella stagione" value={bozza.pagatoStagione} onChange={set('pagatoStagione')} opzioni={SI_NO} />
+                        </Griglia>
+                        <label className="adv-field">
+                            <span>Totale pagato nella stagione almeno (€)</span>
+                            <input type="number" min="0" step="0.01" className="md-input" value={bozza.importoMinStagione} onChange={(e) => set('importoMinStagione')(e.target.value)} />
+                        </label>
+                    </Sezione>
 
-                        {/* Row 6: Quote periodiche, Comune */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Ha pagato quote periodiche</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <CityAutocomplete label="Comune di residenza" />
-                            </div>
-                        </div>
+                    <Sezione titolo="Corsi">
+                        <Griglia colonne={3}>
+                            <Select label="Frequenta un corso" value={bozza.frequentaCorso} onChange={set('frequentaCorso')} opzioni={SI_NO} />
+                            <Select label="Tipo attività" value={bozza.attivitaId} onChange={(v) => setBozza(b => ({ ...b, attivitaId: v, corsoId: '' }))}
+                                opzioni={[['', 'TUTTE'], ...attivita.map(a => [String(a.id), a.descrizione])]} />
+                            <Select label="Corso" value={bozza.corsoId} onChange={set('corsoId')}
+                                opzioni={[['', 'TUTTI'], ...corsiVisibili.map(c => [String(c.id), c.label])]} />
+                        </Griglia>
+                    </Sezione>
 
-                        {/* Row 7: Pagamenti min, Corso */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Pagamenti effettuati per min</label>
-                                <input type="number" className="md-input"/>
-                            </div>
-                            <div className="adv-field">
-                                <label>Frequenta un corso</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                        </div>
+                    <Sezione titolo="Etichette">
+                        {etichette.length === 0 ? (
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nessuna etichetta assegnata ai soci di questa società.</p>
+                        ) : (
+                            <>
+                                <Griglia colonne={2}>
+                                    <MultiSelect label="Ha almeno una di" options={etichetteOpzioni} value={bozza.etichetteAlmenoUna} onChange={set('etichetteAlmenoUna')} />
+                                    <MultiSelect label="Ha tutte" options={etichetteOpzioni} value={bozza.etichetteTutte} onChange={set('etichetteTutte')} />
+                                </Griglia>
+                                <MultiSelect label="Non ha nessuna di" options={etichetteOpzioni} value={bozza.etichetteNessuna} onChange={set('etichetteNessuna')} />
+                            </>
+                        )}
+                    </Sezione>
+                </form>
 
-                        {/* Row 8: Tipo attività, Abbonamento */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>Tipo attività corso frequentato</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTE</option>
-                                    <option value="2429">Torneo Basket 3vs3</option>
-                                    <option value="2430">MiniBasket Dragons Buttrio</option>
-                                    <option value="2431">Corso di Yoga</option>
-                                    <option value="2432">SCUOLA NUOTO</option>
-                                    <option value="2433">Corso di Sci</option>
-                                    <option value="2441">Padel Prenotazione</option>
-                                    <option value="2540">Aerobica</option>
-                                </select>
-                            </div>
-                            <div className="adv-field">
-                                <label>Ha un abbonamento</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="1">SI</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Row 9: Indirizzo */}
-                        <div className="adv-field">
-                            <label style={{textTransform:'uppercase'}}>INDIRIZZO</label>
-                            <input className="md-input" />
-                        </div>
-
-                         {/* Row 10: Luogo Nascita */}
-                         <div className="adv-field">
-                            <CityAutocomplete label="LUOGO DI NASCITA" />
-                        </div>
-
-                        {/* Row 11: Data Nascita Range */}
-                        <div className="adv-field">
-                            <label style={{textTransform:'uppercase'}}>DATA DI NASCITA</label>
-                            <div style={{display:'flex', gap:'12px'}}>
-                                <input type="date" className="md-input" style={{flex:1}} />
-                                <input type="date" className="md-input" style={{flex:1}} />
-                            </div>
-                        </div>
-
-                        {/* Row 12: ID Badge, Stato tesseramento */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <div className="adv-field">
-                                <label>ID Badge</label>
-                                <input className="md-input" />
-                            </div>
-                            <div className="adv-field">
-                                <label>Stato tesseramento</label>
-                                <select className="md-select">
-                                    <option value="-1">TUTTI</option>
-                                    <option value="2">VALIDO</option>
-                                    <option value="1">IN SCADENZA</option>
-                                    <option value="0">SCADUTO</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        {/* Row 13: Liste */}
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                            <MultiSelect 
-                                label="In lista (almeno una)" 
-                                options={listOptions} 
-                                value={listAtLeastOne} 
-                                onChange={setListAtLeastOne} 
-                            />
-                            <MultiSelect 
-                                label="In lista (tutte)" 
-                                options={listOptions} 
-                                value={listAll} 
-                                onChange={setListAll} 
-                            />
-                        </div>
-
-                        {/* Row 14: Non lista */}
-                        <MultiSelect 
-                            label="NON Appartiene alla lista" 
-                            options={listOptions} 
-                            value={notInList} 
-                            onChange={setNotInList} 
-                        />
-                        
-                        {/* Spacer for bottom scrolling */}
-                        <div style={{height: '20px'}}></div>
-
-                    </form>
-                </div>
-
-                {/* Footer */}
-                <div style={{padding: '16px 20px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)'}}>
-                     <button className="btn-contained" style={{width: '100%', backgroundColor: 'var(--success-color)', justifyContent: 'center', fontSize: '1.2rem', padding: '12px', display:'flex', alignItems:'center'}}>
-                        <Search size={22} style={{marginRight:'10px'}}/> Avvia ricerca
+                <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: 10 }}>
+                    <button type="button" className="btn-outlined" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}
+                        onClick={() => setBozza(FILTRI_AVANZATI_VUOTI)} disabled={nAttivi === 0}>
+                        <RotateCcw size={16} /> Azzera
+                    </button>
+                    <button type="submit" form="ricerca-avanzata" className="btn-contained" style={{ flex: 1, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.05rem' }}>
+                        <Search size={20} /> Avvia ricerca{nAttivi > 0 ? ` (${nAttivi} ${nAttivi === 1 ? 'filtro' : 'filtri'})` : ''}
                     </button>
                 </div>
-            </div>
+            </aside>
 
             <style>{`
-                .adv-field {
-                    display: flex;
-                    flex-direction: column;
-                }
-                .adv-field label {
-                    font-size: 0.9rem;
-                    color: var(--primary-color);
-                    margin-bottom: 4px;
-                }
+                .adv-sezione { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px 14px; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+                .adv-sezione legend { padding: 0 6px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+                .adv-griglia { display: grid; gap: 12px; }
+                .adv-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+                .adv-field > span, .adv-field label { font-size: 0.85rem; color: var(--primary); }
+                .adv-field .md-select, .adv-field .md-input { width: 100%; box-sizing: border-box; }
+                @media (max-width: 560px) { .adv-griglia { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
             `}</style>
         </>
     );
