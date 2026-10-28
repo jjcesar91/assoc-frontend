@@ -341,6 +341,8 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         dataA: dateRange.dataA,
         conto: 'TUTTI',
         segno: 'TUTTI',
+        gruppo: '',
+        modalita: 'TUTTI',
     });
 
     useEffect(() => {
@@ -360,11 +362,66 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             dataA: dateRange.dataA,
             conto: 'TUTTI',
             segno: 'TUTTI',
+            gruppo: '',
+            modalita: 'TUTTI',
         });
         setCurrentPage(1);
     };
 
     const paymentsConSaldo = useMemo(() => [...payments, ...saldoRows], [payments, saldoRows]);
+
+    // Filtro per gruppo/sottogruppo: elenco dei gruppi e, per ogni movimento, i sottogruppi a
+    // cui è imputato (calcolati dal backend con le stesse regole del Bilancio, voce per voce)
+    const [gruppi, setGruppi] = useState([]);
+    const [assegnazioni, setAssegnazioni] = useState({});
+    useEffect(() => {
+        if (!societa?.id) return;
+        const token = localStorage.getItem('token');
+        fetch(`/payments/api/gruppi?societa_id=${societa.id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setGruppi(Array.isArray(data) ? data : []))
+            .catch(() => setGruppi([]));
+    }, [societa?.id]);
+    useEffect(() => {
+        if (!societa?.id || !filters.gruppo) return;
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams({ societa_id: societa.id });
+        if (filters.dataDa) params.set('data_da', filters.dataDa);
+        if (filters.dataA) params.set('data_a', filters.dataA);
+        let annullato = false;
+        fetch(`/payments/api/gruppi/assegnazioni?${params}`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : { assegnazioni: {} })
+            .then(data => { if (!annullato) setAssegnazioni(data.assegnazioni || {}); })
+            .catch(() => { if (!annullato) setAssegnazioni({}); });
+        return () => { annullato = true; };
+    }, [societa?.id, filters.gruppo, filters.dataDa, filters.dataA, payments]);
+
+    // Opzioni del filtro: gruppi radice (con tutti i loro sottogruppi) e sottogruppi indentati
+    const opzioniGruppo = useMemo(() => {
+        const perCodice = (a, b) => String(a.codice || '').localeCompare(String(b.codice || ''), 'it', { numeric: true }) || (a.descrizione || '').localeCompare(b.descrizione || '', 'it');
+        const radici = gruppi.filter(g => !g.gruppo_id).sort(perCodice);
+        const out = [];
+        for (const r of radici) {
+            out.push({ value: `g:${r.id}`, label: `${r.codice ? `${r.codice} ` : ''}${r.descrizione}${r.tipo ? ` (${r.tipo})` : ''}` });
+            gruppi.filter(g => g.gruppo_id === r.id).sort(perCodice)
+                .forEach(sg => out.push({ value: `s:${sg.id}`, label: `\u00A0\u00A0\u00A0${sg.codice ? `${sg.codice} ` : ''}${sg.descrizione}` }));
+        }
+        return out;
+    }, [gruppi]);
+
+    // Gruppi accettati dal filtro corrente (un gruppo radice include i suoi sottogruppi)
+    const gruppiAmmessi = useMemo(() => {
+        const f = filters.gruppo;
+        if (!f || f === 'none') return null;
+        const id = Number(f.slice(2));
+        if (f.startsWith('s:')) return new Set([id]);
+        return new Set([id, ...gruppi.filter(g => g.gruppo_id === id).map(g => g.id)]);
+    }, [filters.gruppo, gruppi]);
+
+    const modalitaUniche = useMemo(() => {
+        const s = new Set(paymentsConSaldo.map(p => p.modalita_pagamento).filter(Boolean));
+        return [...s].sort((a, b) => a.localeCompare(b, 'it'));
+    }, [paymentsConSaldo]);
 
     const contiUnici = useMemo(() => {
         const s = new Set(paymentsConSaldo.map(p => p.conto_destinazione).filter(Boolean));
@@ -386,6 +443,16 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                 if (!(p.intestatario || '').toLowerCase().includes(q)) return false;
             }
             if (filters.conto !== 'TUTTI' && p.conto_destinazione !== filters.conto) return false;
+            if (filters.modalita !== 'TUTTI') {
+                if (filters.modalita === '__nessuna') { if (p.modalita_pagamento) return false; }
+                else if (p.modalita_pagamento !== filters.modalita) return false;
+            }
+            if (filters.gruppo) {
+                // Le righe di saldo iniziale non appartengono a nessun gruppo
+                const imputati = assegnazioni[p.id] || [null];
+                if (filters.gruppo === 'none') { if (!imputati.includes(null)) return false; }
+                else if (!imputati.some(id => id != null && gruppiAmmessi.has(id))) return false;
+            }
             if (filters.segno !== 'TUTTI') {
                 const importo = parseFloat(p.importo || 0);
                 const isAnnullato = p.stato_pagamento?.startsWith('3.');
@@ -402,7 +469,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         const pinned = risultato.filter(p => p.pinnedFirst);
         const resto = risultato.filter(p => !p.pinnedFirst);
         return pinned.length > 0 ? [...pinned, ...resto] : risultato;
-    }, [paymentsConSaldo, filters]);
+    }, [paymentsConSaldo, filters, assegnazioni, gruppiAmmessi]);
 
     // Totale netto del periodo filtrato: entrate + uscite (gli importi delle
     // uscite sono già memorizzati negativi, quindi la somma li sottrae).
@@ -570,6 +637,34 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                             <option value="TUTTI">Tutti</option>
                             <option value="AVERE">Entrata</option>
                             <option value="DARE">Uscita</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '130px' }}>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Modalità</label>
+                        <select
+                            className="md-select"
+                            style={{ padding: '6px 12px' }}
+                            value={filters.modalita}
+                            onChange={(e) => handleFilterChange('modalita', e.target.value)}
+                        >
+                            <option value="TUTTI">Tutte</option>
+                            {modalitaUniche.map(m => <option key={m} value={m}>{m}</option>)}
+                            <option value="__nessuna">Non indicata</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '200px' }}>
+                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Gruppo / Sottogruppo</label>
+                        <select
+                            className="md-select"
+                            style={{ padding: '6px 12px' }}
+                            value={filters.gruppo}
+                            onChange={(e) => handleFilterChange('gruppo', e.target.value)}
+                        >
+                            <option value="">Tutti</option>
+                            {opzioniGruppo.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            <option value="none">Non assegnato a nessun gruppo</option>
                         </select>
                     </div>
                 </div>
