@@ -159,6 +159,11 @@ const ScadenziarioComunicazioni = () => {
                                                 <input type="checkbox" checked={!!b.attiva} onChange={(e) => aggiorna(r.tipo, { attiva: e.target.checked })} style={{ width: 16, height: 16 }} />
                                                 Invio attivo
                                             </label>
+                                            {!b.attiva && (
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--warning)', alignSelf: 'center' }}>
+                                                    Invio disattivato: puoi preparare il testo, ma l&apos;email non parte finché non attivi l&apos;invio.
+                                                </span>
+                                            )}
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                                 <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Giorni di anticipo</label>
                                                 <input className="md-input" type="number" min="0" style={{ width: 120, padding: '6px 12px' }}
@@ -166,12 +171,12 @@ const ScadenziarioComunicazioni = () => {
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, opacity: b.attiva ? 1 : 0.6 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Oggetto email</label>
                                             <SimpleEditor subject value={b.oggetto || ''} onChange={(e) => aggiorna(r.tipo, { oggetto: e.target.value })} insertFields={CAMPI_OGGETTO} />
                                         </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, opacity: b.attiva ? 1 : 0.6 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Testo del messaggio</label>
                                             <SimpleEditor value={b.testo || ''} onChange={(e) => aggiorna(r.tipo, { testo: e.target.value })} insertFields={CAMPI_TESTO} />
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
