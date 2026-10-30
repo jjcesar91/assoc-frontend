@@ -16,7 +16,17 @@ const EMPTY_FORM = {
 // un valore che esiste solo qui: non è selezionabile in anagrafica Conti e non
 // viene conteggiato nel Bilancio (è un movimento interno, non un'entrata/uscita
 // reale della società).
-const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
+// In modifica (giroconto = una delle due righe) si aggiornano entrambe le righe con
+// PUT /giroconto/:id; i conti si ricavano dalla riga e dalla sua descrizione.
+const contiDaRiga = (riga) => {
+    if (!riga) return { uscita: '', entrata: '' };
+    const altro = (riga.quote || '').replace(/^Giroconto (verso|da) /, '');
+    return parseFloat(riga.importo) < 0
+        ? { uscita: riga.conto_destinazione || '', entrata: altro }
+        : { uscita: altro, entrata: riga.conto_destinazione || '' };
+};
+
+const GirocontoModal = ({ isOpen, onClose, onSaved, societaId, giroconto = null }) => {
     const { selectedAnno } = useAnno();
     const { societaList } = useSocieta();
     const selectedSocieta = useMemo(
@@ -54,6 +64,19 @@ const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
             setError(null);
         }
     }, [isOpen, societaId]);
+
+    // Modifica: precompila data, importo e conti appena i conti sono caricati
+    useEffect(() => {
+        if (!isOpen || !giroconto || conti.length === 0) return;
+        const { uscita, entrata } = contiDaRiga(giroconto);
+        const idDi = (nome) => String(conti.find(c => c.descrizione === nome)?.id ?? '');
+        setForm({
+            data_pagamento: giroconto.data_pagamento,
+            importo: String(Math.abs(parseFloat(giroconto.importo) || 0)),
+            conto_uscita_id: idDi(uscita),
+            conto_entrata_id: idDi(entrata),
+        });
+    }, [isOpen, giroconto, conti]);
 
     const handleFieldChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -94,8 +117,8 @@ const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
         setSaving(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('/payments/api/giroconto', {
-                method: 'POST',
+            const res = await fetch(giroconto ? `/payments/api/giroconto/${giroconto.id}` : '/payments/api/giroconto', {
+                method: giroconto ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
@@ -106,6 +129,7 @@ const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
                     importo: parseFloat(form.importo),
                     conto_uscita: contoUscita?.descrizione,
                     conto_entrata: contoEntrata?.descrizione,
+                    ...(giroconto ? { note: giroconto.note || null } : {}),
                 }),
             });
             if (!res.ok) {
@@ -129,7 +153,7 @@ const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
                 <div className="nom-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <ArrowLeftRight size={20} />
-                        <span>Giroconto</span>
+                        <span>{giroconto ? 'Modifica giroconto' : 'Giroconto'}</span>
                     </div>
                     <button className="nom-close-btn" onClick={onClose} title="Chiudi">
                         <X size={20} />
@@ -208,7 +232,7 @@ const GirocontoModal = ({ isOpen, onClose, onSaved, societaId }) => {
                             Annulla
                         </button>
                         <button type="submit" className="nom-btn nom-btn--save" disabled={saving}>
-                            {saving ? 'Salvataggio…' : 'Salva giroconto'}
+                            {saving ? 'Salvataggio…' : (giroconto ? 'Salva modifiche' : 'Salva giroconto')}
                         </button>
                     </div>
                 </form>

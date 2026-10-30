@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { RotateCcw, ChevronUp, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
+import { RotateCcw, ChevronUp, Ban, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
 import GirocontoModal from './GirocontoModal';
+import ModificaMovimentoModal from './ModificaMovimentoModal';
+import { useNavigate } from 'react-router-dom';
 import ImportPrimaNotaModal from './ImportPrimaNotaModal';
 import { formatDateIT } from '../utils/dateUtils';
 import { usePianoLicenza, MESSAGGIO_PIANO } from '../data/pianoLicenza';
@@ -261,7 +263,8 @@ const MODALITA_STANDARD = ['Contanti', 'POS', 'Assegno', 'Bonifico', 'Carta di c
 // ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
-const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onGiroconto, onDettaglio, onModifica, onElimina, onImportCsv }) => {
+const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onGiroconto, onDettaglio, onModifica, onElimina, onImportCsv, onModificaGiroconto, onEliminaGiroconto, onModificaMovimento, onAnnullaRicevuta, onEliminaProforma }) => {
+    const navigate = useNavigate();
     const dateRange = useMemo(() => {
         if (!selectedAnno || !societa) {
             const y = new Date().getFullYear();
@@ -523,6 +526,46 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         cursor: 'pointer',
         whiteSpace: 'nowrap',
     });
+
+    // Azioni di modifica/rimozione per tipo di riga:
+    //  - saldo iniziale (riga calcolata dal conto): si modifica o azzera in Configurazione → Conti
+    //  - giroconto: modifica ed eliminazione di entrambe le righe (uscita + entrata)
+    //  - operazione manuale o importata (senza socio né ricevuta): maschera Nuova operazione
+    //  - proforma: modifica dei dati contabili, eliminazione
+    //  - ricevuta: modifica dei dati contabili; con numero si annulla (documento emesso),
+    //    senza numero si elimina
+    const azioniRiga = (p) => {
+        if (typeof p.id === 'string' && p.id.startsWith('saldo-')) {
+            return {
+                modifica: () => navigate('/ricevute/conti'), titoloModifica: 'Modifica il saldo iniziale in Configurazione → Conti',
+                rimuovi: null, titoloRimuovi: 'Il saldo iniziale si azzera in Configurazione → Conti',
+            };
+        }
+        if (p.modalita_pagamento === 'Giroconto' || p.quote_types === 'giroconto') {
+            return {
+                modifica: () => onModificaGiroconto(p), titoloModifica: 'Modifica giroconto (entrambe le righe)',
+                rimuovi: () => onEliminaGiroconto(p), titoloRimuovi: 'Elimina giroconto (entrambe le righe)',
+            };
+        }
+        if (p.quote_types === 'operazione_manuale' || (!p.socio_id && !p.numero_ricevuta && p.tipo_documento !== 'proforma')) {
+            return { modifica: () => onModifica(p), titoloModifica: 'Modifica', rimuovi: () => onElimina(p), titoloRimuovi: 'Elimina' };
+        }
+        if (p.tipo_documento === 'proforma') {
+            return {
+                modifica: () => onModificaMovimento(p), titoloModifica: 'Modifica dati contabili',
+                rimuovi: () => onEliminaProforma(p), titoloRimuovi: 'Elimina proforma',
+            };
+        }
+        const annullata = p.stato_pagamento?.startsWith('3.');
+        if (p.numero_ricevuta) {
+            return {
+                modifica: () => onModificaMovimento(p), titoloModifica: 'Modifica dati contabili (data, conto, modalità, note)',
+                rimuovi: annullata ? null : () => onAnnullaRicevuta(p), annulla: true,
+                titoloRimuovi: annullata ? 'Ricevuta già annullata: non conta più nei totali' : 'Annulla ricevuta (resta in elenco come annullata)',
+            };
+        }
+        return { modifica: () => onModificaMovimento(p), titoloModifica: 'Modifica dati contabili', rimuovi: () => onElimina(p), titoloRimuovi: 'Elimina' };
+    };
 
     // Filtri diversi dai valori iniziali (le date di default sono quelle della stagione)
     const filtriAttivi = [
@@ -820,24 +863,27 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                                 >
                                                     <FolderOpen size={14} />
                                                 </button>
-                                                {p.quote_types === 'operazione_manuale' && (
-                                                    <>
-                                                        <button
-                                                            style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--warning)', color: 'white' }}
-                                                            title="Modifica"
-                                                            onClick={() => onModifica(p)}
-                                                        >
-                                                            <Edit2 size={14} />
-                                                        </button>
-                                                        <button
-                                                            style={{ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--danger)', color: 'white' }}
-                                                            title="Elimina"
-                                                            onClick={() => onElimina(p)}
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </>
-                                                )}
+                                                {(() => {
+                                                    // Ogni riga si può modificare e togliere, ciascuna nel modo giusto per il suo tipo
+                                                    const az = azioniRiga(p);
+                                                    const stile = (colore, attivo = true) => ({ padding: 0, border: 'none', width: '30px', height: '30px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: attivo ? 'pointer' : 'not-allowed', backgroundColor: colore, color: 'white', opacity: attivo ? 1 : 0.4 });
+                                                    return (
+                                                        <>
+                                                            <button style={stile('var(--warning)')} title={az.titoloModifica} onClick={az.modifica}>
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            {az.rimuovi ? (
+                                                                <button style={stile('var(--danger)')} title={az.titoloRimuovi} onClick={az.rimuovi}>
+                                                                    {az.annulla ? <Ban size={14} /> : <Trash2 size={14} />}
+                                                                </button>
+                                                            ) : (
+                                                                <button style={stile('var(--danger)', false)} title={az.titoloRimuovi} disabled>
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                     </tr>
@@ -1501,6 +1547,8 @@ const Contabilita = () => {
     const [nuovaOpInitialData, setNuovaOpInitialData] = useState(null);
     const [editingOperazione, setEditingOperazione] = useState(null);
     const [girocontoModalOpen, setGirocontoModalOpen] = useState(false);
+    const [girocontoInModifica, setGirocontoInModifica] = useState(null);
+    const [movimentoInModifica, setMovimentoInModifica] = useState(null);
     const [dettaglioPayment, setDettaglioPayment] = useState(null);
     const [importCsvOpen, setImportCsvOpen] = useState(false);
     const confirm = useConfirm();
@@ -1539,6 +1587,32 @@ const Contabilita = () => {
         } catch (err) {
             console.error('Errore eliminazione operazione:', err);
         }
+    };
+
+    const chiama = async (url, method, okMsg) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) refreshPayments();
+            else {
+                const d = await res.json().catch(() => ({}));
+                await confirm(d.error || 'Operazione non riuscita', 'Errore', { confirmLabel: 'OK' });
+            }
+        } catch (err) {
+            console.error(okMsg, err);
+        }
+    };
+    const handleEliminaGiroconto = async (p) => {
+        if (!(await confirm(`Eliminare il giroconto del ${formatDateIT(p.data_pagamento)} da ${Math.abs(parseFloat(p.importo)).toFixed(2).replace('.', ',')} €? Vengono eliminate entrambe le righe (uscita ed entrata).`, 'Elimina giroconto'))) return;
+        await chiama(`/payments/api/giroconto/${p.id}`, 'DELETE', 'Errore eliminazione giroconto');
+    };
+    const handleAnnullaRicevuta = async (p) => {
+        if (!(await confirm(`Annullare la ricevuta n. ${p.numero_ricevuta} di ${p.intestatario || '—'}? Resta in elenco come annullata e non conta più nei totali. L'operazione non si può annullare.`, 'Annulla ricevuta'))) return;
+        await chiama(`/payments/api/${p.id}/annulla`, 'PATCH', 'Errore annullamento ricevuta');
+    };
+    const handleEliminaProforma = async (p) => {
+        if (!(await confirm(`Eliminare la proforma di ${p.intestatario || '—'}? Viene cancellata definitivamente.`, 'Elimina proforma'))) return;
+        await chiama(`/payments/api/${p.id}/proforma`, 'DELETE', 'Errore eliminazione proforma');
     };
 
     const refreshPayments = () => {
@@ -1653,6 +1727,11 @@ const Contabilita = () => {
                         onModifica={(p) => { setEditingOperazione(p); setNuovaOpInitialData(null); setNuovaOpModalOpen(true); }}
                         onElimina={handleElimina}
                         onImportCsv={() => setImportCsvOpen(true)}
+                        onModificaGiroconto={(p) => setGirocontoInModifica(p)}
+                        onEliminaGiroconto={handleEliminaGiroconto}
+                        onModificaMovimento={(p) => setMovimentoInModifica(p)}
+                        onAnnullaRicevuta={handleAnnullaRicevuta}
+                        onEliminaProforma={handleEliminaProforma}
                     />
                 )}
 
@@ -1681,6 +1760,20 @@ const Contabilita = () => {
                 <GirocontoModal
                     isOpen={girocontoModalOpen}
                     onClose={() => setGirocontoModalOpen(false)}
+                    onSaved={refreshPayments}
+                    societaId={selectedSocietaId}
+                />
+                <GirocontoModal
+                    isOpen={girocontoInModifica !== null}
+                    giroconto={girocontoInModifica}
+                    onClose={() => setGirocontoInModifica(null)}
+                    onSaved={refreshPayments}
+                    societaId={selectedSocietaId}
+                />
+                <ModificaMovimentoModal
+                    isOpen={movimentoInModifica !== null}
+                    movimento={movimentoInModifica}
+                    onClose={() => setMovimentoInModifica(null)}
                     onSaved={refreshPayments}
                     societaId={selectedSocietaId}
                 />
