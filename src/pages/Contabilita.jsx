@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
+import { RotateCcw, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -508,7 +508,12 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         whiteSpace: 'nowrap',
     });
 
-    const filterDivider = <div style={{ width: '1px', background: 'var(--border-color)', alignSelf: 'stretch', margin: '0 2px' }} />;
+    // Filtri diversi dai valori iniziali (le date di default sono quelle della stagione)
+    const filtriAttivi = [
+        filters.dataDa !== dateRange.dataDa || filters.dataA !== dateRange.dataA,
+        !!filters.descrizione, !!filters.intestatario,
+        filters.conto !== 'TUTTI', filters.segno !== 'TUTTI', filters.modalita !== 'TUTTI', !!filters.gruppo,
+    ].filter(Boolean).length;
 
     return (
         <>
@@ -537,137 +542,107 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                 </div>
             </div>
 
-            {/* Toolbar: filtri — raggruppati per periodo / ricerca testuale / categoria */}
-            <div className="toolbar-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: '130px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Data da</label>
-                        <input
-                            type="date"
-                            className="md-input"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.dataDa}
-                            onChange={(e) => handleFilterChange('dataDa', e.target.value)}
-                        />
+            {/* Toolbar: filtri — periodo e ricerca testuale, poi classificazione; in fondo i filtri attivi e Reset */}
+            <div className="toolbar-card pn-filtri">
+                <div className="pn-riga pn-riga-1">
+                    <div className="pn-gruppo">
+                        <span className="pn-gruppo-titolo">Periodo</span>
+                        <div className="pn-campi pn-campi-2">
+                            <label className="pn-campo">
+                                <span>Dal</span>
+                                <input type="date" className="md-input" value={filters.dataDa} onChange={(e) => handleFilterChange('dataDa', e.target.value)} />
+                            </label>
+                            <label className="pn-campo">
+                                <span>Al</span>
+                                <input type="date" className="md-input" value={filters.dataA} onChange={(e) => handleFilterChange('dataA', e.target.value)} />
+                            </label>
+                        </div>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: '130px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Data a</label>
-                        <input
-                            type="date"
-                            className="md-input"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.dataA}
-                            onChange={(e) => handleFilterChange('dataA', e.target.value)}
-                        />
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                        <button
-                            onClick={handleResetFilters}
-                            title="Reimposta filtri"
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '7px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '8px',
-                                background: 'var(--surface-1)',
-                                cursor: 'pointer',
-                                color: 'var(--text-secondary)',
-                                fontSize: '0.85rem',
-                                fontWeight: '500',
-                                lineHeight: 1,
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <span style={{ fontSize: '1rem' }}>&#8635;</span> Reset
-                        </button>
-                    </div>
-
-                    {filterDivider}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 2, minWidth: '160px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Descrizione</label>
-                        <input
-                            className="md-input"
-                            placeholder="Cerca in descrizione o num. ricevuta..."
-                            style={{ padding: '6px 12px' }}
-                            value={filters.descrizione}
-                            onChange={(e) => handleFilterChange('descrizione', e.target.value)}
-                        />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '140px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Fornitore / Cliente</label>
-                        <input
-                            className="md-input"
-                            placeholder="Intestatario..."
-                            style={{ padding: '6px 12px' }}
-                            value={filters.intestatario}
-                            onChange={(e) => handleFilterChange('intestatario', e.target.value)}
-                        />
-                    </div>
-
-                    {filterDivider}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '120px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Conto</label>
-                        <select
-                            className="md-select"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.conto}
-                            onChange={(e) => handleFilterChange('conto', e.target.value)}
-                        >
-                            <option value="TUTTI">Tutti</option>
-                            {contiUnici.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '110px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Entrata/Uscita</label>
-                        <select
-                            className="md-select"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.segno}
-                            onChange={(e) => handleFilterChange('segno', e.target.value)}
-                        >
-                            <option value="TUTTI">Tutti</option>
-                            <option value="AVERE">Entrata</option>
-                            <option value="DARE">Uscita</option>
-                        </select>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '130px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Modalità</label>
-                        <select
-                            className="md-select"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.modalita}
-                            onChange={(e) => handleFilterChange('modalita', e.target.value)}
-                        >
-                            <option value="TUTTI">Tutte</option>
-                            {modalitaUniche.map(m => <option key={m} value={m}>{m}</option>)}
-                            <option value="__nessuna">Non indicata</option>
-                        </select>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 240px', minWidth: '200px', maxWidth: '420px' }}>
-                        <label style={{ fontSize: '0.85rem', marginBottom: '4px' }}>Gruppo / Sottogruppo</label>
-                        <select
-                            className="md-select"
-                            style={{ padding: '6px 12px' }}
-                            value={filters.gruppo}
-                            onChange={(e) => handleFilterChange('gruppo', e.target.value)}
-                        >
-                            <option value="">Tutti</option>
-                            {opzioniGruppo.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            <option value="none">Non assegnato a nessun gruppo</option>
-                        </select>
+                    <div className="pn-gruppo">
+                        <span className="pn-gruppo-titolo">Ricerca</span>
+                        <div className="pn-campi pn-campi-ricerca">
+                            <label className="pn-campo">
+                                <span>Descrizione o n. ricevuta</span>
+                                <input className="md-input" placeholder="Cerca…" value={filters.descrizione} onChange={(e) => handleFilterChange('descrizione', e.target.value)} />
+                            </label>
+                            <label className="pn-campo">
+                                <span>Fornitore / Cliente</span>
+                                <input className="md-input" placeholder="Intestatario…" value={filters.intestatario} onChange={(e) => handleFilterChange('intestatario', e.target.value)} />
+                            </label>
+                        </div>
                     </div>
                 </div>
+
+                <div className="pn-gruppo">
+                    <span className="pn-gruppo-titolo">Classificazione</span>
+                    <div className="pn-campi pn-campi-classificazione">
+                        <label className="pn-campo">
+                            <span>Entrata / Uscita</span>
+                            <select className="md-select" value={filters.segno} onChange={(e) => handleFilterChange('segno', e.target.value)}>
+                                <option value="TUTTI">Tutte</option>
+                                <option value="AVERE">Entrate</option>
+                                <option value="DARE">Uscite</option>
+                            </select>
+                        </label>
+                        <label className="pn-campo">
+                            <span>Conto</span>
+                            <select className="md-select" value={filters.conto} onChange={(e) => handleFilterChange('conto', e.target.value)}>
+                                <option value="TUTTI">Tutti</option>
+                                {contiUnici.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </label>
+                        <label className="pn-campo">
+                            <span>Modalità di pagamento</span>
+                            <select className="md-select" value={filters.modalita} onChange={(e) => handleFilterChange('modalita', e.target.value)}>
+                                <option value="TUTTI">Tutte</option>
+                                {modalitaUniche.map(m => <option key={m} value={m}>{m}</option>)}
+                                <option value="__nessuna">Non indicata</option>
+                            </select>
+                        </label>
+                        <label className="pn-campo">
+                            <span>Gruppo / Sottogruppo</span>
+                            <select className="md-select" value={filters.gruppo} onChange={(e) => handleFilterChange('gruppo', e.target.value)}>
+                                <option value="">Tutti</option>
+                                {opzioniGruppo.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                <option value="none">Non assegnato a nessun gruppo</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="pn-piede">
+                    <span>
+                        {filtriAttivi > 0
+                            ? <><strong>{filtriAttivi}</strong> {filtriAttivi === 1 ? 'filtro attivo' : 'filtri attivi'}</>
+                            : 'Nessun filtro attivo: tutti i movimenti della stagione'}
+                    </span>
+                    <button type="button" className="btn-outlined pn-reset" onClick={handleResetFilters} disabled={filtriAttivi === 0} title="Reimposta filtri">
+                        <RotateCcw size={14} /> Reset filtri
+                    </button>
+                </div>
+
+                <style>{`
+                    .pn-filtri { flex-direction: column; align-items: stretch; gap: 14px; }
+                    .pn-riga-1 { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(320px, 2fr); gap: 14px 24px; }
+                    .pn-gruppo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+                    .pn-gruppo-titolo { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-tertiary); }
+                    .pn-campi { display: grid; gap: 10px 12px; }
+                    .pn-campi-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                    .pn-campi-ricerca { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+                    .pn-campi-classificazione { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); }
+                    .pn-campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+                    .pn-campo > span { font-size: 0.85rem; color: var(--text-secondary); }
+                    .pn-campo .md-input, .pn-campo .md-select { width: 100%; box-sizing: border-box; padding: 6px 12px; }
+                    .pn-piede { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-secondary); }
+                    .pn-reset { height: 32px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; }
+                    @media (max-width: 1100px) {
+                        .pn-riga-1 { grid-template-columns: 1fr; }
+                        .pn-campi-classificazione { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                    }
+                    @media (max-width: 600px) {
+                        .pn-campi-ricerca, .pn-campi-classificazione { grid-template-columns: 1fr; }
+                    }
+                `}</style>
             </div>
 
             {/* Table Block */}
