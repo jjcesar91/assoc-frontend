@@ -141,7 +141,7 @@ const ModificaMovimentoModal = ({ isOpen, movimento, societaId, onClose, onSaved
                                     {modalita.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
-                            <div className="nom-field" style={{ gridColumn: '1 / -1' }}>
+                            <div className="nom-field nom-field--full">
                                 <label>Note</label>
                                 <textarea className="md-input" rows={2} value={form.note} onChange={set('note')} />
                             </div>
