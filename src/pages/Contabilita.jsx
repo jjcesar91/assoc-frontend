@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { RotateCcw, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
+import { RotateCcw, ChevronUp, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
@@ -372,6 +372,9 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 
     const paymentsConSaldo = useMemo(() => [...payments, ...saldoRows], [payments, saldoRows]);
 
+    // Verso dell'ordinamento per data (clic sull'intestazione "Data"): all'apertura dalla più recente
+    const [ordineData, setOrdineData] = useState('desc');
+
     // Filtro per gruppo/sottogruppo: elenco dei gruppi e, per ogni movimento, i sottogruppi a
     // cui è imputato (calcolati dal backend con le stesse regole del Bilancio, voce per voce)
     const [gruppi, setGruppi] = useState([]);
@@ -472,14 +475,17 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         // dalla più recente. A parità di data: prima le operazioni inserite per ultime (id più alto),
         // in fondo alla giornata il saldo del conto, che è il punto di partenza di quel giorno.
         // Nessuna riga è più fissata in cima: anche i saldi riportati stanno alla loro data.
+        // In ordine crescente tutto si inverte: il saldo apre la giornata, poi le operazioni
+        // nell'ordine di inserimento.
         const eSaldo = (p) => typeof p.id === 'string' && p.id.startsWith('saldo-');
+        const verso = ordineData === 'asc' ? -1 : 1;
         return risultato.sort((x, y) => {
             const perData = (y.data_pagamento || '').localeCompare(x.data_pagamento || '');
-            if (perData !== 0) return perData;
-            if (eSaldo(x) !== eSaldo(y)) return eSaldo(x) ? 1 : -1;
-            return (Number(y.id) || 0) - (Number(x.id) || 0);
+            if (perData !== 0) return verso * perData;
+            if (eSaldo(x) !== eSaldo(y)) return verso * (eSaldo(x) ? 1 : -1);
+            return verso * ((Number(y.id) || 0) - (Number(x.id) || 0));
         });
-    }, [paymentsConSaldo, filters, assegnazioni, gruppiAmmessi]);
+    }, [paymentsConSaldo, filters, assegnazioni, gruppiAmmessi, ordineData]);
 
     // Totale netto del periodo filtrato: entrate + uscite (gli importi delle
     // uscite sono già memorizzati negativi, quindi la somma li sottrae).
@@ -667,8 +673,19 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                                 <th style={{ padding: '12px 16px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600' }}>
                                     Operazione - tipologia
                                 </th>
-                                <th style={{ padding: '12px 16px', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
-                                    Data
+                                <th
+                                    aria-sort={ordineData === 'asc' ? 'ascending' : 'descending'}
+                                    style={{ padding: 0, backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => { setOrdineData(o => (o === 'asc' ? 'desc' : 'asc')); setCurrentPage(1); }}
+                                        title={ordineData === 'asc' ? 'Dalla più vecchia: clicca per mostrare prima le più recenti' : 'Dalla più recente: clicca per mostrare prima le più vecchie'}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', padding: '12px 16px', background: 'none', border: 'none', color: 'inherit', font: 'inherit', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                        Data
+                                        {ordineData === 'asc' ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                    </button>
                                 </th>
                                 <th style={{ padding: '12px 16px', textAlign: 'right', backgroundColor: 'var(--success)', color: '#fff', whiteSpace: 'nowrap', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.25)' }}>
                                     Importo
