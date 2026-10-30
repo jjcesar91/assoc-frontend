@@ -287,7 +287,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
     useEffect(() => {
         if (!societa?.id) { setConti([]); return; }
         const token = localStorage.getItem('token');
-        fetch(`/payments/api/conti?societa_id=${societa.id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`/payments/api/conti?societa_id=${societa.id}`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' })
             .then(r => r.ok ? r.json() : [])
             .then(setConti)
             .catch(() => setConti([]));
