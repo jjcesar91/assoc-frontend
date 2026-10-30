@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { RotateCcw, ChevronUp, Ban, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
+import { RotateCcw, ChevronUp, Ban, Wallet, BookOpen, FolderOpen, Trash2, Edit2, Plus, BarChart2, Download, Star, ChevronDown, Search, X, Calendar, CreditCard, FileText, User, Tag, Upload, ExternalLink, Settings, Truck, ArrowLeftRight } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import NuovaOperazioneModal from './NuovaOperazioneModal';
 import GirocontoModal from './GirocontoModal';
 import ModificaMovimentoModal from './ModificaMovimentoModal';
+import SaldoContoModal from './SaldoContoModal';
 import { useNavigate } from 'react-router-dom';
 import ImportPrimaNotaModal from './ImportPrimaNotaModal';
 import { formatDateIT } from '../utils/dateUtils';
@@ -279,6 +280,10 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
 
     // Conti della società, per le righe di saldo iniziale (vedi saldoRows).
     const [conti, setConti] = useState([]);
+    // Saldo iniziale in modifica dalla Prima Nota (SaldoContoModal); ricaricaConti dopo il salvataggio
+    const [saldoInModifica, setSaldoInModifica] = useState(null);
+    const [versioneConti, setVersioneConti] = useState(0);
+    const [menuSaldiAperto, setMenuSaldiAperto] = useState(false);
     useEffect(() => {
         if (!societa?.id) { setConti([]); return; }
         const token = localStorage.getItem('token');
@@ -286,7 +291,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
             .then(r => r.ok ? r.json() : [])
             .then(setConti)
             .catch(() => setConti([]));
-    }, [societa?.id]);
+    }, [societa?.id, versioneConti]);
 
     // Righe sintetiche di saldo iniziale, una per ogni conto con un saldo
     // registrato in anagrafica (Configurazione → Conti), rispetto all'anno
@@ -536,9 +541,11 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
     //    senza numero si elimina
     const azioniRiga = (p) => {
         if (typeof p.id === 'string' && p.id.startsWith('saldo-')) {
+            const conto = conti.find(c => `saldo-${c.id}` === p.id);
             return {
-                modifica: () => navigate('/ricevute/conti'), titoloModifica: 'Modifica il saldo iniziale in Configurazione → Conti',
-                rimuovi: null, titoloRimuovi: 'Il saldo iniziale si azzera in Configurazione → Conti',
+                modifica: () => (conto ? setSaldoInModifica(conto) : navigate('/ricevute/conti')),
+                titoloModifica: 'Modifica il saldo iniziale del conto (con storico delle modifiche)',
+                rimuovi: null, titoloRimuovi: 'Per azzerare il saldo iniziale imposta 0 dalla modifica',
             };
         }
         if (p.modalita_pagamento === 'Giroconto' || p.quote_types === 'giroconto') {
@@ -590,6 +597,35 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ position: 'relative' }}>
+                        <button onClick={() => setMenuSaldiAperto(v => !v)} style={actionBtnStyle('var(--primary)')} aria-expanded={menuSaldiAperto} title="Saldo iniziale dei conti">
+                            <Wallet size={16} />
+                            Saldi iniziali
+                            <ChevronDown size={14} />
+                        </button>
+                        {menuSaldiAperto && (
+                            <>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setMenuSaldiAperto(false)} />
+                                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 41, minWidth: 260, background: '#fff', border: '1px solid var(--border-color)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6 }}>
+                                    {conti.length === 0 ? (
+                                        <div style={{ padding: '8px 10px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nessun conto configurato.</div>
+                                    ) : conti.map(c => (
+                                        <button key={c.id} type="button" onClick={() => { setMenuSaldiAperto(false); setSaldoInModifica(c); }}
+                                            style={{ display: 'flex', justifyContent: 'space-between', gap: 12, width: '100%', padding: '8px 10px', border: 'none', background: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.88rem', textAlign: 'left' }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-1)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}>
+                                            <span>{c.descrizione}</span>
+                                            <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                                {c.saldo_iniziale_data || Number(c.saldo_iniziale || 0) !== 0
+                                                    ? `${Number(c.saldo_iniziale || 0).toFixed(2).replace('.', ',')} €`
+                                                    : 'non impostato'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                     <button onClick={onGiroconto} style={actionBtnStyle('var(--primary)')}>
                         <ArrowLeftRight size={16} />
                         Giroconto
@@ -600,6 +636,12 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                     </button>
                 </div>
             </div>
+
+            <SaldoContoModal
+                conto={saldoInModifica}
+                onClose={() => setSaldoInModifica(null)}
+                onSaved={() => setVersioneConti(v => v + 1)}
+            />
 
             {/* Toolbar: filtri — periodo e ricerca testuale, poi classificazione; in fondo i filtri attivi e Reset */}
             <div className="toolbar-card pn-filtri">

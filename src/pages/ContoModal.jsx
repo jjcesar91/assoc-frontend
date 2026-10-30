@@ -14,13 +14,13 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
     const [saldoIniziale, setSaldoIniziale] = useState('0');
     const [saldoInizialeData, setSaldoInizialeData] = useState('');
 
-    const isSuperuser = (localStorage.getItem('user_role') || '') === 'superuser';
-    // Il saldo si considera "già impostato" se è stata registrata una data di
-    // riferimento oppure un importo diverso da zero. In quel caso solo il
-    // superuser può modificarlo; se non è mai stato impostato, chiunque può farlo.
+    // Amministratori della società (admin) e superuser modificano il saldo iniziale anche
+    // quando è già impostato; ogni modifica è registrata nello storico (visibile dalla
+    // riga del saldo in Prima Nota). Se non è mai stato impostato, chiunque può inserirlo.
+    const isAmministratore = ['admin', 'superuser'].includes(localStorage.getItem('user_role') || '');
     const saldoGiaImpostato = !!(conto?.saldo_iniziale_data)
         || (conto?.saldo_iniziale != null && Number(conto.saldo_iniziale) !== 0);
-    const saldoBloccato = saldoGiaImpostato && !isSuperuser;
+    const saldoBloccato = saldoGiaImpostato && !isAmministratore;
 
     useEffect(() => {
         if (isOpen) {
@@ -125,7 +125,12 @@ const ContoModal = ({ isOpen, onClose, onSave, conto }) => {
                         {saldoBloccato && (
                             <div className="field-hint">
                                 Il saldo iniziale e la relativa data sono già stati impostati:
-                                solo un <strong>superuser</strong> può modificarli.
+                                solo un <strong>amministratore</strong> della società può modificarli.
+                            </div>
+                        )}
+                        {saldoGiaImpostato && !saldoBloccato && (
+                            <div className="field-hint">
+                                Le modifiche al saldo iniziale vengono registrate con data, ora e autore.
                             </div>
                         )}
 
