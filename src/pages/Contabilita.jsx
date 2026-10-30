@@ -295,7 +295,7 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
     //   giorno dell'anno, saldo + movimenti del conto tra la data di saldo
     //   (esclusa, si presume già riflessa nel saldo) e l'inizio anno (escluso,
     //   per non contare due volte i movimenti del primo giorno che compaiono
-    //   comunque come righe proprie), sempre mostrata per prima nella lista.
+    //   comunque come righe proprie), ordinata alla sua data come le altre righe.
     const saldoRows = useMemo(() => {
         const { dataDa: startStr, dataA: endStr } = dateRange;
         const rows = [];
@@ -330,7 +330,6 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                     ...base,
                     data_pagamento: startStr,
                     importo: parseFloat(conto.saldo_iniziale) + totMovimenti,
-                    pinnedFirst: true,
                 });
             }
         });
@@ -467,15 +466,19 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
                 if (filters.segno === 'DARE' && importo >= 0 && !isAnnullato) return false;
             }
             return true;
-        }).sort((a, b) => (b.data_pagamento || '').localeCompare(a.data_pagamento || ''));
+        });
 
-        // I saldi riportati (conto con saldo antecedente all'anno) vanno
-        // sempre mostrati per primi, davanti alle operazioni vere e proprie
-        // dell'anno, anche se la loro data (inizio anno) li metterebbe in
-        // fondo nell'ordinamento per data decrescente.
-        const pinned = risultato.filter(p => p.pinnedFirst);
-        const resto = risultato.filter(p => !p.pinnedFirst);
-        return pinned.length > 0 ? [...pinned, ...resto] : risultato;
+        // Ordinamento per data di riferimento (data_pagamento, il campo "Data" dell'operazione),
+        // dalla più recente. A parità di data: prima le operazioni inserite per ultime (id più alto),
+        // in fondo alla giornata il saldo del conto, che è il punto di partenza di quel giorno.
+        // Nessuna riga è più fissata in cima: anche i saldi riportati stanno alla loro data.
+        const eSaldo = (p) => typeof p.id === 'string' && p.id.startsWith('saldo-');
+        return risultato.sort((x, y) => {
+            const perData = (y.data_pagamento || '').localeCompare(x.data_pagamento || '');
+            if (perData !== 0) return perData;
+            if (eSaldo(x) !== eSaldo(y)) return eSaldo(x) ? 1 : -1;
+            return (Number(y.id) || 0) - (Number(x.id) || 0);
+        });
     }, [paymentsConSaldo, filters, assegnazioni, gruppiAmmessi]);
 
     // Totale netto del periodo filtrato: entrate + uscite (gli importi delle
