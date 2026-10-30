@@ -255,6 +255,9 @@ const DettaglioOperazioneModal = ({ payment, onClose }) => {
     );
 };
 
+// Modalità di pagamento proposte dalle maschere di inserimento (filtro Modalità della Prima Nota)
+const MODALITA_STANDARD = ['Contanti', 'POS', 'Assegno', 'Bonifico', 'Carta di credito', 'Altro'];
+
 // ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
@@ -418,10 +421,14 @@ const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazi
         return new Set([id, ...gruppi.filter(g => g.gruppo_id === id).map(g => g.id)]);
     }, [filters.gruppo, gruppi]);
 
+    // Modalità del filtro: quelle standard del gestionale (Nuova operazione / Nuova ricevuta),
+    // quelle configurate sui conti della società e quelle presenti nei movimenti
     const modalitaUniche = useMemo(() => {
-        const s = new Set(paymentsConSaldo.map(p => p.modalita_pagamento).filter(Boolean));
+        const s = new Set(MODALITA_STANDARD);
+        conti.forEach(c => (Array.isArray(c.modalita_pagamento) ? c.modalita_pagamento : []).forEach(m => m && s.add(m)));
+        paymentsConSaldo.forEach(p => p.modalita_pagamento && s.add(p.modalita_pagamento));
         return [...s].sort((a, b) => a.localeCompare(b, 'it'));
-    }, [paymentsConSaldo]);
+    }, [paymentsConSaldo, conti]);
 
     const contiUnici = useMemo(() => {
         const s = new Set(paymentsConSaldo.map(p => p.conto_destinazione).filter(Boolean));
