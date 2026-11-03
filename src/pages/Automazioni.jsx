@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Mail, Save, PlayCircle, Info } from 'lucide-react';
+import { Mail, Save, PlayCircle, Info, Clock } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
@@ -10,6 +10,24 @@ const CATEGORIA_LABEL = {
     associazioni: 'Associazioni',
 };
 
+const GIORNI_SETTIMANA = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+const INTERVALLO_GIORNI = { giornaliera: 1, settimanale: 7, mensile: 31 };
+const PIANIFICAZIONE_DEFAULT = { frequenza: 'giornaliera', ora: 6, giorno_settimana: 1, giorno_mese: 1 };
+
+// 'YYYY-MM-DDTHH:mm' (ora locale di Roma, dal backend) → 'gg/mm/aaaa alle HH:mm'
+const formatSlot = (s) => {
+    if (!s) return '—';
+    const [d, t] = s.split('T');
+    return `${formatDateIT(d)} alle ${t}`;
+};
+
+const descriviCadenza = (p) => {
+    const ora = `${String(p.ora).padStart(2, '0')}:00`;
+    if (p.frequenza === 'settimanale') return `ogni ${GIORNI_SETTIMANA[p.giorno_settimana - 1].toLowerCase()} alle ${ora}`;
+    if (p.frequenza === 'mensile') return `il giorno ${p.giorno_mese} di ogni mese alle ${ora}`;
+    return `ogni giorno alle ${ora}`;
+};
+
 const Automazioni = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const currentSocieta = societaList.find(s => s.id == selectedSocietaId);
@@ -17,6 +35,8 @@ const Automazioni = () => {
     const [activeTab, setActiveTab] = useState('config');
 
     const [rules, setRules] = useState([]);
+    const [pianificazione, setPianificazione] = useState(PIANIFICAZIONE_DEFAULT);
+    const [statoControllo, setStatoControllo] = useState({ ultimo: null, prossimo: null });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [runningNow, setRunningNow] = useState(false);
@@ -34,6 +54,11 @@ const Automazioni = () => {
             if (res.ok) {
                 const data = await res.json();
                 setRules(data.rules);
+                if (data.pianificazione) {
+                    const { frequenza, ora, giorno_settimana, giorno_mese, ultimo_controllo, prossimo_controllo } = data.pianificazione;
+                    setPianificazione({ frequenza, ora, giorno_settimana, giorno_mese });
+                    setStatoControllo({ ultimo: ultimo_controllo, prossimo: prossimo_controllo });
+                }
             }
         } catch (e) {
             console.error('Errore caricamento configurazione automazioni', e);
@@ -83,6 +108,7 @@ const Automazioni = () => {
         try {
             const payload = {
                 societaId: selectedSocietaId,
+                pianificazione,
                 rules: rules.map(r => ({
                     tipo: r.tipo,
                     attiva: r.attiva,
@@ -154,6 +180,16 @@ const Automazioni = () => {
         return byCategoria;
     }, [rules]);
 
+    // Automazioni attive con una finestra di invio più corta dell'intervallo tra due
+    // controlli: la scadenza potrebbe cadere tra un controllo e l'altro senza email.
+    const finestreCorte = useMemo(() => rules.filter(r =>
+        r.applicabile && r.attiva
+        && (r.categoria !== 'ets_point' || currentSocieta?.gestore_ets_point)
+        && (parseInt(r.giorni_anticipo, 10) || 0) < INTERVALLO_GIORNI[pianificazione.frequenza]
+    ), [rules, pianificazione.frequenza, currentSocieta]);
+
+    const updatePianificazione = (patch) => setPianificazione(prev => ({ ...prev, ...patch }));
+
     const formatDate = (s) => {
         if (!s) return '—';
         return formatDateIT(s);
@@ -184,14 +220,70 @@ const Automazioni = () => {
                         <p>Caricamento...</p>
                     ) : (
                         <>
-                            <div className="auto-info-note">
-                                <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span>
-                                    Il controllo delle scadenze e l'invio delle email vengono eseguiti automaticamente
-                                    <strong> una volta al giorno, alle 6:00</strong>. Il pulsante "Esegui controllo ora"
-                                    in fondo alla pagina forza subito lo stesso controllo, inviando immediatamente le
-                                    email eventualmente dovute (senza duplicare quelle già inviate).
-                                </span>
+                            <div className="auto-section card">
+                                <div className="auto-section-title">
+                                    <Clock size={16} /> Cadenza del controllo scadenze
+                                </div>
+                                <div className="auto-schedule">
+                                    <div className="auto-schedule-field">
+                                        <label className="field-label">Frequenza</label>
+                                        <select className="md-select" value={pianificazione.frequenza}
+                                            onChange={(e) => updatePianificazione({ frequenza: e.target.value })}>
+                                            <option value="giornaliera">Ogni giorno</option>
+                                            <option value="settimanale">Ogni settimana</option>
+                                            <option value="mensile">Ogni mese</option>
+                                        </select>
+                                    </div>
+                                    {pianificazione.frequenza === 'settimanale' && (
+                                        <div className="auto-schedule-field">
+                                            <label className="field-label">Giorno</label>
+                                            <select className="md-select" value={pianificazione.giorno_settimana}
+                                                onChange={(e) => updatePianificazione({ giorno_settimana: parseInt(e.target.value, 10) })}>
+                                                {GIORNI_SETTIMANA.map((g, i) => <option key={g} value={i + 1}>{g}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {pianificazione.frequenza === 'mensile' && (
+                                        <div className="auto-schedule-field">
+                                            <label className="field-label">Giorno del mese</label>
+                                            <select className="md-select" value={pianificazione.giorno_mese}
+                                                onChange={(e) => updatePianificazione({ giorno_mese: parseInt(e.target.value, 10) })}>
+                                                {Array.from({ length: 28 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                    <div className="auto-schedule-field">
+                                        <label className="field-label">Ora</label>
+                                        <select className="md-select" value={pianificazione.ora}
+                                            onChange={(e) => updatePianificazione({ ora: parseInt(e.target.value, 10) })}>
+                                            {Array.from({ length: 24 }, (_, h) => h).map(h => (
+                                                <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="auto-schedule-status">
+                                        <div>Ultimo controllo automatico: <strong>{statoControllo.ultimo ? formatDateTimeIT(statoControllo.ultimo) : '—'}</strong></div>
+                                        <div>Prossimo controllo: <strong>{formatSlot(statoControllo.prossimo)}</strong></div>
+                                    </div>
+                                </div>
+                                <div className="auto-info-note">
+                                    <Info size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                    <span>
+                                        Il controllo delle scadenze e l'invio delle email vengono eseguiti automaticamente
+                                        <strong> {descriviCadenza(pianificazione)}</strong>. Le modifiche valgono dopo il salvataggio,
+                                        a partire dal prossimo orario previsto. Il pulsante "Esegui controllo ora" in fondo alla
+                                        pagina forza subito lo stesso controllo, inviando immediatamente le email eventualmente
+                                        dovute (senza duplicare quelle già inviate). Il promemoria del certificato medico parte
+                                        solo per i soci con almeno un abbonamento attivo (pagamento non scaduto).
+                                    </span>
+                                </div>
+                                {finestreCorte.length > 0 && (
+                                    <div className="auto-message auto-message-warning">
+                                        Con questa cadenza un controllo avviene ogni {INTERVALLO_GIORNI[pianificazione.frequenza]} giorni:
+                                        alcune automazioni hanno meno giorni di anticipo ({finestreCorte.map(r => r.label).join(', ')})
+                                        e la loro email potrebbe non partire. Aumenta i giorni di anticipo o scegli una cadenza più frequente.
+                                    </div>
+                                )}
                             </div>
 
                             {['ets_point', 'associazioni']
@@ -329,7 +421,7 @@ const Automazioni = () => {
                                             <td>{rules.find(r => r.tipo === row.tipo)?.label || row.tipo}</td>
                                             <td>{row.destinatario || (row.socio ? `${row.socio.cognome} ${row.socio.nome}` : '—')}</td>
                                             <td>
-                                                <span className={`auto-badge auto-badge-${row.esito === 'INVIATO' ? 'ok' : 'error'}`}>{row.esito}</span>
+                                                <span className={`auto-badge auto-badge-${row.esito === 'INVIATO' ? 'ok' : row.esito === 'NON_INVIATO' ? 'neutral' : 'error'}`}>{row.esito === 'NON_INVIATO' ? 'NON INVIATO' : row.esito}</span>
                                             </td>
                                             <td>{formatDate(row.scadenza_riferimento)}</td>
                                             <td>{row.dettaglio_errore || '—'}</td>
