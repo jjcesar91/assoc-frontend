@@ -28,6 +28,17 @@ const descriviCadenza = (p) => {
     return `ogni giorno alle ${ora}`;
 };
 
+// Es. anticipo 6, ripeti 3 → "6, 3 e 0 giorni prima": giorni prima della scadenza in cui parte l'email
+// (con controllo giornaliero; con cadenze più rade i promemoria si allineano ai controlli).
+const descriviInvii = (anticipo, ogni) => {
+    const a = parseInt(anticipo, 10) || 0;
+    const n = parseInt(ogni, 10);
+    const giorni = [];
+    for (let g = a; g >= 0 && giorni.length < 20; g -= n) giorni.push(g);
+    const elenco = giorni.length > 1 ? `${giorni.slice(0, -1).join(', ')} e ${giorni[giorni.length - 1]}` : `${giorni[0]}`;
+    return `Email ${elenco} giorni prima`;
+};
+
 const Automazioni = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const currentSocieta = societaList.find(s => s.id == selectedSocietaId);
@@ -113,6 +124,7 @@ const Automazioni = () => {
                     tipo: r.tipo,
                     attiva: r.attiva,
                     giorni_anticipo: parseInt(r.giorni_anticipo, 10) || 0,
+                    ripeti_ogni_giorni: parseInt(r.ripeti_ogni_giorni, 10) > 0 ? parseInt(r.ripeti_ogni_giorni, 10) : null,
                     extra_config: r.extra_config || null,
                     oggetto_email: r.oggetto_email || null,
                     testo_email: r.testo_email || null,
@@ -273,7 +285,8 @@ const Automazioni = () => {
                                         <strong> {descriviCadenza(pianificazione)}</strong>. Le modifiche valgono dopo il salvataggio,
                                         a partire dal prossimo orario previsto. Il pulsante "Esegui controllo ora" in fondo alla
                                         pagina forza subito lo stesso controllo, inviando immediatamente le email eventualmente
-                                        dovute (senza duplicare quelle già inviate). Il promemoria del certificato medico parte
+                                        dovute (senza duplicare quelle già inviate). Con "Ripeti ogni" l'email viene rimandata ogni N giorni
+                                        fino al giorno della scadenza compreso, ma solo nei giorni in cui avviene un controllo. Il promemoria del certificato medico parte
                                         solo per i soci con almeno un abbonamento attivo (pagamento non scaduto).
                                     </span>
                                 </div>
@@ -301,6 +314,7 @@ const Automazioni = () => {
                                                         <th>Automazione</th>
                                                         <th>Attiva</th>
                                                         <th>Giorni anticipo</th>
+                                                        <th title="Ripete l'email ogni N giorni fino alla scadenza. Vuoto = una sola email.">Ripeti ogni (giorni)</th>
                                                         <th>Dati scadenza</th>
                                                         <th>Prossimo invio</th>
                                                         <th>Ultimo invio</th>
@@ -332,6 +346,21 @@ const Automazioni = () => {
                                                                     value={r.giorni_anticipo}
                                                                     onChange={(e) => updateRule(r.tipo, { giorni_anticipo: e.target.value })}
                                                                 />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    className="md-input auto-input-num"
+                                                                    type="number"
+                                                                    min="1"
+                                                                    placeholder="—"
+                                                                    title="Vuoto = una sola email"
+                                                                    disabled={!r.applicabile}
+                                                                    value={r.ripeti_ogni_giorni ?? ''}
+                                                                    onChange={(e) => updateRule(r.tipo, { ripeti_ogni_giorni: e.target.value })}
+                                                                />
+                                                                {parseInt(r.ripeti_ogni_giorni, 10) > 0 && (
+                                                                    <div className="auto-row-note">{descriviInvii(r.giorni_anticipo, r.ripeti_ogni_giorni)}</div>
+                                                                )}
                                                             </td>
                                                             <td>
                                                                 {r.richiedeExtraBiennale && (
@@ -418,7 +447,10 @@ const Automazioni = () => {
                                     ) : logRows.map(row => (
                                         <tr key={row.id}>
                                             <td>{formatDateTimeIT(row.data_invio)}</td>
-                                            <td>{rules.find(r => r.tipo === row.tipo)?.label || row.tipo}</td>
+                                            <td>
+                                                {rules.find(r => r.tipo === row.tipo)?.label || row.tipo}
+                                                {row.promemoria_n > 1 && <div className="auto-row-note">Promemoria n. {row.promemoria_n}</div>}
+                                            </td>
                                             <td>{row.destinatario || (row.socio ? `${row.socio.cognome} ${row.socio.nome}` : '—')}</td>
                                             <td>
                                                 <span className={`auto-badge auto-badge-${row.esito === 'INVIATO' ? 'ok' : row.esito === 'NON_INVIATO' ? 'neutral' : 'error'}`}>{row.esito === 'NON_INVIATO' ? 'NON INVIATO' : row.esito}</span>
