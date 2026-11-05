@@ -278,6 +278,7 @@ export default function RicevutaTelematica() {
                 today: new Date().toISOString(),
                 socio,
                 autoPrint: true,
+                nomeSocioNelTitolo: true,
             });
 
             if (printWindow) {

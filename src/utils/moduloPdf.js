@@ -148,6 +148,11 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
     `;
 }
 
+// Il titolo contiene dati inseriti nel form pubblico: va trattato come testo, non come HTML.
+function escapeTitolo(testo) {
+    return String(testo).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /**
  * Costruisce il documento HTML completo (non solo il frammento di buildModuloHtml)
  * pronto per essere scritto in una finestra e stampato da browser — stesso schema
@@ -161,16 +166,21 @@ export function buildModuloHtml({ modulo, societa, logoBase64 = null, today, soc
  * @param {string} p.today - data ISO da mostrare come data di compilazione
  * @param {Object|null} [p.socio]
  * @param {boolean} [p.autoPrint=true]
+ * @param {boolean} [p.nomeSocioNelTitolo=false] - antepone nome e cognome del socio al titolo,
+ *   che il browser propone come nome del file quando si salva in PDF
  */
-export function buildModuloPrintHtml({ modulo, societa, logoBase64 = null, today, socio = null, autoPrint = true }) {
+export function buildModuloPrintHtml({ modulo, societa, logoBase64 = null, today, socio = null, autoPrint = true, nomeSocioNelTitolo = false }) {
     const todayFormatted = formatDateIT(today);
     const body = buildModuloHtml({ modulo, societa, logoBase64, today: todayFormatted, socio });
+    const descrizione = modulo.descrizione || 'Modulo';
+    const nomeSocio = nomeSocioNelTitolo ? [socio?.nome, socio?.cognome].filter(Boolean).join(' ') : '';
+    const titolo = nomeSocio ? `${nomeSocio} - ${descrizione}` : descrizione;
 
     return `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8" />
-<title>${modulo.descrizione || 'Modulo'}</title>
+<title>${escapeTitolo(titolo)}</title>
 <style>
   @page { size: A4; margin: 0; }
   body { margin: 0; }
