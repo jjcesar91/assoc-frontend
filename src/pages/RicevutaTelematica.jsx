@@ -51,6 +51,11 @@ export default function RicevutaTelematica() {
     // Esito del check in tempo reale sul socio esistente: null (non ancora verificato),
     // 'checking', 'found' (dati precompilati da un socio esistente) o 'not-found'.
     const [socioLookup, setSocioLookup] = useState(null);
+    // Verifica preventiva della proforma automatica per il CF inserito:
+    // null = non verificato/nessun prodotto, 'checking', 'ok', oppure il messaggio
+    // da mostrare quando esiste già una proforma o ricevuta per l'anno in corso.
+    const [verificaProforma, setVerificaProforma] = useState(null);
+    const prodottoTelematicaId = societa?.ricevuta_telematica_prodotto_id || null;
 
     useEffect(() => {
         let cancelled = false;
@@ -90,6 +95,7 @@ export default function RicevutaTelematica() {
         const clearAll = () => {
             setCfInfo(null);
             setSocioLookup(null);
+            setVerificaProforma(null);
             setForm((prev) => ({
                 ...prev,
                 nome: '', cognome: '', indirizzo: '', comune: '', cap: '', email: '', telefono: '',
@@ -130,6 +136,27 @@ export default function RicevutaTelematica() {
             }
             if (cancelled) return;
 
+            // Proforma automatica configurata: verifica subito se per questo socio
+            // esiste già una proforma o una ricevuta dell'anno, per disattivare
+            // "Conferma e stampa" prima ancora della conferma. In caso di errore
+            // della verifica il pulsante resta attivo: decide comunque il server.
+            if (prodottoTelematicaId) {
+                setVerificaProforma('checking');
+                try {
+                    const params = new URLSearchParams({ societa_id: societaId, prodotto_id: prodottoTelematicaId, codice_fiscale: cf });
+                    if (existing?.id) params.set('socio_id', existing.id);
+                    const res = await fetch(`/payments/api/public/proforma-telematica/verifica?${params}`);
+                    const data = res.ok ? await res.json() : null;
+                    if (!cancelled) setVerificaProforma(data?.esiste ? (data.messaggio || 'Esiste già una proforma o una ricevuta per l\'anno in corso.') : 'ok');
+                } catch (err) {
+                    console.error('Errore verifica proforma esistente:', err);
+                    if (!cancelled) setVerificaProforma('ok');
+                }
+                if (cancelled) return;
+            } else {
+                setVerificaProforma(null);
+            }
+
             if (existing) {
                 const placeName = existing.luogo_nascita || luogo?.nome || '';
                 setSocioLookup('found');
@@ -159,7 +186,7 @@ export default function RicevutaTelematica() {
             }
         })();
         return () => { cancelled = true; };
-    }, [form.codice_fiscale, societaId]);
+    }, [form.codice_fiscale, societaId, prodottoTelematicaId]);
 
     const handleChange = (field) => (e) => {
         setForm((prev) => ({ ...prev, [field]: upper(e.target.value) }));
@@ -176,8 +203,12 @@ export default function RicevutaTelematica() {
         return null;
     };
 
+    const documentoGiaPresente = !!verificaProforma && verificaProforma !== 'ok' && verificaProforma !== 'checking';
+    const bloccato = submitting || verificaProforma === 'checking' || documentoGiaPresente;
+
     const handleConferma = async (e) => {
         e.preventDefault();
+        if (bloccato) return;
         const validationError = validate();
         if (validationError) {
             showAlert(validationError, 'Dati mancanti', 'warning');
@@ -472,8 +503,15 @@ export default function RicevutaTelematica() {
                                 </div>
                             </div>
 
-                            <button type="submit" style={styles.button} disabled={submitting}>
-                                {submitting ? 'Attendere...' : 'Conferma e stampa'}
+                            {verificaProforma && verificaProforma !== 'ok' && verificaProforma !== 'checking' && (
+                                <p style={styles.warning}>{verificaProforma} Non è possibile procedere.</p>
+                            )}
+                            <button
+                                type="submit"
+                                style={{ ...styles.button, ...(bloccato ? styles.buttonDisabled : {}) }}
+                                disabled={bloccato}
+                            >
+                                {submitting ? 'Attendere...' : verificaProforma === 'checking' ? 'Verifica in corso...' : 'Conferma e stampa'}
                             </button>
                         </>
                     )}
@@ -529,5 +567,9 @@ const styles = {
         fontSize: '15px',
         fontWeight: 600,
         cursor: 'pointer',
+    },
+    buttonDisabled: {
+        background: '#9ca3af',
+        cursor: 'not-allowed',
     },
 };
