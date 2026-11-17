@@ -3,6 +3,10 @@
 // della ricevuta come allegato PDF nelle comunicazioni email.
 
 import { formatDateIT } from './dateUtils';
+import { nomeFileSocio, descrizioneRicevuta } from './nomeFileSocio';
+
+// Il titolo contiene dati del socio: va inserito nell'HTML come testo.
+const escapeHtmlTitolo = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const RICEVUTA_CSS = `
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
@@ -135,6 +139,7 @@ export async function buildRicevutaDocument(p, { societa = null, products = [], 
     let datiPagatore = p.codice_fiscale_genitore || '';
     let indirizzoSocio = '';
     let codiceFiscaleSocio = '';
+    let socioIntestatario = socioNoto;
     if (p.socio_id || socioNoto) {
         try {
             // socioNoto: dati del socio già disponibili al chiamante (pagina pubblica
@@ -147,6 +152,7 @@ export async function buildRicevutaDocument(p, { societa = null, products = [], 
                 if (socioRes.ok) socio = await socioRes.json();
             }
             if (socio) {
+                socioIntestatario = socio;
                 indirizzoSocio = [socio.indirizzo, socio.cap, socio.comune].filter(Boolean).join(' - ');
                 codiceFiscaleSocio = socio.codice_fiscale || '';
                 if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
@@ -237,7 +243,10 @@ export async function buildRicevutaDocument(p, { societa = null, products = [], 
     return {
         css: RICEVUTA_CSS,
         body,
-        title: `Ricevuta ${p.numero_ricevuta || p.id}`,
+        // "COGNOME NOME - Ricevuta N": titolo della stampa (nome proposto da
+        // "Salva come PDF") e nome dei file PDF/allegati
+        title: escapeHtmlTitolo(nomeFileSocio(socioIntestatario, descrizioneRicevuta(p), p.intestatario)),
+        fileName: `${nomeFileSocio(socioIntestatario, descrizioneRicevuta(p), p.intestatario)}.pdf`,
         importoFormatted,
         isProforma,
         // Dati strutturati per la generazione del PDF vettoriale (pdfmake),
@@ -335,8 +344,17 @@ const BORDER = '#cccccc';
  * screenshot del DOM, e produce testo nitido e file più leggeri.
  * @returns {Promise<string>} base64 del PDF
  */
-export async function generateRicevutaPdfBase64(p, { societa, products, socio } = {}) {
-    const { data } = await buildRicevutaDocument(p, { societa, products, socio });
+export async function generateRicevutaPdfBase64(p, opts = {}) {
+    return (await generateRicevutaPdf(p, opts)).base64;
+}
+
+/**
+ * Come generateRicevutaPdfBase64, ma restituisce anche il nome file
+ * "COGNOME NOME - Ricevuta N.pdf" da usare per allegati e download.
+ * @returns {Promise<{ base64: string, filename: string }>}
+ */
+export async function generateRicevutaPdf(p, { societa, products, socio } = {}) {
+    const { data, fileName } = await buildRicevutaDocument(p, { societa, products, socio });
     const pdfMake = await getPdfMake();
 
     // Logo (solo PNG/JPEG: pdfmake non gestisce SVG come immagine raster).
@@ -452,16 +470,17 @@ export async function generateRicevutaPdfBase64(p, { societa, products, socio } 
         setTimeout(() => reject(new Error('Timeout generazione PDF ricevuta')), 20000)
     );
     const b64 = await Promise.race([pdf.getBase64(), timeout]);
-    return b64 || '';
+    return { base64: b64 || '', filename: fileName };
 }
 
 /**
- * Scarica sul dispositivo il PDF di una ricevuta/proforma con il nome file indicato
- * (".pdf" aggiunto se manca). Stesso layout di generateRicevutaPdfBase64.
+ * Scarica sul dispositivo il PDF di una ricevuta/proforma. Nome file: quello
+ * indicato (".pdf" aggiunto se manca) o, se omesso, "COGNOME NOME - Ricevuta N.pdf".
  */
-export async function scaricaRicevutaPdf(p, nomeFile, opts = {}) {
-    const b64 = await generateRicevutaPdfBase64(p, opts);
+export async function scaricaRicevutaPdf(p, nomeFile = null, opts = {}) {
+    const { base64: b64, filename } = await generateRicevutaPdf(p, opts);
     if (!b64) throw new Error('PDF vuoto');
+    nomeFile = nomeFile || filename;
     const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const a = document.createElement('a');

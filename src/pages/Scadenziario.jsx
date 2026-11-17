@@ -6,6 +6,9 @@ import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 import './DettaglioRicevutaModal.css';
+import { nomeFileSocio, descrizioneRicevuta } from '../utils/nomeFileSocio';
+
+const escapeTitolo = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Date come stringhe 'AAAA-MM-GG' (niente fuso orario: new Date('AAAA-MM-GG') è
 // mezzanotte UTC e i conti con i metodi locali potevano spostare il giorno).
@@ -166,6 +169,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
         let datiPagatore = p.codice_fiscale_genitore || '';
         let indirizzoSocio = '';
         let codiceFiscaleSocio = '';
+        let socioIntestatario = null;
         if (p.socio_id) {
             try {
                 const token = localStorage.getItem('token');
@@ -174,6 +178,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
                 });
                 if (socioRes.ok) {
                     const socio = await socioRes.json();
+                    socioIntestatario = socio;
                     indirizzoSocio = [socio.indirizzo, socio.cap, socio.comune].filter(Boolean).join(' - ');
                     codiceFiscaleSocio = socio.codice_fiscale || '';
                     if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
@@ -198,7 +203,7 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Ricevuta ${p.numero_ricevuta || p.id}</title>
+    <title>${escapeTitolo(nomeFileSocio(socioIntestatario, descrizioneRicevuta(p), p.intestatario))}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
         .header { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }

@@ -4,6 +4,7 @@
 // divergano nel template HTML (è già successo: un fix al problema dello spazio vuoto dopo
 // la tabella anagrafica era stato applicato solo in una delle due copie).
 import { formatDateIT } from './dateUtils';
+import { nomeFileSocio } from './nomeFileSocio';
 
 /** Converte un'immagine (es. il logo della società) in data URL base64, per evitare problemi CORS nel PDF. */
 export function loadImageAsBase64(url) {
@@ -166,15 +167,14 @@ function escapeTitolo(testo) {
  * @param {string} p.today - data ISO da mostrare come data di compilazione
  * @param {Object|null} [p.socio]
  * @param {boolean} [p.autoPrint=true]
- * @param {boolean} [p.nomeSocioNelTitolo=false] - antepone nome e cognome del socio al titolo,
- *   che il browser propone come nome del file quando si salva in PDF
+ * Con un socio, il titolo (che il browser propone come nome del file quando si
+ * salva in PDF) è "COGNOME NOME - <modulo>": vedi utils/nomeFileSocio.js.
  */
-export function buildModuloPrintHtml({ modulo, societa, logoBase64 = null, today, socio = null, autoPrint = true, nomeSocioNelTitolo = false }) {
+export function buildModuloPrintHtml({ modulo, societa, logoBase64 = null, today, socio = null, autoPrint = true }) {
     const todayFormatted = formatDateIT(today);
     const body = buildModuloHtml({ modulo, societa, logoBase64, today: todayFormatted, socio });
     const descrizione = modulo.descrizione || 'Modulo';
-    const nomeSocio = nomeSocioNelTitolo ? [socio?.nome, socio?.cognome].filter(Boolean).join(' ') : '';
-    const titolo = nomeSocio ? `${nomeSocio} - ${descrizione}` : descrizione;
+    const titolo = nomeFileSocio(socio, descrizione);
 
     return `<!DOCTYPE html>
 <html lang="it">

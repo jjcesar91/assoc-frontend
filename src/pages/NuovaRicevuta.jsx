@@ -16,7 +16,7 @@ import {
     getComConfig, applyShortcodes, buildIstruzioniPagamento,
     sendComunicazioneEmail, formatImporto,
 } from '../utils/comunicazioniRicevute';
-import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
+import { generateRicevutaPdf } from '../utils/ricevuta';
 import { formatDateIT } from '../utils/dateUtils';
 import './NuovoPagamento.css'; // Make sure we use the right CSS with isolated namespaces
 
@@ -236,11 +236,10 @@ const NuovaRicevuta = () => {
         // Genera la ricevuta PDF da allegare
         let allegati = [];
         try {
-            const base64 = await generateRicevutaPdfBase64(created, { societa, products });
+            // Nome file "COGNOME NOME - Ricevuta N.pdf" (vedi utils/nomeFileSocio.js)
+            const { base64, filename } = await generateRicevutaPdf(created, { societa, products });
             if (base64) {
-                // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
-                const safeNumero = String(created?.numero_ricevuta || created?.id || 'pagamento').replace(/[\\/:*?"<>|]/g, '-');
-                allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
+                allegati = [{ filename, content: base64 }];
             }
         } catch (e) {
             console.error('Errore generazione PDF ricevuta per allegato', e);

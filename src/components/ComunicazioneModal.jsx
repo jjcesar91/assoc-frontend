@@ -8,7 +8,7 @@ import {
     buildIstruzioniPagamento,
     formatImporto,
 } from '../utils/comunicazioniRicevute';
-import { generateRicevutaPdfBase64 } from '../utils/ricevuta';
+import { generateRicevutaPdf } from '../utils/ricevuta';
 import './ComunicazioneModal.css';
 
 // Comunicazioni di default richiamabili dal selettore.
@@ -160,11 +160,10 @@ const ComunicazioneModal = ({ onClose, socioId, onSave, ricevuta, societa, produ
             let allegati;
             if (tipo === 'EMAIL' && allegaRicevuta && ricevuta) {
                 try {
-                    const base64 = await generateRicevutaPdfBase64(ricevuta, { societa, products });
+                    // Nome file "COGNOME NOME - Ricevuta N.pdf" (vedi utils/nomeFileSocio.js)
+                    const { base64, filename } = await generateRicevutaPdf(ricevuta, { societa, products });
                     if (base64) {
-                        // Il numero ricevuta può contenere "/" (es. 35/2025-26): non valido in un filename.
-                        const safeNumero = String(ricevuta?.numero_ricevuta || ricevuta?.id || 'ricevuta').replace(/[\\/:*?"<>|]/g, '-');
-                        allegati = [{ filename: `Ricevuta_${safeNumero}.pdf`, content: base64 }];
+                        allegati = [{ filename, content: base64 }];
                     }
                 } catch (pdfErr) {
                     console.error('Errore generazione PDF ricevuta per allegato', pdfErr);

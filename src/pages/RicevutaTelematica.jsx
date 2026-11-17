@@ -5,6 +5,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 import { parseCodiceFiscale, lookupLuogoNascita } from '../utils/codiceFiscale';
 import { scaricaRicevutaPdf } from '../utils/ricevuta';
+import { nomeFileSocio } from '../utils/nomeFileSocio';
 
 // Pagina pubblica (senza autenticazione), specifica per una società: il socio
 // inserisce la propria anagrafica minima, viene creato/aggiornato come Socio
@@ -322,7 +323,6 @@ export default function RicevutaTelematica() {
                 today: new Date().toISOString(),
                 socio,
                 autoPrint: true,
-                nomeSocioNelTitolo: true,
             });
 
             if (printWindow) {
@@ -331,13 +331,12 @@ export default function RicevutaTelematica() {
                 printWindow.document.close();
             }
             // Proforma generata: oltre alla stampa del modulo, ne scarica il PDF
-            // "NOME COGNOME - AAAA-MM-GG.pdf" (data della proforma). Best-effort: un
+            // "COGNOME NOME - AAAA-MM-GG.pdf" (data della proforma). Best-effort: un
             // errore qui non annulla l'invio, ma viene segnalato all'operatore.
             if (proformaCreata) {
                 try {
-                    const nome = [socio.nome, socio.cognome].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '').trim() || 'Socio';
                     const data = proformaCreata.data_ricevuta || proformaCreata.data_pagamento || new Date().toISOString().slice(0, 10);
-                    await scaricaRicevutaPdf(proformaCreata, `${nome} - ${data}`, { societa, socio });
+                    await scaricaRicevutaPdf(proformaCreata, nomeFileSocio(socio, data, 'Socio'), { societa, socio });
                 } catch (err) {
                     console.error('Errore salvataggio PDF proforma:', err);
                     showAlert('La proforma è stata generata ma non è stato possibile salvarne il PDF.', 'PDF proforma', 'warning');

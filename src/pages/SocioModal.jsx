@@ -20,6 +20,9 @@ import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../util
 import { ultimoAbbonamento, abbonamentiDelCorso } from '../utils/listino';
 import './SocioModal.css';
 import './NuovoPagamento.css';
+import { nomeFileSocio, descrizioneRicevuta } from '../utils/nomeFileSocio';
+
+const escapeTitolo = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // ---------------------------------------------------------------------------
 // Scadenziario utils (rispecchia Scadenziario.jsx)
@@ -1325,7 +1328,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Ricevuta ${p.numero_ricevuta || p.id}</title>
+    <title>${escapeTitolo(nomeFileSocio(formData, descrizioneRicevuta(p), p.intestatario))}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
         .header { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
