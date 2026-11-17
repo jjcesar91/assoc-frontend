@@ -279,6 +279,42 @@ const Ricevute = () => {
     const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0 && !p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + parseFloat(p.importo), 0);
     const totalUscite = filteredPayments.filter(p => parseFloat(p.importo) < 0 || p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + Math.abs(parseFloat(p.importo)), 0);
 
+    // Esporta in Excel tutte le ricevute filtrate (non solo la pagina corrente),
+    // nell'ordinamento attivo.
+    const handleExportElenco = async () => {
+        if (filteredPayments.length === 0) {
+            showAlert('Nessuna ricevuta da esportare con i filtri attuali.', 'Esporta elenco');
+            return;
+        }
+        let XLSX;
+        try {
+            XLSX = await import('xlsx');
+        } catch {
+            showAlert('Impossibile caricare il supporto Excel.', 'Errore esportazione');
+            return;
+        }
+        const header = ['Data pagamento', 'Data ricevuta', 'Numero', 'Tipo documento', 'Intestatario', 'Quote', 'Etichette', 'Modalità pagamento', 'Stato', 'Importo', 'Operatore'];
+        const rows = filteredPayments.map(p => [
+            formatDateIT(p.data_pagamento) || '',
+            formatDateIT(p.data_ricevuta) || '',
+            p.tipo_documento === 'proforma' ? '' : (p.numero_ricevuta || `#${p.id}`),
+            p.tipo_documento === 'proforma' ? 'Proforma' : 'Ricevuta',
+            p.intestatario || '',
+            getItemNames(p).join(', '),
+            (p.etichette || '').split(',').map(t => t.trim()).filter(Boolean).join(', '),
+            p.modalita_pagamento || '',
+            (s => s ? s[0].toUpperCase() + s.slice(1) : '')(getStatoRicevuta(p)),
+            Math.abs(parseFloat(p.importo) || 0),
+            p.modificato_da || p.utente_nome || '',
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+        ws['!cols'] = [12, 12, 12, 14, 30, 40, 25, 18, 14, 12, 20].map(wch => ({ wch }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Ricevute');
+        const oggi = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `elenco_ricevute_${oggi}.xlsx`);
+    };
+
     const totalPages = Math.max(1, Math.ceil(filteredPayments.length / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     const paginatedPayments = filteredPayments.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -317,6 +353,7 @@ const Ricevute = () => {
                             <button
                                 className="btn-contained"
                                 style={{backgroundColor: 'var(--primary)', height: '35px', display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem', padding: '0 12px'}}
+                                onClick={handleExportElenco}
                             >
                                 <Printer size={14}/> Esporta elenco
                             </button>
