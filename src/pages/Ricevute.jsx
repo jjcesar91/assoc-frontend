@@ -14,6 +14,37 @@ import { buildRicevutaHtml } from '../utils/ricevuta';
 import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 
+// Numero ricevuta "n/anno" → valore confrontabile (anno prima del numero).
+// Le proforma non hanno numero: null.
+const valoreNumero = (p) => {
+    if (p.tipo_documento === 'proforma') return null;
+    const [n, y] = (p.numero_ricevuta || '').split('/').map(x => parseInt(x, 10));
+    if (isNaN(n)) return 0;
+    return isNaN(y) ? n : y * 100000 + n;
+};
+
+// Ordinamento della lista ricevute. Criteri secondari sempre nello stesso verso,
+// così l'ordine è stabile anche a parità di valore:
+//  - data: data_pagamento, poi numero ricevuta, poi id (ordine di inserimento);
+//  - numero: le proforma (senza numero) sempre in fondo, fra loro per data;
+//  - importo: valore assoluto, poi data.
+const confrontaRicevute = (a, b, sort) => {
+    const verso = sort.dir === 'asc' ? 1 : -1;
+    const perData = () => (a.data_pagamento || '').localeCompare(b.data_pagamento || '');
+    const perNumero = () => (valoreNumero(a) ?? 0) - (valoreNumero(b) ?? 0);
+    const perId = () => (Number(a.id) || 0) - (Number(b.id) || 0);
+    if (sort.key === 'numero_ricevuta') {
+        const pa = valoreNumero(a) === null, pb = valoreNumero(b) === null;
+        if (pa !== pb) return pa ? 1 : -1;
+        return verso * (perNumero() || perData() || perId());
+    }
+    if (sort.key === 'importo') {
+        const diff = Math.abs(parseFloat(a.importo) || 0) - Math.abs(parseFloat(b.importo) || 0);
+        return verso * (diff || perData() || perId());
+    }
+    return verso * (perData() || perNumero() || perId());
+};
+
 const Ricevute = () => {
     const { selectedSocietaId, societaList } = useSocieta();
     const navigate = useNavigate();
@@ -247,34 +278,7 @@ const Ricevute = () => {
             }
         }
         return true;
-    }).sort((a, b) => {
-        let va, vb;
-        if (sort.key === 'data') {
-            va = a.data_pagamento || '';
-            vb = b.data_pagamento || '';
-        } else if (sort.key === 'numero_ricevuta') {
-            const parseNum = (p) => {
-                if (p.tipo_documento === 'proforma') return Infinity;
-                const raw = p.numero_ricevuta || '';
-                const parts = raw.split('/');
-                const num = parseInt(parts[0], 10);
-                const year = parseInt(parts[1], 10);
-                if (isNaN(num)) return 0;
-                if (isNaN(year)) return num;
-                return year * 100000 + num;
-            };
-            va = parseNum(a);
-            vb = parseNum(b);
-            return sort.dir === 'asc' ? va - vb : vb - va;
-        } else if (sort.key === 'importo') {
-            va = Math.abs(parseFloat(a.importo));
-            vb = Math.abs(parseFloat(b.importo));
-            return sort.dir === 'asc' ? va - vb : vb - va;
-        }
-        if (va < vb) return sort.dir === 'asc' ? -1 : 1;
-        if (va > vb) return sort.dir === 'asc' ? 1 : -1;
-        return 0;
-    });
+    }).sort((a, b) => confrontaRicevute(a, b, sort));
 
     const totalEntrate = filteredPayments.filter(p => parseFloat(p.importo) >= 0 && !p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + parseFloat(p.importo), 0);
     const totalUscite = filteredPayments.filter(p => parseFloat(p.importo) < 0 || p.stato_pagamento?.startsWith('3.')).reduce((acc, p) => acc + Math.abs(parseFloat(p.importo)), 0);
@@ -571,7 +575,11 @@ const Ricevute = () => {
                                                                 ) : p.intestatario}
                                                             </div>
                                                             <div style={{fontSize:'0.8rem', color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:'4px'}}>
-                                                                {formatDateIT(p.updatedAt || p.createdAt)} {(p.updatedAt || p.createdAt) ? `- h ${new Date(p.updatedAt || p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''} <User size={12}/> {p.modificato_da || p.utente_nome || 'ADMIN'}
+                                                                <span style={{fontWeight:600, color:'var(--text-primary)'}} title="Data del pagamento (usata per l'ordinamento)">{formatDateIT(p.data_pagamento) || '—'}</span>
+                                                                {(p.updatedAt || p.createdAt) && (
+                                                                    <span title="Ultima modifica">· mod. {formatDateIT(p.updatedAt || p.createdAt)} h {new Date(p.updatedAt || p.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                )}
+                                                                <User size={12}/> {p.modificato_da || p.utente_nome || 'ADMIN'}
                                                                 {isAnnullato && <span style={{color:'var(--danger)', fontWeight:'bold', fontSize:'0.75rem'}}>ANNULLATO</span>}
                                                             </div>
                                                         </div>
