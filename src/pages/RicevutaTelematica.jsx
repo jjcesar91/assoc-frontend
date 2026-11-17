@@ -4,6 +4,7 @@ import { useAlert } from '../components/AlertModal';
 import CityAutocomplete from '../components/CityAutocomplete';
 import { buildModuloPrintHtml, loadImageAsBase64, resolveLogoUrl } from '../utils/moduloPdf';
 import { parseCodiceFiscale, lookupLuogoNascita } from '../utils/codiceFiscale';
+import { scaricaRicevutaPdf } from '../utils/ricevuta';
 
 // Pagina pubblica (senza autenticazione), specifica per una società: il socio
 // inserisce la propria anagrafica minima, viene creato/aggiornato come Socio
@@ -220,9 +221,10 @@ export default function RicevutaTelematica() {
             // prodotto per la Ricevuta Telematica, genera anche una proforma per il
             // socio. Non deve mai bloccare la stampa del modulo, che resta l'esito
             // principale della conferma: un eventuale errore qui viene solo loggato.
-            // Avviso da mostrare a fine flusso (dopo la stampa) se la proforma non è
-            // stata generata perché ne esiste già una, o una ricevuta, per l'anno.
+            // Se la proforma non è generata perché ne esiste già una, o una ricevuta,
+            // per l'anno in corso, il flusso si ferma: niente stampa del modulo, solo l'avviso.
             let avvisoProforma = null;
+            let proformaCreata = null;
             if (societa?.ricevuta_telematica_prodotto_id) {
                 try {
                     const proformaRes = await fetch('/payments/api/public/proforma-telematica', {
@@ -239,7 +241,10 @@ export default function RicevutaTelematica() {
                             },
                         }),
                     });
-                    if (!proformaRes.ok) {
+                    if (proformaRes.ok) {
+                        const { proforma } = await proformaRes.json().catch(() => ({}));
+                        if (proforma) proformaCreata = proforma;
+                    } else {
                         const err = await proformaRes.json().catch(() => ({}));
                         if (proformaRes.status === 409) {
                             avvisoProforma = err.error || 'Esiste già una proforma o una ricevuta per l\'anno in corso: la proforma non è stata generata.';
@@ -250,6 +255,14 @@ export default function RicevutaTelematica() {
                 } catch (err) {
                     console.error('Errore creazione proforma automatica:', err);
                 }
+            }
+
+            if (avvisoProforma) {
+                if (printWindow) printWindow.close();
+                setForm(EMPTY_FORM);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showAlert(avvisoProforma, 'Proforma non generata', 'warning');
+                return;
             }
 
             const moduloRes = await fetch(
@@ -286,12 +299,24 @@ export default function RicevutaTelematica() {
                 printWindow.document.write(html);
                 printWindow.document.close();
             }
+            // Proforma generata: oltre alla stampa del modulo, ne scarica il PDF
+            // "NOME COGNOME - AAAA-MM-GG.pdf" (data della proforma). Best-effort: un
+            // errore qui non annulla l'invio, ma viene segnalato all'operatore.
+            if (proformaCreata) {
+                try {
+                    const nome = [socio.nome, socio.cognome].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '').trim() || 'Socio';
+                    const data = proformaCreata.data_ricevuta || proformaCreata.data_pagamento || new Date().toISOString().slice(0, 10);
+                    await scaricaRicevutaPdf(proformaCreata, `${nome} - ${data}`, { societa, socio });
+                } catch (err) {
+                    console.error('Errore salvataggio PDF proforma:', err);
+                    showAlert('La proforma è stata generata ma non è stato possibile salvarne il PDF.', 'PDF proforma', 'warning');
+                }
+            }
             // Invio completato (modulo in stampa nel nuovo tab): torna allo stato
             // iniziale con il solo campo Codice fiscale, pronto per il socio successivo.
             // Svuotare il CF fa nascondere e ripulire il resto del form all'effetto sul CF.
             setForm(EMPTY_FORM);
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            if (avvisoProforma) showAlert(avvisoProforma, 'Proforma non generata', 'warning');
         } catch (err) {
             console.error('Errore generazione modulo:', err);
             if (printWindow) printWindow.close();

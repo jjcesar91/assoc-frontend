@@ -43,7 +43,7 @@ const RICEVUTA_CSS = `
  * @param {Array} [opts.products] - elenco prodotti (per descrizioni voci)
  * @returns {Promise<{ css: string, body: string, title: string, importoFormatted: string, isProforma: boolean }>}
  */
-export async function buildRicevutaDocument(p, { societa = null, products = [] } = {}) {
+export async function buildRicevutaDocument(p, { societa = null, products = [], socio: socioNoto = null } = {}) {
     const token = localStorage.getItem('token');
     const statoLabel = p.stato_pagamento?.startsWith('3.') ? 'ANNULLATO' : 'VALIDO';
     const isProforma = p.tipo_documento === 'proforma';
@@ -135,13 +135,18 @@ export async function buildRicevutaDocument(p, { societa = null, products = [] }
     let datiPagatore = p.codice_fiscale_genitore || '';
     let indirizzoSocio = '';
     let codiceFiscaleSocio = '';
-    if (p.socio_id) {
+    if (p.socio_id || socioNoto) {
         try {
-            const socioRes = await fetch(`/users/api/soci/${p.socio_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (socioRes.ok) {
-                const socio = await socioRes.json();
+            // socioNoto: dati del socio già disponibili al chiamante (pagina pubblica
+            // Ricevuta Telematica, senza token per leggerlo dall'API).
+            let socio = socioNoto;
+            if (!socio) {
+                const socioRes = await fetch(`/users/api/soci/${p.socio_id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (socioRes.ok) socio = await socioRes.json();
+            }
+            if (socio) {
                 indirizzoSocio = [socio.indirizzo, socio.cap, socio.comune].filter(Boolean).join(' - ');
                 codiceFiscaleSocio = socio.codice_fiscale || '';
                 if (socio.data_nascita && (socio.nome_genitore || socio.cognome_genitore || socio.cf_genitore)) {
@@ -330,8 +335,8 @@ const BORDER = '#cccccc';
  * screenshot del DOM, e produce testo nitido e file più leggeri.
  * @returns {Promise<string>} base64 del PDF
  */
-export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
-    const { data } = await buildRicevutaDocument(p, { societa, products });
+export async function generateRicevutaPdfBase64(p, { societa, products, socio } = {}) {
+    const { data } = await buildRicevutaDocument(p, { societa, products, socio });
     const pdfMake = await getPdfMake();
 
     // Logo (solo PNG/JPEG: pdfmake non gestisce SVG come immagine raster).
@@ -448,4 +453,22 @@ export async function generateRicevutaPdfBase64(p, { societa, products } = {}) {
     );
     const b64 = await Promise.race([pdf.getBase64(), timeout]);
     return b64 || '';
+}
+
+/**
+ * Scarica sul dispositivo il PDF di una ricevuta/proforma con il nome file indicato
+ * (".pdf" aggiunto se manca). Stesso layout di generateRicevutaPdfBase64.
+ */
+export async function scaricaRicevutaPdf(p, nomeFile, opts = {}) {
+    const b64 = await generateRicevutaPdfBase64(p, opts);
+    if (!b64) throw new Error('PDF vuoto');
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = /\.pdf$/i.test(nomeFile) ? nomeFile : `${nomeFile}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
