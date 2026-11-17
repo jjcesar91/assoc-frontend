@@ -307,6 +307,11 @@ const Automazioni = () => {
                                         <div className="auto-section-title">
                                             <Mail size={16} /> {CATEGORIA_LABEL[categoria]}
                                         </div>
+                                        {categoria === 'ets_point' && (
+                                            <div className="auto-row-note" style={{ marginBottom: '8px' }}>
+                                                Inviate solo ai soci di tipo associazione; dove indicato, solo a quelli del tipo richiesto.
+                                            </div>
+                                        )}
                                         <div className="table-responsive">
                                             <table className="md-table auto-table">
                                                 <thead>
@@ -327,6 +332,9 @@ const Automazioni = () => {
                                                                 {r.label}
                                                                 {!r.applicabile && (
                                                                     <div className="auto-row-note">Non applicabile per questa società</div>
+                                                                )}
+                                                                {r.applicabile && r.requisito_socio && (
+                                                                    <div className="auto-row-note">Solo soci associazione {r.requisito_socio}</div>
                                                                 )}
                                                             </td>
                                                             <td>
