@@ -1,0 +1,116 @@
+/* Dettaglio scadenza (Scadenziario): estende gli stili dpm-* di DettaglioRicevutaModal.css */
+
+.scz-modal { max-width: 640px; height: auto; max-height: 90vh; }
+/* Le card non si comprimono: se il contenuto non entra, scorre il corpo del modal */
+.scz-modal .dpm-body > * { flex-shrink: 0; }
+
+/* Hero: socio + data di scadenza in evidenza, bordo sinistro col colore dello stato */
+.scz-hero { border-left-width: 4px; }
+.scz-hero-scaduto { border-left-color: var(--danger); }
+.scz-hero-inscadenza { border-left-color: var(--warning); }
+.scz-hero-valido { border-left-color: var(--success); }
+
+.scz-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.scz-link:hover { text-decoration: underline; }
+
+.scz-data {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+.scz-stato {
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.4px;
+}
+.scz-giorni { font-size: 0.78rem; color: var(--text-secondary); }
+
+.scz-nota {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--warning-container);
+    color: var(--on-warning-container);
+    font-size: 13px;
+}
+
+/* Storia delle proroghe */
+.scz-storia { border-color: var(--warning); }
+.scz-storia .dpm-card-label { background: var(--warning-container); color: var(--on-warning-container); }
+.scz-storia-riga { padding: 10px 16px; border-bottom: 1px solid var(--surface-1); display: flex; flex-direction: column; gap: 3px; }
+.scz-storia-riga:last-child { border-bottom: none; }
+.scz-storia-date { font-size: 14px; color: var(--text-primary); }
+.scz-storia-motivo { font-size: 13.5px; color: var(--text-secondary); font-style: italic; }
+.scz-storia-meta { font-size: 12px; color: var(--text-tertiary); }
+
+.scz-row-sep { border-top: 1px solid var(--surface-1); }
+
+.scz-voce-corrente { background: var(--info-container); }
+
+/* Riquadro proroga */
+.scz-proroga { border-color: var(--primary); }
+.scz-proroga-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.scz-proroga-riga { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: end; }
+.scz-input {
+    font: inherit;
+    font-size: 14px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+}
+.scz-input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+.scz-hint { font-size: 12px; color: var(--text-tertiary); }
+.scz-errore {
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--danger-container);
+    color: var(--on-danger-container);
+}
+.scz-proroga-azioni { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Footer: azione principale a sinistra, secondarie a destra */
+.scz-footer { justify-content: space-between; }
+.scz-footer-dx { display: flex; gap: 8px; margin-left: auto; }
+
+.scz-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, opacity 0.15s;
+}
+.scz-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.scz-btn-primary { background: var(--primary); color: #fff; }
+.scz-btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.scz-btn-secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border-color); }
+.scz-btn-secondary:hover:not(:disabled) { background: var(--surface-2); }
+.scz-btn-ghost { background: transparent; color: var(--text-secondary); }
+.scz-btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-2); }
+
+@media (max-width: 560px) {
+    .dpm-row-3, .scz-proroga-riga { grid-template-columns: 1fr; gap: 12px; }
+    .scz-footer { flex-wrap: wrap; }
+}

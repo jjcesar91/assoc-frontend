@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip, Edit } from 'lucide-react';
+import { X, User, Users, Tag, CreditCard, Calendar, Activity, Monitor, Mail, Coins, Check, AlertTriangle, MessageSquare, Folder, Printer, Banknote, Landmark, DollarSign, Trash2, RefreshCw, Eye, EyeOff, BookOpen, PlusCircle, ChevronRight, Globe, Copy, KeyRound, ShieldCheck, ShieldOff, ClipboardList, Download, Paperclip, Edit, CalendarPlus } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useAlert } from '../components/AlertModal';
 import DettaglioRicevutaModal from './DettaglioRicevutaModal';
@@ -1996,6 +1996,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         nota: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Nota', icon: <MessageSquare size={14}/> },
         ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Quietanza', icon: <Paperclip size={14}/> },
         tesseramento: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Tesseramento', icon: <ShieldCheck size={14}/> },
+        proroga: { color: 'var(--primary-hover)', bg: 'var(--info-container)', label: 'Proroga scadenza', icon: <CalendarPlus size={14}/> },
     };
 
     // Apertura della quietanza caricata dal socio direttamente dalla riga di storico.

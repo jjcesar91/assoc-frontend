@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Euro, Printer, X, CalendarClock, User, Landmark, Banknote } from 'lucide-react';
+import { Eye, Euro, Printer, X, CalendarClock, CalendarPlus, ExternalLink, History } from 'lucide-react';
 import { useSocieta } from '../data/SocietaContext';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { formatDateIT } from '../utils/dateUtils';
 import './Soci.css';
 import './DettaglioRicevutaModal.css';
+import './Scadenziario.css';
 import { nomeFileSocio, descrizioneRicevuta } from '../utils/nomeFileSocio';
 
 const escapeTitolo = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -29,6 +30,11 @@ function scadenzaTessera365(dataPagamento) {
     if (!dataPagamento) return null;
     const [y, m, d] = String(dataPagamento).slice(0, 10).split('-').map(Number);
     return dataISO(y + 1, m, d - 1);
+}
+
+// Giorni da a → b (date ISO AAAA-MM-GG); negativo se b è nel passato.
+function giorniTra(a, b) {
+    return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 }
 
 function computeStato(scadenzaStr) {
@@ -83,8 +89,35 @@ function scadenzeDelPagamento(p) {
 // ---------------------------------------------------------------------------
 // Inline detail modal
 // ---------------------------------------------------------------------------
-const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
+const ScadenziarioDettaglioModal = ({ row, ...props }) => {
     if (!row) return null;
+    // key: il riquadro di proroga si richiude cambiando scadenza
+    return <DettaglioScadenza key={`${row.pagamento.id}-${row.idx}-${row.scadenzaStr}`} row={row} {...props} />;
+};
+
+const DettaglioScadenza = ({ row, societa, onClose, products, onProrogata }) => {
+    const [prorogaAperta, setProrogaAperta] = useState(false);
+    // Proroghe di questa scadenza, dallo storico del socio (fonte unica: chi, quando, perché)
+    const [proroghe, setProroghe] = useState(null);
+    const pagamentoId = row.pagamento.id;
+    const socioId = row.pagamento.socio_id;
+    useEffect(() => {
+        if (!socioId || row.tipoKey !== 'subscription') { setProroghe([]); return; }
+        let annullato = false;
+        fetch(`/users/api/soci/${socioId}/storico?tipo=proroga`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        })
+            .then(r => (r.ok ? r.json() : []))
+            .then(righe => {
+                if (annullato) return;
+                setProroghe((Array.isArray(righe) ? righe : []).filter(r =>
+                    r.tipo === 'proroga'
+                    && Number(r.dettagli?.payment_id) === Number(pagamentoId)
+                    && Number(r.dettagli?.voce_idx ?? 0) === Number(row.idx ?? 0)));
+            })
+            .catch(() => { if (!annullato) setProroghe([]); });
+        return () => { annullato = true; };
+    }, [socioId, pagamentoId, row.idx, row.tipoKey]);
     const p = row.pagamento;
     const stato = computeStato(row.scadenzaStr);
 
@@ -280,168 +313,262 @@ const ScadenziarioDettaglioModal = ({ row, societa, onClose, products }) => {
         }
     };
 
+    // Dati della scadenza
+    const voce = vociDi(p)[row.idx] || null;
+    const dataOriginale = voce?.data_scadenza_originale || null;
+    const giorni = giorniTra(oggiISO(), row.scadenzaStr);
+    const nomeProdotto = (row.productId && products?.find(pr => Number(pr.id) === Number(row.productId))?.description)
+        || voce?.quote || null;
+    const annullata = p.stato_pagamento?.startsWith('3.');
+    const proforma = p.tipo_documento === 'proforma';
+    const euro = (v) => `€ ${Math.abs(parseFloat(v || 0)).toFixed(2).replace('.', ',')}`;
+
+    // Proroga: solo amministratori, solo abbonamenti su ricevute attive collegate a un socio
+    const isAdmin = ['admin', 'superuser'].includes(localStorage.getItem('user_role'));
+    const prorogabile = row.tipoKey === 'subscription' && !annullata && !proforma && !!p.socio_id;
+    const motivoNonProrogabile = !prorogabile
+        ? (row.tipoKey !== 'subscription' ? 'La proroga è disponibile solo per gli abbonamenti'
+            : (annullata || proforma) ? 'La proroga è disponibile solo su ricevute attive'
+            : 'Il pagamento non è collegato a un socio')
+        : null;
+
+    const Campo = ({ label, children }) => (
+        <div className="dpm-field">
+            <span className="dpm-fl">{label}</span>
+            {children === null || children === undefined || children === '' || children === '—'
+                ? <span className="dpm-fv-empty">—</span>
+                : <span className="dpm-fv">{children}</span>}
+        </div>
+    );
+
     return (
-        <div className="dpm-overlay">
-            <div className="dpm-modal">
+        <div className="dpm-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="dpm-modal scz-modal" role="dialog" aria-labelledby="scz-titolo">
                 <div className="dpm-header">
-                    <div className="dpm-title">
-                        <CalendarClock size={20} />
-                        <h2>Dettaglio scadenza</h2>
+                    <div className="dpm-title" id="scz-titolo">
+                        <CalendarClock size={18} /> Dettaglio scadenza
                     </div>
-                    <button className="dpm-close-btn" onClick={onClose}><X size={20} /></button>
+                    <button className="dpm-close-btn" onClick={onClose} aria-label="Chiudi"><X size={20} /></button>
                 </div>
 
                 <div className="dpm-body">
-                    {/* Scadenza */}
-                    <div className="dpm-section">
-                        <div className="dpm-section-title">Scadenza</div>
-                        <div className="dpm-grid-3">
-                            <div className="dpm-field">
-                                <label>Tipo</label>
-                                <div className="dpm-value">{row.tipo}</div>
+                    {/* 1. Chi e cosa scade: l'informazione principale, in evidenza */}
+                    <div className={`dpm-hero scz-hero scz-hero-${stato === 'SCADUTO' ? 'scaduto' : stato === 'IN SCADENZA' ? 'inscadenza' : 'valido'}`}>
+                        <div className="dpm-hero-left">
+                            <div className="dpm-hero-name">
+                                {p.socio_id
+                                    ? <a href={`/soci?apriSocioPath=${p.socio_id}`} target="_blank" rel="noreferrer" className="scz-link" title="Apri la scheda del socio">{p.intestatario} <ExternalLink size={13} /></a>
+                                    : p.intestatario}
                             </div>
-                            <div className="dpm-field">
-                                <label>Data scadenza</label>
-                                <div className="dpm-value" style={{ fontWeight: 700 }}>{formatDate(row.scadenzaStr)}</div>
+                            <div className="dpm-hero-sub">
+                                {row.tipo}{nomeProdotto ? ` · ${nomeProdotto}` : ''}
                             </div>
-                            <div className="dpm-field">
-                                <label>Stato</label>
-                                <div className="dpm-value">
-                                    <span style={{ ...statoStyle(stato), padding: '3px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                        {stato}
-                                    </span>
-                                </div>
-                            </div>
+                        </div>
+                        <div className="dpm-hero-right">
+                            <span className="scz-data">{formatDate(row.scadenzaStr)}</span>
+                            <span className="scz-stato" style={statoStyle(stato)}>{stato}</span>
+                            <span className="scz-giorni">
+                                {giorni > 0 ? `tra ${giorni} giorn${giorni === 1 ? 'o' : 'i'}` : giorni === 0 ? 'scade oggi' : `scaduta da ${-giorni} giorn${giorni === -1 ? 'o' : 'i'}`}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Pagamento */}
-                    <div className="dpm-section">
-                        <div className="dpm-section-title">Pagamento registrato</div>
-                        <div className="dpm-grid-3">
-                            <div className="dpm-field">
-                                <label><User size={14} /> Intestatario</label>
-                                <div className="dpm-value">{p.intestatario}</div>
+                    {/* Storia delle proroghe: chi ha cambiato la scadenza, quando e perché */}
+                    {proroghe && proroghe.length > 0 ? (
+                        <div className="dpm-card scz-storia">
+                            <div className="dpm-card-label dpm-card-label-row">
+                                <span className="dpm-card-label-icon"><History size={13} /> Scadenza prorogata{proroghe.length > 1 ? ` ${proroghe.length} volte` : ''}</span>
+                                {(() => {
+                                    const originale = proroghe[proroghe.length - 1]?.dettagli?.data_precedente || dataOriginale;
+                                    return originale ? <span>Originale {formatDate(originale)}</span> : null;
+                                })()}
                             </div>
-                            <div className="dpm-field">
-                                <label>Data pagamento</label>
-                                <div className="dpm-value">{formatDate(p.data_pagamento)}</div>
-                            </div>
-                            <div className="dpm-field">
-                                <label>€ Importo</label>
-                                <div className="dpm-value">€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</div>
-                            </div>
+                            {proroghe.map(r => (
+                                <div key={r.id} className="scz-storia-riga">
+                                    <div className="scz-storia-date">
+                                        {formatDate(r.dettagli?.data_precedente)} <span aria-hidden="true">→</span> <strong>{formatDate(r.dettagli?.data_nuova)}</strong>
+                                    </div>
+                                    {r.dettagli?.motivo && <div className="scz-storia-motivo">“{r.dettagli.motivo}”</div>}
+                                    <div className="scz-storia-meta">
+                                        {r.owner_label || 'Operatore'} · {new Date(r.data_evento).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <div className="dpm-divider" />
-                        <div className="dpm-grid-3">
-                            <div className="dpm-field">
-                                <label>Operatore</label>
-                                <div className="dpm-value">{p.utente_nome || '—'}</div>
-                            </div>
-                            <div className="dpm-field">
-                                <label><Landmark size={14} /> Conto destinazione</label>
-                                <div className="dpm-value">{p.conto_destinazione || '—'}</div>
-                            </div>
-                            <div className="dpm-field">
-                                <label><Banknote size={14} /> Modalità</label>
-                                <div className="dpm-value">{p.modalita_pagamento || '—'}</div>
-                            </div>
+                    ) : (proroghe !== null && dataOriginale && dataOriginale !== row.scadenzaStr && (
+                        <div className="scz-nota">
+                            <History size={14} /> Scadenza prorogata: data originale {formatDate(dataOriginale)}.
                         </div>
-                        <div className="dpm-divider" />
-                        <div className="dpm-grid-3">
+                    ))}
+
+                    {/* 2. Proroga (solo amministratori) */}
+                    {isAdmin && prorogabile && (
+                        prorogaAperta
+                            ? <ProrogaScadenzaForm
+                                pagamento={p}
+                                voceIdx={row.idx}
+                                scadenzaAttuale={row.scadenzaStr}
+                                onAnnulla={() => setProrogaAperta(false)}
+                                onFatto={(aggiornato, nuovaData) => { setProrogaAperta(false); onProrogata?.(aggiornato, nuovaData); }}
+                              />
+                            : null
+                    )}
+
+                    {/* 3. Pagamento che ha generato la scadenza: dati di contesto */}
+                    <div className="dpm-card">
+                        <div className="dpm-card-label">Pagamento</div>
+                        <div className="dpm-row-3">
+                            <Campo label="Data pagamento">{formatDate(p.data_pagamento)}</Campo>
+                            <Campo label="Importo">{euro(p.importo)}</Campo>
+                            <Campo label="Modalità">{p.modalita_pagamento}</Campo>
+                        </div>
+                        <div className="dpm-row-3 scz-row-sep">
                             <div className="dpm-field">
-                                <label>Numero ricevuta</label>
-                                <div className="dpm-value dpm-ricevuta">
-                                    {p.numero_ricevuta || '—'}
-                                    {p.numero_ricevuta && (
-                                        p.stato_pagamento?.startsWith('3.')
+                                <span className="dpm-fl">Ricevuta</span>
+                                {proforma
+                                    ? <span className="dpm-fv">Proforma</span>
+                                    : <span className="dpm-fv dpm-ricevuta">
+                                        {p.numero_ricevuta || '—'}
+                                        {p.numero_ricevuta && (annullata
                                             ? <span className="dpm-badge-annullata">ANNULLATA</span>
-                                            : <span className="dpm-badge-valida">VALIDA</span>
-                                    )}
-                                </div>
+                                            : <span className="dpm-badge-valida">VALIDA</span>)}
+                                      </span>}
                             </div>
-                            <div className="dpm-field">
-                                <label>Data ricevuta</label>
-                                <div className="dpm-value">{formatDate(p.data_ricevuta)}</div>
-                            </div>
-                            <div className="dpm-field">
-                                <label>Codice fiscale</label>
-                                <div className="dpm-value">{p.codice_fiscale || '—'}</div>
-                            </div>
+                            <Campo label="Data ricevuta">{p.data_ricevuta ? formatDate(p.data_ricevuta) : null}</Campo>
+                            <Campo label="Conto">{p.conto_destinazione}</Campo>
+                        </div>
+                        <div className="dpm-row-3 scz-row-sep">
+                            <Campo label="Codice fiscale">{p.codice_fiscale}</Campo>
+                            <Campo label="Operatore">{p.modificato_da || p.utente_nome}</Campo>
+                            <div />
                         </div>
                     </div>
 
-                    {/* Quote */}
-                    <div className="dpm-section dpm-section-quote">
-                        <div className="dpm-section-title">Quote</div>
-                        {(() => {
-                            let items = p.payment_items;
-                            if (typeof items === 'string') {
-                                try { items = JSON.parse(items); } catch { items = null; }
-                            }
-                            const getProductName = (productId) => {
-                                if (!productId || !products?.length) return null;
-                                return products.find(pr => Number(pr.id) === Number(productId))?.description || null;
-                            };
-                            if (Array.isArray(items) && items.length > 0) {
-                                if (items.length === 1) {
-                                    const item = items[0];
-                                    const prodName = getProductName(item.product_id) || item.quote || '';
+                    {/* 4. Voci del pagamento */}
+                    <div className="dpm-card">
+                        <div className="dpm-card-label">Quote</div>
+                        <div className="dpm-quote-list">
+                            {(() => {
+                                const voci = vociDi(p);
+                                const nome = (v) => (v.product_id && products?.find(pr => Number(pr.id) === Number(v.product_id))?.description) || v.quote || p.quote || '';
+                                if (voci.length === 0) {
                                     return (
                                         <div className="dpm-quote-row">
-                                            <span>{prodName}</span>
-                                            <span>€ {Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="dpm-quote-name">{p.quote || '—'}</span>
+                                            <span className="dpm-quote-amount">{euro(p.importo)}</span>
                                         </div>
                                     );
                                 }
                                 return (
                                     <>
-                                        {items.map((item, idx) => {
-                                            const prodName = getProductName(item.product_id) || item.quote || '';
-                                            return (
-                                                <div key={idx} className="dpm-quote-row">
-                                                    <span>{prodName}</span>
-                                                    <span>€ {Math.abs(parseFloat(item.importo || 0)).toFixed(2).replace('.', ',')}</span>
-                                                </div>
-                                            );
-                                        })}
-                                        <div className="dpm-quote-row" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4px', paddingTop: '6px', fontWeight: 700 }}>
-                                            <span>Totale</span>
-                                            <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
-                                        </div>
+                                        {voci.map((v, i) => (
+                                            <div key={i} className={`dpm-quote-row${voci.length > 1 && i === row.idx ? ' scz-voce-corrente' : ''}`}>
+                                                <span className="dpm-quote-name">
+                                                    {nome(v)}
+                                                    {v.data_scadenza_abbonamento && <span className="dpm-quote-scad">scad. {formatDate(String(v.data_scadenza_abbonamento).slice(0, 10))}</span>}
+                                                </span>
+                                                <span className="dpm-quote-amount">{euro(v.importo)}</span>
+                                            </div>
+                                        ))}
+                                        {voci.length > 1 && (
+                                            <div className="dpm-quote-row dpm-quote-total">
+                                                <span>Totale</span>
+                                                <span>{euro(p.importo)}</span>
+                                            </div>
+                                        )}
                                     </>
                                 );
-                            }
-                            // Fallback top-level
-                            const prodName = getProductName(p.product_id) || p.quote || '';
-                            return (
-                                <div className="dpm-quote-row">
-                                    <span>{prodName}</span>
-                                    <span>€ {Math.abs(parseFloat(p.importo || 0)).toFixed(2).replace('.', ',')}</span>
-                                </div>
-                            );
-                        })()}
+                            })()}
+                        </div>
                     </div>
                 </div>
 
-                <div className="dpm-footer" style={{ gap: '10px' }}>
-                    <button
-                        className="dpm-btn-annulla"
-                        style={{ backgroundColor: 'var(--primary)' }}
-                        onClick={handlePrint}
-                    >
-                        <Printer size={16} /> Scarica PDF
-                    </button>
-                    <button
-                        className="dpm-btn-annulla"
-                        style={{ backgroundColor: 'var(--text-secondary)' }}
-                        onClick={onClose}
-                    >
-                        <X size={16} /> Chiudi
-                    </button>
+                <div className="dpm-footer scz-footer">
+                    {isAdmin && (
+                        <button
+                            className="scz-btn scz-btn-primary"
+                            onClick={() => setProrogaAperta(true)}
+                            disabled={!prorogabile || prorogaAperta}
+                            title={motivoNonProrogabile || 'Sposta in avanti la data di scadenza'}
+                        >
+                            <CalendarPlus size={16} /> Proroga scadenza
+                        </button>
+                    )}
+                    <div className="scz-footer-dx">
+                        <button className="scz-btn scz-btn-secondary" onClick={handlePrint}>
+                            <Printer size={16} /> Stampa ricevuta
+                        </button>
+                        <button className="scz-btn scz-btn-ghost" onClick={onClose}>Chiudi</button>
+                    </div>
                 </div>
             </div>
         </div>
+    );
+};
+
+// Riquadro di proroga nel dettaglio scadenza: nuova data (solo successiva) e motivazione
+// obbligatoria. La proroga è registrata dal server nello storico del socio.
+const ProrogaScadenzaForm = ({ pagamento, voceIdx, scadenzaAttuale, onAnnulla, onFatto }) => {
+    const minData = aggiungiGiorniISO(scadenzaAttuale, 1);
+    const [nuovaData, setNuovaData] = useState(minData);
+    const [motivo, setMotivo] = useState('');
+    const [errore, setErrore] = useState(null);
+    const [salvataggio, setSalvataggio] = useState(false);
+
+    const valida = nuovaData && nuovaData > scadenzaAttuale && motivo.trim().length > 0;
+
+    const conferma = async (e) => {
+        e.preventDefault();
+        if (!valida || salvataggio) return;
+        setSalvataggio(true);
+        setErrore(null);
+        try {
+            const res = await fetch(`/payments/api/${pagamento.id}/proroga-scadenza`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                body: JSON.stringify({ voce_idx: voceIdx, nuova_data: nuovaData, motivo: motivo.trim() }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Errore durante la proroga');
+            onFatto(data, nuovaData);
+        } catch (err) {
+            setErrore(err.message);
+        } finally {
+            setSalvataggio(false);
+        }
+    };
+
+    return (
+        <form className="dpm-card scz-proroga" onSubmit={conferma}>
+            <div className="dpm-card-label">Proroga scadenza</div>
+            <div className="scz-proroga-body">
+                <div className="scz-proroga-riga">
+                    <label className="dpm-field">
+                        <span className="dpm-fl">Scadenza attuale</span>
+                        <span className="dpm-fv">{formatDateIT(scadenzaAttuale)}</span>
+                    </label>
+                    <label className="dpm-field">
+                        <span className="dpm-fl">Nuova scadenza *</span>
+                        <input type="date" className="scz-input" min={minData} value={nuovaData}
+                            onChange={(e) => setNuovaData(e.target.value)} required autoFocus />
+                    </label>
+                </div>
+                <label className="dpm-field">
+                    <span className="dpm-fl">Motivazione *</span>
+                    <textarea className="scz-input" rows={2} maxLength={500} value={motivo}
+                        placeholder="Es. sospensione per infortunio dal 10/03 al 10/04"
+                        onChange={(e) => setMotivo(e.target.value)} required />
+                </label>
+                <div className="scz-hint">La nuova data deve essere successiva a quella attuale. L'operazione viene registrata nello Storico del socio.</div>
+                {errore && <div className="scz-errore">{errore}</div>}
+                <div className="scz-proroga-azioni">
+                    <button type="button" className="scz-btn scz-btn-ghost" onClick={onAnnulla} disabled={salvataggio}>Annulla</button>
+                    <button type="submit" className="scz-btn scz-btn-primary" disabled={!valida || salvataggio}>
+                        {salvataggio ? 'Salvataggio...' : 'Conferma proroga'}
+                    </button>
+                </div>
+            </div>
+        </form>
     );
 };
 
@@ -546,6 +673,7 @@ const Scadenziario = () => {
             .map(v => ({
                 key: `${v.pagamento.id}-${v.tipoKey}-${v.idx}`,
                 pagamento: v.pagamento,
+                idx: v.idx, // indice della voce nei payment_items (proroga, nota "prorogata")
                 tipo: v.tipo,
                 tipoKey: v.tipoKey,
                 productId: v.productId,
@@ -803,6 +931,11 @@ const Scadenziario = () => {
                 societa={societa}
                 onClose={() => setSelectedDettaglio(null)}
                 products={products}
+                onProrogata={(aggiornato, nuovaData) => {
+                    // Aggiorna l'elenco e il modal aperto con la nuova scadenza
+                    setPayments(prev => prev.map(x => x.id === aggiornato.id ? aggiornato : x));
+                    setSelectedDettaglio(prev => prev ? { ...prev, pagamento: aggiornato, scadenzaStr: nuovaData } : prev);
+                }}
             />
         </div>
     );
