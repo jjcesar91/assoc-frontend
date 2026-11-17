@@ -16,19 +16,8 @@ import { Settings, User, ShoppingBag, CreditCard, CalendarClock, BookOpen, FileT
  *   feature       – (opzionale) funzionalità del piano di licenza: se esclusa la voce
  *                   resta visibile ma disabilitata (vedi Sidebar)
  */
-/**
- * Sottovoci in ordine alfabetico; l'ordine delle voci principali resta quello
- * di MENU_STRUCTURE. L'ordine in sorgente dei children resta significativo per
- * getHomePath (la prima sottovoce è la pagina di atterraggio della voce).
- */
-const ordinaSottovoci = (items) => items.map(item => item.children
-    ? { ...item, children: [...item.children].sort((a, b) => a.label.localeCompare(b.label, 'it', { sensitivity: 'base' })) }
-    : item);
-
 /** Restituisce le voci di menu visibili per l'utente corrente */
-export const getVisibleMenu = () => ordinaSottovoci(getVisibleMenuNonOrdinato());
-
-const getVisibleMenuNonOrdinato = () => {
+export const getVisibleMenu = () => {
     const role = localStorage.getItem('user_role') || 'user';
     let featuresRaw;
     try { featuresRaw = JSON.parse(localStorage.getItem('user_features')); } catch { featuresRaw = null; }

@@ -264,8 +264,14 @@ const MODALITA_STANDARD = ['Contanti', 'POS', 'Assegno', 'Bonifico', 'Carta di c
 // ---------------------------------------------------------------------------
 // Tab: Prima Nota
 // ---------------------------------------------------------------------------
-const PrimaNotaTab = ({ payments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onGiroconto, onDettaglio, onModifica, onElimina, onImportCsv, onModificaGiroconto, onEliminaGiroconto, onModificaMovimento, onAnnullaRicevuta, onEliminaProforma }) => {
+const PrimaNotaTab = ({ payments: tuttiPayments, loading, selectedAnno, societa, onNuovaOperazione, onNuovaOperazioneDaPreferita, onGiroconto, onDettaglio, onModifica, onElimina, onImportCsv, onModificaGiroconto, onEliminaGiroconto, onModificaMovimento, onAnnullaRicevuta, onEliminaProforma }) => {
     const navigate = useNavigate();
+    // La Prima Nota mostra solo i movimenti effettivi: niente ricevute annullate
+    // (stato 3.x) né proforma, che restano visibili in Ricevute.
+    const payments = useMemo(
+        () => tuttiPayments.filter(p => !p.stato_pagamento?.startsWith('3.') && p.tipo_documento !== 'proforma'),
+        [tuttiPayments]
+    );
     const dateRange = useMemo(() => {
         if (!selectedAnno || !societa) {
             const y = new Date().getFullYear();
