@@ -9,7 +9,7 @@ import { generateRicevutaPdf } from '../utils/ricevuta';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
-import { opzioniModalita } from '../utils/modalitaPagamento';
+import { contiPerModalita, contoDopoCambioModalita, modalitaDisponibili } from '../utils/modalitaPagamento';
 import './DettaglioRicevutaModal.css';
 
 const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -606,20 +606,28 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                             <div>
                                 <div className="dpm-pag-form">
                                     <label className="dpm-field">
-                                        <span className="dpm-fl">Conto</span>
-                                        <select className="dpm-select" value={formPag.conto} onChange={e => setFormPag(f => ({ ...f, conto: e.target.value }))} disabled={savingPag}>
-                                            <option value="">— Nessun conto —</option>
-                                            {conti.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)}
-                                            {formPag.conto && !conti.some(c => c.descrizione === formPag.conto) && (
-                                                <option value={formPag.conto}>{formPag.conto}</option>
-                                            )}
+                                        <span className="dpm-fl">Modalità di pagamento</span>
+                                        <select
+                                            className="dpm-select"
+                                            value={formPag.modalita}
+                                            onChange={e => {
+                                                const m = e.target.value;
+                                                setFormPag(f => ({ modalita: m, conto: f.conto ? contoDopoCambioModalita(conti, f.conto, m) : f.conto }));
+                                            }}
+                                            disabled={savingPag}
+                                        >
+                                            <option value="">— Non indicata —</option>
+                                            {modalitaDisponibili(conti, undefined, pagValori.modalita).map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </label>
                                     <label className="dpm-field">
-                                        <span className="dpm-fl">Modalità di pagamento</span>
-                                        <select className="dpm-select" value={formPag.modalita} onChange={e => setFormPag(f => ({ ...f, modalita: e.target.value }))} disabled={savingPag}>
-                                            <option value="">— Non indicata —</option>
-                                            {opzioniModalita(conti, formPag.conto, pagValori.modalita).map(m => <option key={m} value={m}>{m}</option>)}
+                                        <span className="dpm-fl">Conto</span>
+                                        <select className="dpm-select" value={formPag.conto} onChange={e => setFormPag(f => ({ ...f, conto: e.target.value }))} disabled={savingPag}>
+                                            <option value="">— Nessun conto —</option>
+                                            {contiPerModalita(conti, formPag.modalita).map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)}
+                                            {formPag.conto && !contiPerModalita(conti, formPag.modalita).some(c => c.descrizione === formPag.conto) && (
+                                                <option value={formPag.conto}>{formPag.conto}</option>
+                                            )}
                                         </select>
                                     </label>
                                 </div>

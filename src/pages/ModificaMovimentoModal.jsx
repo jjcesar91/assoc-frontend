@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Edit2 } from 'lucide-react';
 import './NuovaOperazioneModal.css';
-import { opzioniModalita } from '../utils/modalitaPagamento';
+import { contiPerModalita, contoDopoCambioModalita, modalitaDisponibili } from '../utils/modalitaPagamento';
 
 // Prima Nota → Modifica di un movimento che nasce da una ricevuta o da una proforma:
 // si correggono i dati contabili (data, conto, modalità, note). Il contenuto della
@@ -49,7 +49,13 @@ const ModificaMovimentoModal = ({ isOpen, movimento, societaId, onClose, onSaved
     if (!isOpen || !movimento) return null;
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-    const modalita = opzioniModalita(conti, form.conto_destinazione, movimento.modalita_pagamento);
+    // Prima la modalità, poi i conti che la accettano
+    const modalita = modalitaDisponibili(conti, undefined, movimento.modalita_pagamento);
+    const contiOptions = contiPerModalita(conti, form.modalita_pagamento);
+    const cambiaModalita = (e) => {
+        const m = e.target.value;
+        setForm(f => ({ ...f, modalita_pagamento: m, conto_destinazione: f.conto_destinazione ? contoDopoCambioModalita(conti, f.conto_destinazione, m) : f.conto_destinazione }));
+    };
     const conImporto = importoModificabile(movimento);
 
     const salva = async (e) => {
@@ -124,20 +130,20 @@ const ModificaMovimentoModal = ({ isOpen, movimento, societaId, onClose, onSaved
                                 <input type="number" step="0.01" min="0.01" className="md-input" value={form.importo} onChange={set('importo')} disabled={!conImporto} />
                             </div>
                             <div className="nom-field nom-field--half">
-                                <label>Conto</label>
-                                <select className="md-select" value={form.conto_destinazione} onChange={set('conto_destinazione')}>
-                                    <option value="">— Nessun conto —</option>
-                                    {conti.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)}
-                                    {form.conto_destinazione && !conti.some(c => c.descrizione === form.conto_destinazione) && (
-                                        <option value={form.conto_destinazione}>{form.conto_destinazione}</option>
-                                    )}
+                                <label>Modalità</label>
+                                <select className="md-select" value={form.modalita_pagamento} onChange={cambiaModalita}>
+                                    <option value="">— Non indicata —</option>
+                                    {modalita.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                             <div className="nom-field nom-field--half">
-                                <label>Modalità</label>
-                                <select className="md-select" value={form.modalita_pagamento} onChange={set('modalita_pagamento')}>
-                                    <option value="">— Non indicata —</option>
-                                    {modalita.map(m => <option key={m} value={m}>{m}</option>)}
+                                <label>Conto</label>
+                                <select className="md-select" value={form.conto_destinazione} onChange={set('conto_destinazione')}>
+                                    <option value="">— Nessun conto —</option>
+                                    {contiOptions.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)}
+                                    {form.conto_destinazione && !contiOptions.some(c => c.descrizione === form.conto_destinazione) && (
+                                        <option value={form.conto_destinazione}>{form.conto_destinazione}</option>
+                                    )}
                                 </select>
                             </div>
                             <div className="nom-field nom-field--full">

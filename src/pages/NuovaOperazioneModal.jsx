@@ -4,6 +4,7 @@ import RicercaSocioModal from './RicercaSocioModal';
 import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { useSocieta } from '../data/SocietaContext';
 import './NuovaOperazioneModal.css';
+import { contiPerModalita, contoDopoCambioModalita, contoPredefinito, modalitaDisponibili, modalitaPerConto } from '../utils/modalitaPagamento';
 
 const MODALITA = ['Contanti', 'Bonifico', 'Carta di credito', 'Assegno', 'POS', 'Altro'];
 
@@ -253,8 +254,9 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                     });
                 }
             } else {
-                const defaultConto = cData.find(c => (c.modalita_pagamento || []).includes('Contanti')) || cData[0];
-                const defaultModalita = defaultConto?.modalita_pagamento?.[0] || 'Contanti';
+                // Default: il conto predefinito di Configurazione → Conti (altrimenti il primo)
+                const defaultConto = contoPredefinito(cData);
+                const defaultModalita = modalitaPerConto(defaultConto);
                 setForm(prev => ({ ...prev, conto_destinazione: defaultConto?.descrizione || '', modalita_pagamento: defaultModalita }));
             }
         } catch (e) {
@@ -397,19 +399,14 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
         setForm(prev => ({ ...prev, [field]: value }));
     };
 
-    // Il conto guida la scelta della modalità: cambiando conto, la tendina
-    // modalità si ricarica con le modalità associate al conto selezionato
-    // (se il conto non ne ha nessuna configurata, restano le modalità
-    // "storiche" per non bloccare l'operatore).
-    const handleContoChange = (descrizione) => {
-        const conto = conti.find(c => c.descrizione === descrizione);
-        const modalitaDelConto = conto?.modalita_pagamento;
+    // La modalità guida la scelta del conto: la tendina conti mostra solo quelli
+    // che accettano la modalità scelta; se il conto attuale non va bene si passa
+    // a quello proposto (il predefinito, se compatibile).
+    const handleModalitaChange = (m) => {
         setForm(prev => ({
             ...prev,
-            conto_destinazione: descrizione,
-            modalita_pagamento: (modalitaDelConto && modalitaDelConto.length > 0)
-                ? (modalitaDelConto.includes(prev.modalita_pagamento) ? prev.modalita_pagamento : modalitaDelConto[0])
-                : prev.modalita_pagamento,
+            modalita_pagamento: m,
+            conto_destinazione: prev.conto_destinazione ? contoDopoCambioModalita(conti, prev.conto_destinazione, m) : prev.conto_destinazione,
         }));
     };
 
@@ -522,12 +519,9 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
     const selectedItem = selectedSottogruppo || selectedGruppo;
     const isMisto = selectedItem?.tipo === 'Entrata/Uscita';
 
-    // Modalità disponibili per il conto attualmente selezionato; se il conto
-    // non ha modalità configurate si ripiega sull'elenco storico fisso.
-    const contoSelezionato = conti.find(c => c.descrizione === form.conto_destinazione);
-    const modalitaOptions = (contoSelezionato?.modalita_pagamento?.length > 0)
-        ? contoSelezionato.modalita_pagamento
-        : MODALITA;
+    // Modalità configurate sui conti (più l'elenco storico se servono) e conti che accettano quella scelta
+    const modalitaOptions = modalitaDisponibili(conti, MODALITA, form.modalita_pagamento);
+    const contiOptions = contiPerModalita(conti, form.modalita_pagamento);
 
     return (
         <>
@@ -747,27 +741,30 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
                                 </div>
 
                                 <div className="nom-field nom-field--half">
-                                    <label>Conto destinazione</label>
-                                    <select
-                                        className="md-select"
-                                        value={form.conto_destinazione}
-                                        onChange={e => handleContoChange(e.target.value)}
-                                    >
-                                        <option value="">— Nessuno —</option>
-                                        {conti.map(c => (
-                                            <option key={c.id} value={c.descrizione}>{c.descrizione}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="nom-field nom-field--half">
                                     <label>Modalità pagamento</label>
                                     <select
                                         className="md-select"
                                         value={form.modalita_pagamento}
-                                        onChange={e => handleFieldChange('modalita_pagamento', e.target.value)}
+                                        onChange={e => handleModalitaChange(e.target.value)}
                                     >
                                         {modalitaOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="nom-field nom-field--half">
+                                    <label>Conto destinazione</label>
+                                    <select
+                                        className="md-select"
+                                        value={form.conto_destinazione}
+                                        onChange={e => handleFieldChange('conto_destinazione', e.target.value)}
+                                    >
+                                        <option value="">— Nessuno —</option>
+                                        {contiOptions.map(c => (
+                                            <option key={c.id} value={c.descrizione}>{c.descrizione}</option>
+                                        ))}
+                                        {form.conto_destinazione && !contiOptions.some(c => c.descrizione === form.conto_destinazione) && (
+                                            <option value={form.conto_destinazione}>{form.conto_destinazione}</option>
+                                        )}
                                     </select>
                                 </div>
 

@@ -6,40 +6,11 @@ import { useAnno, getAnnoDateRange } from '../data/AnnoContext';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 import { formatDateIT } from '../utils/dateUtils';
 import { etichettaFormula } from '../utils/listino';
+import { contiPerModalita, contoDopoCambioModalita, contoPredefinito, modalitaDisponibili, modalitaPerConto } from '../utils/modalitaPagamento';
 
-// Elenco storico, usato come ripiego quando il conto selezionato non ha
-// modalità configurate in anagrafica (Configurazione → Conti).
+// Modalità proposte quando i conti non ne configurano (Configurazione → Conti)
 const MODALITA_STORICHE = ['Contanti', 'POS', 'Assegno', 'Bonifico'];
 const MODALITA_ICONS = { Contanti: Coins, POS: CreditCard, Assegno: Banknote, Bonifico: Landmark };
-
-// La modalità guida la scelta del conto. Un conto senza modalità configurate le
-// accetta tutte (comportamento storico, per non bloccare l'operatore).
-const modalitaDi = (c) => (Array.isArray(c?.modalita_pagamento) ? c.modalita_pagamento : []);
-const contoAccetta = (c, m) => modalitaDi(c).length === 0 || modalitaDi(c).includes(m);
-
-// Modalità proposte: quelle configurate sui conti (in ordine), più le storiche se
-// non ci sono conti o qualche conto non ne ha configurate.
-function modalitaDisponibili(conti) {
-    if (!conti.length) return MODALITA_STORICHE;
-    const out = [...new Set(conti.flatMap(modalitaDi))];
-    if (!out.length || conti.some(c => modalitaDi(c).length === 0)) {
-        MODALITA_STORICHE.forEach(m => { if (!out.includes(m)) out.push(m); });
-    }
-    return out;
-}
-
-// Conti che accettano la modalità (tutti se nessuno la accetta)
-function contiPerModalita(conti, m) {
-    const ok = conti.filter(c => contoAccetta(c, m));
-    return ok.length ? ok : conti;
-}
-
-// Conto da proporre per una modalità: il predefinito se compatibile, poi uno che
-// la dichiara esplicitamente, poi il primo compatibile.
-function contoPerModalita(conti, m) {
-    const ok = contiPerModalita(conti, m);
-    return ok.find(c => c.predefinito) || ok.find(c => modalitaDi(c).includes(m)) || ok[0] || null;
-}
 
 const GeneraRicevutaModal = ({
     isOpen,
@@ -158,12 +129,13 @@ const GeneraRicevutaModal = ({
                         const data = await res.json();
                         setConti(data);
 
-                        // Default: modalità "Contanti" (se disponibile) e il conto adatto.
+                        // Default: il conto predefinito di Configurazione → Conti (altrimenti il
+                        // primo) e una modalità che accetta: "Contanti" se possibile, altrimenti la sua prima.
                         const lista = Array.isArray(data) ? data : [];
-                        const opzioni = modalitaDisponibili(lista);
-                        const m = opzioni.includes('Contanti') ? 'Contanti' : opzioni[0];
+                        const conto = contoPredefinito(lista);
+                        const m = modalitaPerConto(conto);
                         setModalita(m);
-                        setContoDestinazione(contoPerModalita(lista, m)?.descrizione || 'CASSA');
+                        setContoDestinazione(conto?.descrizione || 'CASSA');
                     }
                 } catch (e) {
                     console.error(e);
@@ -213,16 +185,12 @@ const GeneraRicevutaModal = ({
     // passa a quello proposto per la nuova modalità.
     const handleModalitaChange = (m) => {
         setModalita(m);
-        if (!conti.length) return;
-        const ok = contiPerModalita(conti, m);
-        if (!ok.some(c => c.descrizione === contoDestinazione)) {
-            setContoDestinazione(contoPerModalita(conti, m)?.descrizione || '');
-        }
+        setContoDestinazione(prev => contoDopoCambioModalita(conti, prev, m));
     };
 
     if (!isOpen) return null;
 
-    const modalitaOptions = modalitaDisponibili(conti);
+    const modalitaOptions = modalitaDisponibili(conti, MODALITA_STORICHE);
     const contiOptions = contiPerModalita(conti, modalita);
 
     const annoDiverso = annoRicevuta != null && annoRicevuta !== currentRefYear;
