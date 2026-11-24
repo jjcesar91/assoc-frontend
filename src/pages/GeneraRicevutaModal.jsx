@@ -12,6 +12,35 @@ import { etichettaFormula } from '../utils/listino';
 const MODALITA_STORICHE = ['Contanti', 'POS', 'Assegno', 'Bonifico'];
 const MODALITA_ICONS = { Contanti: Coins, POS: CreditCard, Assegno: Banknote, Bonifico: Landmark };
 
+// La modalità guida la scelta del conto. Un conto senza modalità configurate le
+// accetta tutte (comportamento storico, per non bloccare l'operatore).
+const modalitaDi = (c) => (Array.isArray(c?.modalita_pagamento) ? c.modalita_pagamento : []);
+const contoAccetta = (c, m) => modalitaDi(c).length === 0 || modalitaDi(c).includes(m);
+
+// Modalità proposte: quelle configurate sui conti (in ordine), più le storiche se
+// non ci sono conti o qualche conto non ne ha configurate.
+function modalitaDisponibili(conti) {
+    if (!conti.length) return MODALITA_STORICHE;
+    const out = [...new Set(conti.flatMap(modalitaDi))];
+    if (!out.length || conti.some(c => modalitaDi(c).length === 0)) {
+        MODALITA_STORICHE.forEach(m => { if (!out.includes(m)) out.push(m); });
+    }
+    return out;
+}
+
+// Conti che accettano la modalità (tutti se nessuno la accetta)
+function contiPerModalita(conti, m) {
+    const ok = conti.filter(c => contoAccetta(c, m));
+    return ok.length ? ok : conti;
+}
+
+// Conto da proporre per una modalità: il predefinito se compatibile, poi uno che
+// la dichiara esplicitamente, poi il primo compatibile.
+function contoPerModalita(conti, m) {
+    const ok = contiPerModalita(conti, m);
+    return ok.find(c => c.predefinito) || ok.find(c => modalitaDi(c).includes(m)) || ok[0] || null;
+}
+
 const GeneraRicevutaModal = ({
     isOpen,
     onClose,
@@ -129,15 +158,12 @@ const GeneraRicevutaModal = ({
                         const data = await res.json();
                         setConti(data);
 
-                        // Default: conto con "Contanti" tra le modalità, altrimenti CASSA/il primo.
-                        const defaultConto = data.find(c => (c.modalita_pagamento || []).includes('Contanti')) || data.find(c => c.descrizione === 'CASSA');
-                        if (defaultConto) {
-                            setContoDestinazione(defaultConto.descrizione);
-                            setModalita(defaultConto.modalita_pagamento?.[0] || 'Contanti');
-                        } else {
-                            setContoDestinazione('CASSA');
-                            setModalita('Contanti');
-                        }
+                        // Default: modalità "Contanti" (se disponibile) e il conto adatto.
+                        const lista = Array.isArray(data) ? data : [];
+                        const opzioni = modalitaDisponibili(lista);
+                        const m = opzioni.includes('Contanti') ? 'Contanti' : opzioni[0];
+                        setModalita(m);
+                        setContoDestinazione(contoPerModalita(lista, m)?.descrizione || 'CASSA');
                     }
                 } catch (e) {
                     console.error(e);
@@ -182,25 +208,22 @@ const GeneraRicevutaModal = ({
         return () => { cancelled = true; };
     }, [isOpen, annoRicevuta, selectedSocietaId]);
 
-    // Il conto guida la scelta della modalità: cambiando conto, i pulsanti
-    // modalità si ricaricano con le modalità associate al conto selezionato
-    // (se il conto non ne ha nessuna configurata, restano le modalità
-    // "storiche" per non bloccare l'operatore).
-    const handleContoChange = (descrizione) => {
-        setContoDestinazione(descrizione);
-        const conto = conti.find(c => c.descrizione === descrizione);
-        const modalitaDelConto = conto?.modalita_pagamento;
-        if (modalitaDelConto && modalitaDelConto.length > 0 && !modalitaDelConto.includes(modalita)) {
-            setModalita(modalitaDelConto[0]);
+    // La modalità guida la scelta del conto: cambiando modalità la select dei conti
+    // mostra solo quelli che la accettano; se il conto scelto non è tra questi si
+    // passa a quello proposto per la nuova modalità.
+    const handleModalitaChange = (m) => {
+        setModalita(m);
+        if (!conti.length) return;
+        const ok = contiPerModalita(conti, m);
+        if (!ok.some(c => c.descrizione === contoDestinazione)) {
+            setContoDestinazione(contoPerModalita(conti, m)?.descrizione || '');
         }
     };
 
     if (!isOpen) return null;
 
-    const contoSelezionato = conti.find(c => c.descrizione === contoDestinazione);
-    const modalitaOptions = (contoSelezionato?.modalita_pagamento?.length > 0)
-        ? contoSelezionato.modalita_pagamento
-        : MODALITA_STORICHE;
+    const modalitaOptions = modalitaDisponibili(conti);
+    const contiOptions = contiPerModalita(conti, modalita);
 
     const annoDiverso = annoRicevuta != null && annoRicevuta !== currentRefYear;
 
@@ -353,15 +376,29 @@ const GeneraRicevutaModal = ({
                             </div>
                         </div>
 
+                        <div className="gpm-field-group" style={{ flex: 2 }}>
+                            <label>Modalità di pagamento</label>
+                            <div className="gpm-payment-methods">
+                                {modalitaOptions.map(m => {
+                                    const Icon = MODALITA_ICONS[m] || Coins;
+                                    return (
+                                        <button key={m} type="button" className={`gpm-method-btn ${modalita === m ? 'active' : ''}`} onClick={() => handleModalitaChange(m)}>
+                                            <Icon size={16}/> {m}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <div className="gpm-field-group">
                             <label>Conto di destinazione</label>
                             <select
                                 className="gpm-select"
                                 value={contoDestinazione}
-                                onChange={(e) => handleContoChange(e.target.value)}
+                                onChange={(e) => setContoDestinazione(e.target.value)}
                             >
                                 {conti.length > 0 ? (
-                                    conti.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)
+                                    contiOptions.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)
                                 ) : (
                                     <>
                                         <option value="CASSA">CASSA</option>
@@ -369,20 +406,6 @@ const GeneraRicevutaModal = ({
                                     </>
                                 )}
                             </select>
-                        </div>
-
-                        <div className="gpm-field-group" style={{ flex: 2 }}>
-                            <label>Modalità di pagamento</label>
-                            <div className="gpm-payment-methods">
-                                {modalitaOptions.map(m => {
-                                    const Icon = MODALITA_ICONS[m] || Coins;
-                                    return (
-                                        <button key={m} type="button" className={`gpm-method-btn ${modalita === m ? 'active' : ''}`} onClick={() => setModalita(m)}>
-                                            <Icon size={16}/> {m}
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
 
