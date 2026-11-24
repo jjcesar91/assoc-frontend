@@ -1997,6 +1997,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Quietanza', icon: <Paperclip size={14}/> },
         tesseramento: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Tesseramento', icon: <ShieldCheck size={14}/> },
         proroga: { color: 'var(--primary-hover)', bg: 'var(--info-container)', label: 'Proroga scadenza', icon: <CalendarPlus size={14}/> },
+        modifica_pagamento: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Modifica pagamento', icon: <CreditCard size={14}/> },
     };
 
     // Apertura della quietanza caricata dal socio direttamente dalla riga di storico.
@@ -3976,6 +3977,11 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                         `Proforma convertita in pagamento — ricevuta #${updated.numero_ricevuta}${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
                         { ricevuta_id: updated.id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
                     );
+                }}
+                onUpdate={(updated) => {
+                    setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
+                    setSelectedPaymentDetail(updated);
+                    if (activeTab === 'Storico') fetchStorico(); // la modifica di modalità/conto va a storico
                 }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={prodottiSocieta}

@@ -637,3 +637,79 @@
     0%   { left: -40%; }
     100% { left: 100%; }
 }
+
+/* ── Pagamento: modifica modalità / conto e storico modifiche ───────────── */
+.dpm-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--primary);
+    cursor: pointer;
+}
+.dpm-link-btn:hover { text-decoration: underline; }
+
+.dpm-pag-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 14px 16px 6px;
+}
+.dpm-select {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+.dpm-pag-hint {
+    padding: 0 16px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.dpm-pag-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 16px 0;
+    font-size: 0.82rem;
+    color: var(--danger);
+}
+.dpm-pag-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px 14px;
+}
+
+.dpm-modifiche {
+    border-top: 1px solid var(--border-color);
+    padding: 10px 16px 12px;
+}
+.dpm-modifiche-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.dpm-modifiche ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dpm-modifiche li { font-size: 0.85rem; color: var(--text-primary); }
+.dpm-modifiche s { color: var(--text-tertiary); }
+.dpm-modifiche-meta { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 2px; }
+
+@media (max-width: 600px) {
+    .dpm-pag-form { grid-template-columns: 1fr; }
+}

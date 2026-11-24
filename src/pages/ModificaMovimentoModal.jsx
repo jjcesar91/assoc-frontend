@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { X, Edit2 } from 'lucide-react';
 import './NuovaOperazioneModal.css';
+import { opzioniModalita } from '../utils/modalitaPagamento';
 
 // Prima Nota → Modifica di un movimento che nasce da una ricevuta o da una proforma:
 // si correggono i dati contabili (data, conto, modalità, note). Il contenuto della
 // ricevuta (voci, intestatario, numero) resta quello emesso; l'importo si può
 // correggere solo se il movimento non ha un numero di ricevuta e ha una sola voce.
-const MODALITA_STANDARD = ['Contanti', 'POS', 'Assegno', 'Bonifico', 'Carta di credito', 'Altro'];
 
 const vociDi = (p) => {
     let v = p?.payment_items;
@@ -49,9 +49,7 @@ const ModificaMovimentoModal = ({ isOpen, movimento, societaId, onClose, onSaved
     if (!isOpen || !movimento) return null;
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-    const contoScelto = conti.find(c => c.descrizione === form.conto_destinazione);
-    const modalitaConto = Array.isArray(contoScelto?.modalita_pagamento) ? contoScelto.modalita_pagamento : [];
-    const modalita = [...new Set([...modalitaConto, ...MODALITA_STANDARD, movimento.modalita_pagamento].filter(Boolean))];
+    const modalita = opzioniModalita(conti, form.conto_destinazione, movimento.modalita_pagamento);
     const conImporto = importoModificabile(movimento);
 
     const salva = async (e) => {
@@ -63,6 +61,7 @@ const ModificaMovimentoModal = ({ isOpen, movimento, societaId, onClose, onSaved
             conto_destinazione: form.conto_destinazione || null,
             modalita_pagamento: form.modalita_pagamento || null,
             note: form.note || null,
+            origine_modifica: 'prima_nota', // le modifiche a conto/modalità finiscono nello storico
         };
         if (conImporto) {
             const imp = Math.abs(parseFloat(String(form.importo).replace(',', '.')));

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Ban, Calendar, Check, Download, FileCheck, Plus, Tag, Trash2, User, X } from 'lucide-react';
+import { AlertTriangle, Ban, Calendar, Check, CreditCard, Download, Edit2, FileCheck, History, Plus, Tag, Trash2, User, X } from 'lucide-react';
 import { getAnnoDateRange, useAnno } from '../data/AnnoContext';
 import { getStatoRicevuta, getStatoRicevutaBadgeStyle, STATO_RICEVUTA_CONFIG } from '../utils/ricevutaUtils';
 import ChiediInvioComunicazioneModal from '../components/ChiediInvioComunicazioneModal';
@@ -9,6 +9,7 @@ import { generateRicevutaPdf } from '../utils/ricevuta';
 import { openQuietanzaCaricata } from '../utils/quietanza';
 import { getRangeDataRicevuta, validaDataRicevuta, oggiStr } from '../utils/dataRicevutaUtils';
 import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
+import { opzioniModalita } from '../utils/modalitaPagamento';
 import './DettaglioRicevutaModal.css';
 
 const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
@@ -67,6 +68,15 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
     const [activeIdx, setActiveIdx] = useState(-1);
     const [inputFocused, setInputFocused] = useState(false);
 
+    // Modalità di pagamento / conto: modifica tracciata (payment_modifiche + storico socio)
+    const [pagValori, setPagValori] = useState({ modalita: '', conto: '' });
+    const [editPag, setEditPag] = useState(false);
+    const [formPag, setFormPag] = useState({ modalita: '', conto: '' });
+    const [conti, setConti] = useState([]);
+    const [savingPag, setSavingPag] = useState(false);
+    const [errorPag, setErrorPag] = useState(null);
+    const [modifiche, setModifiche] = useState([]);
+
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
     const todayStr = oggiStr();
@@ -112,6 +122,69 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
         setSavedFlash(false);
         clearTimeout(savedTimerRef.current);
     }, [pagamento?.id]);
+
+    // Modalità/conto attuali e modifiche registrate all'apertura/cambio ricevuta
+    useEffect(() => {
+        if (!isOpen || !pagamento?.id) return;
+        setPagValori({ modalita: pagamento.modalita_pagamento || '', conto: pagamento.conto_destinazione || '' });
+        setEditPag(false);
+        setErrorPag(null);
+        setModifiche([]);
+        let cancelled = false;
+        const token = localStorage.getItem('token');
+        fetch(`/payments/api/${pagamento.id}/modifiche`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => (r.ok ? r.json() : []))
+            .then(d => { if (!cancelled) setModifiche(Array.isArray(d) ? d : []); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [isOpen, pagamento?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const apriModificaPagamento = async () => {
+        setFormPag({ ...pagValori });
+        setErrorPag(null);
+        setEditPag(true);
+        if (conti.length || !pagamento?.societa_id) return;
+        try {
+            const token = localStorage.getItem('token');
+            const r = await fetch(`/payments/api/conti?societa_id=${pagamento.societa_id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const d = r.ok ? await r.json() : [];
+            setConti(Array.isArray(d) ? d : []);
+        } catch { setConti([]); }
+    };
+
+    const salvaModificaPagamento = async () => {
+        if (savingPag) return;
+        if (formPag.modalita === pagValori.modalita && formPag.conto === pagValori.conto) { setEditPag(false); return; }
+        setSavingPag(true);
+        setErrorPag(null);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/payments/api/${pagamento.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    modalita_pagamento: formPag.modalita || null,
+                    conto_destinazione: formPag.conto || null,
+                    origine_modifica: 'dettaglio_ricevuta',
+                }),
+            });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.error || 'Salvataggio non riuscito');
+            }
+            const updated = await res.json();
+            setPagValori({ modalita: updated.modalita_pagamento || '', conto: updated.conto_destinazione || '' });
+            setEditPag(false);
+            showComFeedback('Pagamento aggiornato', 'success');
+            const r = await fetch(`/payments/api/${pagamento.id}/modifiche`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (r.ok) setModifiche(await r.json());
+            if (onUpdate) onUpdate(updated);
+        } catch (e) {
+            setErrorPag(e.message);
+        } finally {
+            setSavingPag(false);
+        }
+    };
 
     const saveEtichette = async (tags) => {
         if (!pagamento?.id || savingEtichette) return;
@@ -506,6 +579,85 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* ── Pagamento: modalità e conto (modificabili, con storico) ── */}
+                    <div className="dpm-card">
+                        <div className="dpm-card-label dpm-card-label-row">
+                            <span className="dpm-card-label-icon"><CreditCard size={11} /> Pagamento</span>
+                            {!isAnnullato && !editPag && (
+                                <button type="button" className="dpm-link-btn" onClick={apriModificaPagamento}>
+                                    <Edit2 size={12} /> Modifica
+                                </button>
+                            )}
+                        </div>
+                        {!editPag ? (
+                            <div className="dpm-row-3">
+                                <div className="dpm-field">
+                                    <div className="dpm-fl">Modalità di pagamento</div>
+                                    <div className="dpm-fv">{pagValori.modalita || <span className="dpm-fv-empty">Non indicata</span>}</div>
+                                </div>
+                                <div className="dpm-field">
+                                    <div className="dpm-fl">Conto</div>
+                                    <div className="dpm-fv">{pagValori.conto || <span className="dpm-fv-empty">Nessun conto</span>}</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="dpm-pag-form">
+                                    <label className="dpm-field">
+                                        <span className="dpm-fl">Conto</span>
+                                        <select className="dpm-select" value={formPag.conto} onChange={e => setFormPag(f => ({ ...f, conto: e.target.value }))} disabled={savingPag}>
+                                            <option value="">— Nessun conto —</option>
+                                            {conti.map(c => <option key={c.id} value={c.descrizione}>{c.descrizione}</option>)}
+                                            {formPag.conto && !conti.some(c => c.descrizione === formPag.conto) && (
+                                                <option value={formPag.conto}>{formPag.conto}</option>
+                                            )}
+                                        </select>
+                                    </label>
+                                    <label className="dpm-field">
+                                        <span className="dpm-fl">Modalità di pagamento</span>
+                                        <select className="dpm-select" value={formPag.modalita} onChange={e => setFormPag(f => ({ ...f, modalita: e.target.value }))} disabled={savingPag}>
+                                            <option value="">— Non indicata —</option>
+                                            {opzioniModalita(conti, formPag.conto, pagValori.modalita).map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </label>
+                                </div>
+                                <div className="dpm-pag-hint">La modifica viene registrata con data e autore nello storico della ricevuta{pagamento.socio_id ? ' e del socio' : ''}.</div>
+                                {errorPag && (
+                                    <div className="dpm-pag-error"><AlertTriangle size={14} /> <span>{errorPag}</span></div>
+                                )}
+                                <div className="dpm-pag-actions">
+                                    <button type="button" className="dpm-confirm-btn-cancel" onClick={() => setEditPag(false)} disabled={savingPag}>
+                                        <X size={14} /> Annulla
+                                    </button>
+                                    <button type="button" className="dpm-btn-converti" onClick={salvaModificaPagamento} disabled={savingPag}>
+                                        <Check size={14} /> {savingPag ? 'Salvataggio…' : 'Salva'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        {modifiche.length > 0 && (
+                            <div className="dpm-modifiche">
+                                <div className="dpm-modifiche-title"><History size={11} /> Modifiche</div>
+                                <ul>
+                                    {modifiche.map(m => (
+                                        <li key={m.id}>
+                                            <div className="dpm-modifiche-meta">
+                                                {formatDateTimeIT(m.createdAt)} · {m.utente_email || 'Operatore'}
+                                                {m.origine === 'prima_nota' && ' · da Prima Nota'}
+                                            </div>
+                                            {(m.modalita_precedente || '') !== (m.modalita_nuova || '') && (
+                                                <div>Modalità: <s>{m.modalita_precedente || 'non indicata'}</s> → <strong>{m.modalita_nuova || 'non indicata'}</strong></div>
+                                            )}
+                                            {(m.conto_precedente || '') !== (m.conto_nuovo || '') && (
+                                                <div>Conto: <s>{m.conto_precedente || 'nessuno'}</s> → <strong>{m.conto_nuovo || 'nessuno'}</strong></div>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
 
                     {/* ── Quietanza di pagamento caricata dal socio ── */}
