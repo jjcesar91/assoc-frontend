@@ -475,6 +475,7 @@ const NuovaOperazioneModal = ({ isOpen, onClose, onSaved, societaId, initialData
             importo: importoSegnato,
             quote: descrizioneFinal,
             quote_types: 'operazione_manuale',
+            ...(editingPayment ? { origine_modifica: 'prima_nota' } : {}),
             modalita_pagamento: form.modalita_pagamento,
             conto_destinazione: form.conto_destinazione || null,
             note: form.note || null,

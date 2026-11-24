@@ -1203,18 +1203,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
     const handleDeleteSocioPagamento = async (id) => {
         if (!await confirm('Sei sicuro di voler eliminare questa ricevuta?')) return;
         try {
-            const pagamento = socioPagamenti.find(p => p.id === id);
             const response = await fetch(`/payments/api/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 setSocioPagamenti(prev => prev.filter(p => p.id !== id));
                 if (selectedPaymentDetail?.id === id) setSelectedPaymentDetail(null);
-                const isProforma = pagamento?.tipo_documento === 'proforma';
-                logToStorico('ordine',
-                    isProforma
-                        ? `Proforma eliminata${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`
-                        : `Ricevuta #${pagamento?.numero_ricevuta || id} eliminata${pagamento?.importo ? ` (€${parseFloat(pagamento.importo).toFixed(2)})` : ''}`,
-                    { ricevuta_id: id, tipo_documento: pagamento?.tipo_documento }
-                );
+                // Lo storico socio lo scrive il servizio payments (modifica_ricevuta)
+                if (activeTab === 'Storico') fetchStorico();
             } else {
                 showAlert('Errore durante l\'eliminazione della ricevuta', 'Errore');
             }
@@ -1231,10 +1225,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 const updated = await response.json();
                 setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                 setSelectedPaymentDetail(updated);
-                logToStorico('ordine',
-                    `Ricevuta #${updated.numero_ricevuta} annullata${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
-                    { ricevuta_id: id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
-                );
+                if (activeTab === 'Storico') fetchStorico(); // storico scritto dal servizio payments
             } else {
                 showAlert('Errore durante l\'annullamento della ricevuta', 'Errore');
             }
@@ -1997,7 +1988,7 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
         ricevuta: { color: 'var(--success)', bg: 'var(--success-container)', label: 'Quietanza', icon: <Paperclip size={14}/> },
         tesseramento: { color: 'var(--warning)', bg: 'var(--warning-container)', label: 'Tesseramento', icon: <ShieldCheck size={14}/> },
         proroga: { color: 'var(--primary-hover)', bg: 'var(--info-container)', label: 'Proroga scadenza', icon: <CalendarPlus size={14}/> },
-        modifica_pagamento: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Modifica pagamento', icon: <CreditCard size={14}/> },
+        modifica_ricevuta: { color: 'var(--primary)', bg: 'var(--info-container)', label: 'Modifica ricevuta', icon: <CreditCard size={14}/> },
     };
 
     // Apertura della quietanza caricata dal socio direttamente dalla riga di storico.
@@ -3973,15 +3964,12 @@ const SocioModal = ({ onClose, onSave, socioData, allEtichette = [] }) => {
                 onConvertProforma={(updated) => {
                     setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                     setSelectedPaymentDetail(updated);
-                    logToStorico('ordine',
-                        `Proforma convertita in pagamento — ricevuta #${updated.numero_ricevuta}${updated.importo ? ` (€${parseFloat(updated.importo).toFixed(2)})` : ''}`,
-                        { ricevuta_id: updated.id, numero_ricevuta: updated.numero_ricevuta, importo: updated.importo }
-                    );
+                    if (activeTab === 'Storico') fetchStorico(); // storico scritto dal servizio payments
                 }}
                 onUpdate={(updated) => {
                     setSocioPagamenti(prev => prev.map(p => p.id === updated.id ? updated : p));
                     setSelectedPaymentDetail(updated);
-                    if (activeTab === 'Storico') fetchStorico(); // la modifica di modalità/conto va a storico
+                    if (activeTab === 'Storico') fetchStorico(); // le modifiche alla ricevuta vanno a storico
                 }}
                 societa={societaList?.find(s => s.id == selectedSocietaId)}
                 products={prodottiSocieta}

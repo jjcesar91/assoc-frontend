@@ -12,6 +12,15 @@ import { formatDateIT, formatDateTimeIT } from '../utils/dateUtils';
 import { contiPerModalita, contoDopoCambioModalita, modalitaDisponibili } from '../utils/modalitaPagamento';
 import './DettaglioRicevutaModal.css';
 
+// Da dove è partita una modifica (storico ricevuta)
+const ORIGINE_LABEL = {
+    dettaglio_ricevuta: 'da Dettaglio ricevuta',
+    prima_nota: 'da Prima Nota',
+    scadenziario: 'da Scadenziario',
+    area_soci: 'dall\'area soci',
+    import: 'da import',
+};
+
 const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnulla, onConvertProforma, onDeleteProforma, onUpdate, societa, products, allEtichette = [] }) => {
     const [showConferma, setShowConferma] = useState(false);
     const [showConvertForm, setShowConvertForm] = useState(false);
@@ -76,6 +85,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
     const [savingPag, setSavingPag] = useState(false);
     const [errorPag, setErrorPag] = useState(null);
     const [modifiche, setModifiche] = useState([]);
+    const [tab, setTab] = useState('dettaglio'); // 'dettaglio' | 'storico'
 
     const { annoOptions, formatAnnoLabel, selectedAnno } = useAnno();
 
@@ -129,15 +139,27 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
         setPagValori({ modalita: pagamento.modalita_pagamento || '', conto: pagamento.conto_destinazione || '' });
         setEditPag(false);
         setErrorPag(null);
+        setTab('dettaglio');
         setModifiche([]);
         let cancelled = false;
-        const token = localStorage.getItem('token');
-        fetch(`/payments/api/${pagamento.id}/modifiche`, { headers: { 'Authorization': `Bearer ${token}` } })
-            .then(r => (r.ok ? r.json() : []))
-            .then(d => { if (!cancelled) setModifiche(Array.isArray(d) ? d : []); })
-            .catch(() => {});
+        caricaStorico(() => cancelled);
         return () => { cancelled = true; };
     }, [isOpen, pagamento?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Storico ricevuta: si ricarica anche quando la ricevuta cambia (annullamento, conversione…)
+    useEffect(() => {
+        if (isOpen && pagamento?.id) caricaStorico();
+    }, [pagamento?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    async function caricaStorico(annullato = () => false) {
+        if (!pagamento?.id) return;
+        try {
+            const token = localStorage.getItem('token');
+            const r = await fetch(`/payments/api/${pagamento.id}/modifiche`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const d = r.ok ? await r.json() : [];
+            if (!annullato()) setModifiche(Array.isArray(d) ? d : []);
+        } catch { /* lo storico resta quello già mostrato */ }
+    }
 
     const apriModificaPagamento = async () => {
         setFormPag({ ...pagValori });
@@ -176,8 +198,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
             setPagValori({ modalita: updated.modalita_pagamento || '', conto: updated.conto_destinazione || '' });
             setEditPag(false);
             showComFeedback('Pagamento aggiornato', 'success');
-            const r = await fetch(`/payments/api/${pagamento.id}/modifiche`, { headers: { 'Authorization': `Bearer ${token}` } });
-            if (r.ok) setModifiche(await r.json());
+            caricaStorico();
             if (onUpdate) onUpdate(updated);
         } catch (e) {
             setErrorPag(e.message);
@@ -194,10 +215,11 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
             const res = await fetch(`/payments/api/${pagamento.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ etichette: tags.length ? tags.join(', ') : null }),
+                body: JSON.stringify({ etichette: tags.length ? tags.join(', ') : null, origine_modifica: 'dettaglio_ricevuta' }),
             });
             if (res.ok) {
                 const updated = await res.json();
+                caricaStorico();
                 setSavedFlash(true);
                 clearTimeout(savedTimerRef.current);
                 savedTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
@@ -283,6 +305,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                 body: JSON.stringify({
                     anno_ricevuta: convertAnno,
                     data_ricevuta: convertData,
+                    origine: 'dettaglio_ricevuta',
                     progressivo_iniziale: convertNextRaw === 1 ? (parseInt(convertStartNumber, 10) || 1) : null,
                 }),
             });
@@ -516,6 +539,57 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                     <button className="dpm-close-btn" onClick={onClose}><X size={20} /></button>
                 </div>
 
+                {/* ── Tab ── */}
+                <div className="dpm-tabs" role="tablist">
+                    <button type="button" role="tab" aria-selected={tab === 'dettaglio'} className={`dpm-tab${tab === 'dettaglio' ? ' dpm-tab-active' : ''}`} onClick={() => setTab('dettaglio')}>
+                        Dettaglio
+                    </button>
+                    <button type="button" role="tab" aria-selected={tab === 'storico'} className={`dpm-tab${tab === 'storico' ? ' dpm-tab-active' : ''}`} onClick={() => setTab('storico')}>
+                        <History size={14} /> Storico modifiche{modifiche.length > 0 && <span className="dpm-tab-count">{modifiche.length}</span>}
+                    </button>
+                </div>
+
+                {tab === 'storico' ? (
+                <div className="dpm-body">
+                    <ul className="dpm-storico">
+                        {modifiche.map(m => (
+                            <li key={m.id} className={`dpm-storico-item dpm-storico-${m.tipo}`}>
+                                <div className="dpm-storico-meta">
+                                    <span>{formatDateTimeIT(m.createdAt)}</span>
+                                    <span>· {m.utente_email || 'Sistema'}</span>
+                                    {ORIGINE_LABEL[m.origine] && <span>· {ORIGINE_LABEL[m.origine]}</span>}
+                                </div>
+                                <div className="dpm-storico-desc">{m.descrizione}</div>
+                                {Array.isArray(m.modifiche) && m.modifiche.length > 0 && (
+                                    <table className="dpm-storico-diff">
+                                        <tbody>
+                                            {m.modifiche.map((c, i) => (
+                                                <tr key={i}>
+                                                    <th>{c.etichetta}</th>
+                                                    <td><s>{c.da ?? '—'}</s></td>
+                                                    <td aria-hidden="true">→</td>
+                                                    <td><strong>{c.a ?? '—'}</strong></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </li>
+                        ))}
+                        <li className="dpm-storico-item dpm-storico-creazione">
+                            <div className="dpm-storico-meta">
+                                <span>{formatDateTimeIT(pagamento.createdAt) || '—'}</span>
+                                {pagamento.utente_nome && <span>· {pagamento.utente_nome}</span>}
+                                {pagamento.origine === 'cliente' && <span>· dall'area soci</span>}
+                            </div>
+                            <div className="dpm-storico-desc">{pagamento.tipo_documento === 'proforma' ? 'Proforma creata' : 'Documento creato'}</div>
+                        </li>
+                    </ul>
+                    {modifiche.length === 0 && (
+                        <p className="dpm-storico-vuoto">Nessuna modifica registrata dopo la creazione.</p>
+                    )}
+                </div>
+                ) : (
                 <div className="dpm-body">
 
                     {/* ── Hero ── */}
@@ -643,27 +717,6 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                                         <Check size={14} /> {savingPag ? 'Salvataggio…' : 'Salva'}
                                     </button>
                                 </div>
-                            </div>
-                        )}
-                        {modifiche.length > 0 && (
-                            <div className="dpm-modifiche">
-                                <div className="dpm-modifiche-title"><History size={11} /> Modifiche</div>
-                                <ul>
-                                    {modifiche.map(m => (
-                                        <li key={m.id}>
-                                            <div className="dpm-modifiche-meta">
-                                                {formatDateTimeIT(m.createdAt)} · {m.utente_email || 'Operatore'}
-                                                {m.origine === 'prima_nota' && ' · da Prima Nota'}
-                                            </div>
-                                            {(m.modalita_precedente || '') !== (m.modalita_nuova || '') && (
-                                                <div>Modalità: <s>{m.modalita_precedente || 'non indicata'}</s> → <strong>{m.modalita_nuova || 'non indicata'}</strong></div>
-                                            )}
-                                            {(m.conto_precedente || '') !== (m.conto_nuovo || '') && (
-                                                <div>Conto: <s>{m.conto_precedente || 'nessuno'}</s> → <strong>{m.conto_nuovo || 'nessuno'}</strong></div>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
                             </div>
                         )}
                     </div>
@@ -829,6 +882,7 @@ const DettaglioRicevutaModal = ({ isOpen, onClose, ricevuta: pagamento, onAnnull
                     )}
 
                 </div>
+                )}
 
                 {/* ── Footer azioni ── */}
                 {!isAnnullato && pagamento.tipo_documento !== 'proforma' && (
